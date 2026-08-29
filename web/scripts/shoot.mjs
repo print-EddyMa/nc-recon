@@ -4,16 +4,16 @@ import puppeteer from "puppeteer-core";
 import { mkdirSync } from "node:fs";
 
 const BASE = process.argv[2] || "http://localhost:4173";
-const OUT = process.argv[3] || "/tmp/tt_shots";
+const OUT = process.argv[3] || "/tmp/tt_shots_gpu";
 const CHROME =
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 mkdirSync(OUT, { recursive: true });
 
 const browser = await puppeteer.launch({
   executablePath: CHROME,
-  headless: "new",
-  args: ["--no-sandbox","--window-size=1440,900","--use-angle=swiftshader","--use-gl=angle","--enable-unsafe-swiftshader","--ignore-gpu-blocklist","--enable-features=Vulkan"],
-  defaultViewport: { width: 1440, height: 900, deviceScaleFactor: 2 },
+  headless: false,
+  args: ["--no-sandbox","--window-size=1500,950"],
+  defaultViewport: { width: 1600, height: 1000, deviceScaleFactor: 2 },
 });
 const page = await browser.newPage();
 const errors = [];
