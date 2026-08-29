@@ -25,3 +25,8 @@ web/.vite/
 pipeline/data/cache/*
 !pipeline/data/cache/.gitkeep
 pipeline/vendor_xview2_1st/
+
+# web build + generated raster tiles (regenerate: pipeline/scripts/make_tiles.py)
+web/dist/
+web/public/tiles/
+web/public/data/*.geojson
