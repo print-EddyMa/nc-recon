@@ -1,0 +1,12 @@
+# TerraTriage pipeline (Phase A) — Python 3.13, macOS/Linux, CPU-only
+numpy
+Pillow
+requests
+rasterio>=1.4
+shapely>=2.0
+pyproj>=3.6
+mercantile
+geopandas
+folium
+# torch/torchvision are used by the model wrapper; install separately to match your platform:
+#   pip install torch torchvision
