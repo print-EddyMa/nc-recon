@@ -8,6 +8,7 @@ export const AREAS: AreaConfig[] = [
     subtitle: "McDowell County, NC",
     center: [-82.1804, 35.6293],
     zoom: 15.2,
+    hero: [16, 17807, 25818],
   },
   {
     id: "spruce_pine",
@@ -15,8 +16,12 @@ export const AREAS: AreaConfig[] = [
     subtitle: "Mitchell County, NC",
     center: [-82.0643, 35.9151],
     zoom: 15.4,
+    hero: [16, 17827, 25754],
   },
 ];
+
+export const heroTileUrl = (id: string, kind: "pre" | "post", [z, x, y]: [number, number, number]) =>
+  `${import.meta.env.BASE_URL}tiles/${id}/${kind}/${z}/${x}/${y}.jpg`;
 
 export const areaById = (id: string) => AREAS.find((a) => a.id === id) ?? AREAS[0];
 

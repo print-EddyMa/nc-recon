@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
-export type { Map as MLMap, IControl } from "maplibre-gl";
+export type { Map as MLMap, IControl, RasterTileSource } from "maplibre-gl";
 
 const BASE_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 

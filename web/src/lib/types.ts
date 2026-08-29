@@ -48,4 +48,5 @@ export interface AreaConfig {
   subtitle: string;
   center: [number, number]; // [lon, lat]
   zoom: number;
+  hero: [number, number, number]; // [z, x, y] tile for the landing before/after
 }

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { summarize } from "../lib/data";
 import type { AreaConfig, DamageCollection } from "../lib/types";
 import { DAMAGE } from "../lib/damage";
+import BeforeAfterImage from "../components/BeforeAfterImage";
 
 interface Props {
   area: AreaConfig;
@@ -13,41 +14,49 @@ export default function Landing({ area, fc, onEnter }: Props) {
   const stats = useMemo(() => (fc ? summarize(fc) : null), [fc]);
 
   return (
-    <div className="relative flex min-h-full flex-col">
-      {/* faint contour backdrop */}
+    <div className="relative min-h-full overflow-y-auto">
       <Contours />
 
-      <div className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-10 md:py-16">
+      <div className="relative mx-auto w-full max-w-6xl px-6 py-10 md:py-14">
         <div className="cap mb-6 flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-accent" />
           Rapid damage assessment · Hurricane Helene · Sept–Oct 2024
         </div>
 
-        <h1 className="max-w-3xl font-display text-4xl leading-[1.05] text-ink md:text-6xl">
-          Every building, triaged from orbit.
-        </h1>
+        <div className="grid items-start gap-10 md:grid-cols-[1.05fr_0.95fr]">
+          <div>
+            <h1 className="font-display text-4xl leading-[1.05] text-ink md:text-[3.4rem]">
+              Every building, triaged from orbit.
+            </h1>
 
-        <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-ink-dim">
-          Hurricane Helene pushed the Swannanoa and North Toe rivers through the mountain
-          towns of western North Carolina, cutting road access for days. TerraTriage pairs
-          pre- and post-storm satellite imagery, finds every structure, and rates its damage
-          on a four-level scale &mdash; turning two photographs into a map a response
-          coordinator can act on.
-        </p>
+            <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-ink-dim">
+              Hurricane Helene pushed the Swannanoa and North Toe rivers through the
+              mountain towns of western North Carolina, cutting road access for days.
+              TerraTriage pairs pre- and post-storm satellite imagery, finds every
+              structure, and rates its damage on a four-level scale — turning two
+              photographs into a map a response coordinator can act on.
+            </p>
 
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          <button
-            onClick={onEnter}
-            className="rounded-sm bg-accent px-5 py-2.5 text-sm font-semibold text-[#05171a] transition-transform hover:-translate-y-0.5"
-          >
-            Open the damage map →
-          </button>
-          <span className="tnum text-xs text-ink-faint">
-            {area.name}, {area.subtitle}
-          </span>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <button
+                onClick={onEnter}
+                className="rounded-sm bg-accent px-5 py-2.5 text-sm font-semibold text-[#05171a] transition-transform hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+              >
+                Open the damage map →
+              </button>
+              <span className="tnum text-xs text-ink-faint">
+                {area.name}, {area.subtitle}
+              </span>
+            </div>
+          </div>
+
+          <BeforeAfterImage
+            area={area}
+            preDate={fc?.properties.pre_image.date}
+            postDate={fc?.properties.post_image.date}
+          />
         </div>
 
-        {/* headline stat strip */}
         <div className="mt-12 grid grid-cols-2 gap-px overflow-hidden rounded-sm border border-line bg-line sm:grid-cols-4">
           <HeroStat label="Buildings assessed" value={stats ? stats.total.toLocaleString() : "—"} />
           <HeroStat
@@ -62,7 +71,7 @@ export default function Landing({ area, fc, onEnter }: Props) {
           <HeroStat label="Damage levels" value="4" />
         </div>
 
-        <p className="mt-6 max-w-2xl text-xs leading-relaxed text-ink-faint">
+        <p className="mt-6 max-w-3xl text-xs leading-relaxed text-ink-faint">
           Imagery: Maxar Open Data. Footprints: OpenStreetMap. Damage model:{" "}
           {fc?.properties.model ?? "—"}
           {fc?.properties.notes ? ` — ${fc.properties.notes}` : ""}

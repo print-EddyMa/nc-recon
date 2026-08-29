@@ -60,7 +60,7 @@ export default function MapView({ area, fc }: Props) {
       />
 
       {/* left: hardest-hit + selection */}
-      <aside className="absolute left-4 top-4 z-20 flex max-h-[calc(100%-2rem)] w-[320px] flex-col gap-3 overflow-y-auto">
+      <aside className="absolute left-3 top-3 z-20 flex max-h-[calc(100%-8.5rem)] w-[19rem] max-w-[calc(100vw-1.5rem)] flex-col gap-3 overflow-y-auto sm:left-4 sm:top-4">
         <section className="panel px-3 py-3">
           <div className="mb-2 flex items-baseline justify-between">
             <h2 className="font-display text-sm text-ink">Hardest-hit clusters</h2>
@@ -83,7 +83,7 @@ export default function MapView({ area, fc }: Props) {
       </aside>
 
       {/* right: filter + counts */}
-      <aside className="absolute right-4 top-4 z-20 w-[288px]">
+      <aside className="absolute right-3 top-3 z-20 hidden w-[18rem] max-w-[calc(100vw-1.5rem)] md:block lg:right-4 lg:top-4">
         <section className="panel px-3 py-3">
           <div className="mb-2 flex items-baseline justify-between">
             <h2 className="font-display text-sm text-ink">{area.name}</h2>
