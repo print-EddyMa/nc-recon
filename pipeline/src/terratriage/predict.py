@@ -66,9 +66,13 @@ def run(
     loc_canvas = MaskCanvas(H, W, 1)
     dmg_canvas = MaskCanvas(H, W, 4)   # accumulate cls channels 1..4 as float
 
-    tiles = list(iter_tiles(pre_path, post_path, tile=tile, overlap=overlap))
+    tile_iter = iter_tiles(pre_path, post_path, tile=tile, overlap=overlap)
     if limit_tiles:
-        tiles = tiles[:limit_tiles]
+        import itertools
+
+        tiles = list(itertools.islice(tile_iter, limit_tiles))
+    else:
+        tiles = list(tile_iter)
     print(f"[predict] {len(tiles)} tiles")
 
     for t in tqdm(tiles, desc="inference"):
