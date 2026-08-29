@@ -10,7 +10,7 @@ export default function BuildingCard({ feature, onClear }: Props) {
   const p = feature.properties;
   const d = DAMAGE[p.damage_class];
   return (
-    <div className="panel px-3 py-3" style={{ borderColor: d.hex }}>
+    <div className="panel enter-pop px-3 py-3" style={{ borderColor: d.hex }}>
       <div className="flex items-start justify-between">
         <div>
           <div className="cap">Selected building</div>
@@ -18,10 +18,12 @@ export default function BuildingCard({ feature, onClear }: Props) {
         </div>
         <button
           onClick={onClear}
-          className="text-ink-faint hover:text-ink"
+          className="pressable -m-1 grid h-6 w-6 place-items-center rounded-md text-ink-faint hover:bg-surface-2 hover:text-ink"
           aria-label="Clear selection"
         >
-          ✕
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
+            <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
         </button>
       </div>
       <div className="mt-2 flex items-center gap-2">

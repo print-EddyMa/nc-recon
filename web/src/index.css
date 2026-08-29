@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Geist:wght@400;450;500;600&family=Geist+Mono:wght@400;500;600&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -7,6 +7,19 @@
 @layer base {
   :root {
     color-scheme: dark;
+
+    /* strong, intentional easing — the built-in CSS curves are too weak */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+    /* shadows carry the canvas hue, never flat black */
+    --shadow-1: 0 1px 2px rgba(4, 8, 14, 0.4), 0 2px 8px rgba(4, 8, 14, 0.3);
+    --shadow-2: 0 4px 12px rgba(4, 8, 14, 0.45), 0 12px 32px rgba(4, 8, 14, 0.4);
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 
   html,
@@ -20,8 +33,20 @@
     background: theme("colors.canvas");
     color: theme("colors.ink");
     font-family: theme("fontFamily.sans");
+    font-feature-settings: "cv11", "ss01"; /* Geist: single-story a, rounded quotes */
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+  }
+
+  /* faint film grain so surfaces read as physical, not vector-flat */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
   ::selection {
@@ -41,7 +66,31 @@
   h3 {
     font-family: theme("fontFamily.display");
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em; /* negative tracking grows with size; headings tighten */
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty; /* no orphans */
+  }
+
+  /* skip link for keyboard users */
+  .skip-link {
+    position: fixed;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 60;
+    padding: 0.5rem 0.75rem;
+    background: theme("colors.accent");
+    color: #05171a;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border-radius: 4px;
+    transform: translateY(-150%);
+    transition: transform 160ms var(--ease-out);
+  }
+  .skip-link:focus-visible {
+    transform: translateY(0);
   }
 }
 
@@ -49,30 +98,79 @@
   .panel {
     background: color-mix(in srgb, theme("colors.surface") 88%, transparent);
     border: 1px solid theme("colors.line");
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  /* pressable elements: instant, physical feedback on the press */
+  .pressable {
+    transition:
+      transform 140ms var(--ease-out),
+      background-color 160ms var(--ease-out),
+      color 160ms var(--ease-out),
+      border-color 160ms var(--ease-out);
+  }
+  .pressable:active {
+    transform: scale(0.97);
   }
 
   .tnum {
     font-family: theme("fontFamily.mono");
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
+    letter-spacing: -0.01em;
   }
 
-  /* label style used for the small cartographic captions */
+  /* small cartographic caption — used sparingly, for section eyebrows only */
   .cap {
     font-family: theme("fontFamily.mono");
-    font-size: theme("fontSize.2xs")[0];
-    letter-spacing: 0.12em;
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     color: theme("colors.ink-faint");
+  }
+
+  /* staggered list/tile entrance */
+  .stagger > * {
+    opacity: 0;
+    transform: translateY(6px);
+    animation: rise 420ms var(--ease-out) forwards;
+  }
+  .stagger > *:nth-child(1) { animation-delay: 20ms; }
+  .stagger > *:nth-child(2) { animation-delay: 60ms; }
+  .stagger > *:nth-child(3) { animation-delay: 100ms; }
+  .stagger > *:nth-child(4) { animation-delay: 140ms; }
+  .stagger > *:nth-child(5) { animation-delay: 180ms; }
+  .stagger > *:nth-child(6) { animation-delay: 220ms; }
+
+  @keyframes rise {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* panel that appears in response to a selection — never pops in from nothing */
+  .enter-pop {
+    animation: enter-pop 240ms var(--ease-out);
+  }
+  @keyframes enter-pop {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.985);
+    }
   }
 }
 
 /* maplibre control chrome, retinted to the palette */
 .maplibregl-ctrl-group {
-  background: theme("colors.surface") !important;
+  background: color-mix(in srgb, theme("colors.surface") 92%, transparent) !important;
   border: 1px solid theme("colors.line") !important;
+  border-radius: 8px !important;
+  box-shadow: var(--shadow-1) !important;
+  backdrop-filter: blur(10px);
 }
 .maplibregl-ctrl-group button + button {
   border-top: 1px solid theme("colors.line") !important;
@@ -82,6 +180,7 @@
 }
 .maplibregl-ctrl-attrib {
   background: rgba(16, 21, 28, 0.8) !important;
+  border-radius: 6px 0 0 0 !important;
 }
 .maplibregl-ctrl-attrib a {
   color: theme("colors.ink-dim") !important;
@@ -111,7 +210,11 @@
   background: theme("colors.ink");
   border: 3px solid theme("colors.accent");
   cursor: ew-resize;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-1);
+  transition: transform 140ms var(--ease-out);
+}
+.ba-range:active::-webkit-slider-thumb {
+  transform: scale(1.12);
 }
 .ba-range::-moz-range-thumb {
   width: 16px;
@@ -123,8 +226,18 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  .stagger > * {
+    opacity: 1;
+    transform: none;
   }
 }

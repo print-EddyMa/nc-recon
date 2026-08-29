@@ -21,7 +21,7 @@ export default function ClassBar({ counts, filter, onToggle, compact }: Props) {
             <div
               key={d.index}
               style={{ width: `${pct}%`, background: on ? d.hex : "transparent" }}
-              className={on ? "" : "opacity-25"}
+              className={`transition-opacity duration-300 ease-out ${on ? "" : "opacity-25"}`}
               title={`${d.label}: ${counts[d.index]}`}
             />
           );
@@ -37,7 +37,7 @@ export default function ClassBar({ counts, filter, onToggle, compact }: Props) {
                 key={d.index}
                 onClick={() => onToggle(d.index)}
                 aria-pressed={on}
-                className={`flex w-full items-center gap-2 whitespace-nowrap text-left text-xs transition-opacity ${
+                className={`flex w-full items-center gap-2 whitespace-nowrap text-left text-xs transition-opacity duration-200 ease-out active:opacity-60 ${
                   on ? "opacity-100" : "opacity-40"
                 } hover:opacity-100`}
               >

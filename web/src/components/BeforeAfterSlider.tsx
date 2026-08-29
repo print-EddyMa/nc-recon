@@ -29,13 +29,13 @@ export default function BeforeAfterSlider({
     <div className="panel px-4 py-3">
       <div className="mb-2 flex items-center justify-between">
         <span className="cap">Imagery</span>
-        <div className="flex overflow-hidden rounded-sm border border-line text-2xs">
+        <div className="flex overflow-hidden rounded-md border border-line text-2xs">
           {(["pre", "post"] as const).map((k) => (
             <button
               key={k}
               onClick={() => onImageryChange(k)}
               aria-pressed={imagery === k}
-              className={`px-2 py-1 font-mono uppercase tracking-wider transition-colors ${
+              className={`px-2 py-1 font-mono uppercase tracking-wider transition-colors duration-200 ease-out active:opacity-70 ${
                 imagery === k
                   ? "bg-accent text-[#05171a]"
                   : "text-ink-dim hover:text-ink"

@@ -60,7 +60,7 @@ export default function Stats({ area, fc, onOpenMap }: Props) {
                 <span className="w-24 text-xs text-ink-dim">{d.label}</span>
                 <span className="relative h-5 flex-1 overflow-hidden rounded-sm bg-surface-2">
                   <span
-                    className="absolute inset-y-0 left-0"
+                    className="absolute inset-y-0 left-0 transition-[width] duration-500 ease-out"
                     style={{ width: `${Math.max(pct, 0.6)}%`, background: d.hex }}
                   />
                 </span>
@@ -77,7 +77,7 @@ export default function Stats({ area, fc, onOpenMap }: Props) {
       <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-ink-faint">
         <button
           onClick={onOpenMap}
-          className="rounded-sm border border-line px-3 py-1.5 text-ink-dim hover:border-accent hover:text-ink"
+          className="pressable rounded-md border border-line px-3 py-1.5 text-ink-dim hover:border-accent hover:text-ink"
         >
           View on map →
         </button>

@@ -13,16 +13,17 @@ export default function HotspotList({ items, activeKey, onPick }: Props) {
   const max = items[0].score || 1;
 
   return (
-    <ol className="space-y-1">
+    <ol className="stagger space-y-0.5">
       {items.map((h, i) => {
         const active = h.key === activeKey;
         return (
           <li key={h.key}>
             <button
               onClick={() => onPick(h)}
-              className={`group flex w-full items-center gap-3 rounded-sm border px-2.5 py-2 text-left transition-colors ${
+              aria-pressed={active}
+              className={`pressable group flex w-full items-center gap-3 rounded-md border px-2.5 py-2 text-left ${
                 active
-                  ? "border-accent bg-surface-2"
+                  ? "border-accent/70 bg-surface-2"
                   : "border-transparent hover:border-line hover:bg-surface-2"
               }`}
             >
@@ -34,14 +35,14 @@ export default function HotspotList({ items, activeKey, onPick }: Props) {
                 </span>
                 <span className="mt-1 block h-1 w-full overflow-hidden rounded-full bg-line">
                   <span
-                    className="block h-full bg-dmg2"
+                    className="block h-full bg-dmg2 transition-[width] duration-500 ease-out"
                     style={{ width: `${(h.score / max) * 100}%` }}
                   />
                 </span>
               </span>
               <span
                 aria-hidden
-                className="text-ink-faint transition-transform group-hover:translate-x-0.5"
+                className="text-ink-faint transition-transform duration-200 ease-out group-hover:translate-x-0.5"
               >
                 ›
               </span>
