@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+# Data & weights (large, not committed)
+pipeline/weights/*
+!pipeline/weights/.gitkeep
+!pipeline/weights/README.md
+pipeline/data/raw/*
+pipeline/data/tiles/*
+!pipeline/data/**/.gitkeep
+# keep sample output committed? no
+pipeline/data/output/*
+!pipeline/data/output/.gitkeep
+# Node
+web/node_modules/
+web/dist/
+web/.vite/
+# OS
+.DS_Store
