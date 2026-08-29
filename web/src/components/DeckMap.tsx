@@ -37,17 +37,6 @@ export default function DeckMap({
   });
   const overlayRef = useRef<MapboxOverlay | null>(null);
 
-  // attach the deck.gl overlay once
-  useEffect(() => {
-    if (!ready || !mapRef.current || overlayRef.current) return;
-    const overlay = new MapboxOverlay({ interleaved: true, layers: [] });
-    mapRef.current.addControl(overlay as unknown as IControl);
-    overlayRef.current = overlay;
-    return () => {
-      overlayRef.current = null;
-    };
-  }, [ready, mapRef]);
-
   // pre/post raster imagery sources (silently absent until tiles are generated)
   useEffect(() => {
     const map = mapRef.current;
@@ -162,9 +151,40 @@ export default function DeckMap({
     ];
   }, [fc, assessment, selectedId, filter, onSelect]);
 
+  // Create the deck.gl overlay once the map is ready, and keep its layers in
+  // sync. Both concerns live here so the overlay always gets the current layers
+  // even if `layers` was already stable when `ready` flipped true.
   useEffect(() => {
-    overlayRef.current?.setProps({ layers });
-  }, [layers]);
+    if (!ready || !mapRef.current) return;
+    if (!overlayRef.current) {
+      overlayRef.current = new MapboxOverlay({ interleaved: false, layers: [] });
+      mapRef.current.addControl(overlayRef.current as unknown as IControl);
+    }
+    overlayRef.current.setProps({ layers });
+  }, [ready, mapRef, layers]);
 
-  return <div ref={containerRef} className="absolute inset-0" aria-label={`Damage map for ${area.name}`} />;
+  useEffect(
+    () => () => {
+      const map = mapRef.current;
+      if (map && overlayRef.current) {
+        try {
+          map.removeControl(overlayRef.current as unknown as IControl);
+        } catch {
+          /* map already torn down */
+        }
+      }
+      overlayRef.current = null;
+    },
+    [mapRef],
+  );
+
+  // NB: maplibre-gl.css forces `.maplibregl-map { position: relative }`, which
+  // cancels `absolute inset-0` and collapses the box — so size it explicitly.
+  return (
+    <div
+      ref={containerRef}
+      className="h-full w-full"
+      aria-label={`Damage map for ${area.name}`}
+    />
+  );
 }

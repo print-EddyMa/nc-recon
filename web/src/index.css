@@ -47,8 +47,10 @@
 
 @layer components {
   .panel {
-    background: theme("colors.surface");
+    background: color-mix(in srgb, theme("colors.surface") 88%, transparent);
     border: 1px solid theme("colors.line");
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 
   .tnum {

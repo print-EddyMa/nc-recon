@@ -60,7 +60,7 @@ export default function MapView({ area, fc }: Props) {
       />
 
       {/* left: hardest-hit + selection */}
-      <aside className="absolute left-4 top-4 flex max-h-[calc(100%-2rem)] w-[320px] flex-col gap-3 overflow-y-auto">
+      <aside className="absolute left-4 top-4 z-20 flex max-h-[calc(100%-2rem)] w-[320px] flex-col gap-3 overflow-y-auto">
         <section className="panel px-3 py-3">
           <div className="mb-2 flex items-baseline justify-between">
             <h2 className="font-display text-sm text-ink">Hardest-hit clusters</h2>
@@ -83,7 +83,7 @@ export default function MapView({ area, fc }: Props) {
       </aside>
 
       {/* right: filter + counts */}
-      <aside className="absolute right-4 top-4 w-[288px]">
+      <aside className="absolute right-4 top-4 z-20 w-[288px]">
         <section className="panel px-3 py-3">
           <div className="mb-2 flex items-baseline justify-between">
             <h2 className="font-display text-sm text-ink">{area.name}</h2>
@@ -106,7 +106,7 @@ export default function MapView({ area, fc }: Props) {
       </aside>
 
       {/* bottom: signature slider */}
-      <div className="absolute bottom-4 left-1/2 w-[min(560px,calc(100%-2rem))] -translate-x-1/2">
+      <div className="absolute bottom-4 left-1/2 z-20 w-[min(560px,calc(100%-2rem))] -translate-x-1/2">
         <BeforeAfterSlider
           value={assessment}
           onChange={setAssessment}

@@ -1,32 +1,31 @@
-# React + TypeScript + Vite
+# TerraTriage — web
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Control-room damage map for the TerraTriage pipeline. React + TypeScript + Vite,
+Tailwind, MapLibre GL + deck.gl.
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run sync-data     # copy pipeline/data/output/*.geojson into public/data/
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+`npm run build` → `dist/`. `npm run shoot` → headless screenshots (needs Chrome
+at the macOS default path).
+
+## Data
+
+- `public/data/<area>.geojson` — Phase A output (the contract). Regenerate with
+  `pipeline/scripts/run.py infer` then `npm run sync-data`.
+- `public/tiles/<area>/<pre|post>/z/x/y.jpg` — pre/post imagery tiles.
+  Regenerate with `pipeline/scripts/make_tiles.py`. Git-ignored by default
+  (committed for the demo).
+
+## Notes
+
+- **maplibre-gl is pinned to v5.** deck.gl 9.3's `@deck.gl/mapbox` `MapboxOverlay`
+  does not render with maplibre-gl v6 (no tiles requested, overlay silent). v5 is
+  the supported pairing.
+- deck.gl overlay runs in **overlaid** (not interleaved) mode — its own canvas
+  above the map — which is robust across maplibre versions.
+- Map overlay panels are `z-20`; `.panel` uses a translucent bg + backdrop-blur
+  so they stay legible over bright post-event imagery.
