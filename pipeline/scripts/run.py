@@ -58,11 +58,15 @@ def cmd_fetch(a):
 def cmd_infer(a):
     from terratriage import predict_footprints as pf
 
+    backend = a.backend
+    if backend == "auto":
+        backend = "keras" if os.path.exists(a.cls_weights) else "heuristic"
+        print(f"[run] backend=auto -> {backend}")
     pre, post = _pair(a.area)
     pf.run(
         pre, post, os.path.join(OUT, f"{a.area}.geojson"),
         event=a.event, area=a.area, cache_dir=CACHE,
-        backend=a.backend, cls_weights=a.cls_weights,
+        backend=backend, cls_weights=a.cls_weights,
         pre_meta=_meta(pre), post_meta=_meta(post), limit=a.limit,
     )
 
@@ -102,7 +106,10 @@ def main():
     i = sub.add_parser("infer")
     i.add_argument("--event", default="HurricaneHelene-Oct24")
     i.add_argument("--area", required=True)
-    i.add_argument("--backend", choices=["heuristic", "keras"], default="heuristic")
+    i.add_argument(
+        "--backend", choices=["auto", "heuristic", "keras"], default="auto",
+        help="auto: xView2 baseline CNN if classification.hdf5 is present, else heuristic",
+    )
     i.add_argument("--cls-weights", default=os.path.join(ROOT, "weights", "classification.hdf5"))
     i.add_argument("--limit", type=int, default=None)
     i.set_defaults(fn=cmd_infer)

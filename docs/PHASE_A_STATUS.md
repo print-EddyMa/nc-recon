@@ -3,11 +3,16 @@
 ## TL;DR
 
 The pipeline runs end-to-end on **real Hurricane Helene Maxar imagery** and emits
-contract-compliant GeoJSON for Old Fort and Spruce Pine, NC. The damage classes
-currently come from a **change-detection heuristic**, not a trained CNN, because
-both published xView2 model releases are unusable as-is from this machine. Every
-output is labelled with which scorer produced it (`model` field in the GeoJSON
-`properties`), so nothing is passed off as more than it is.
+contract-compliant GeoJSON for Old Fort and Spruce Pine, NC. Damage classes now
+come from the **xView2 CMU baseline classifier** (ResNet50-v1 + CNN head, trained
+on xBD) — its weights-only Keras 2.2.5 HDF5 was successfully reconstructed and
+loaded (see "Baseline classifier — RESOLVED" below). A change-detection heuristic
+remains as an offline fallback. Every output is labelled with which scorer
+produced it (`model` field in the GeoJSON `properties`).
+
+Current outputs (auto backend = keras):
+- Old Fort — 766 buildings: 345 none / 275 minor / 78 major / 68 destroyed (19% severe)
+- Spruce Pine — 139 buildings: 104 / 33 / 1 / 1 (1% severe)
 
 ## What works
 
@@ -50,24 +55,29 @@ Also: even with the weights, the original repo needs `torch==1.1` + NVIDIA
 CPU-only ARM Mac the `fast` preset (2 models) is the only practical one, ~minutes
 per 1024 tile.
 
-### 2. xView2 baseline classifier — framework/arch mismatch
+### 2. xView2 baseline classifier — RESOLVED
 
-`weights/classification.hdf5` (474 MB) downloaded fine from the live GitHub
-release. It is **Keras 2.2.5, weights-only** (no architecture in the file). The
-model is `ResNet50(imagenet, frozen) ‖ 3-conv CNN → concat → Dense[2024,524,124,4]`.
+`weights/classification.hdf5` (474 MB) is **Keras 2.2.5, weights-only**. The model
+is `ResNet50-v1(imagenet, frozen) ‖ 3-conv CNN → concat → Dense[2024,524,124,4]`,
+input a single 128×128 **post**-disaster crop, `relu` output + argmax.
 
-Blocker: the file's ResNet50 uses **v1** block structure and old layer names
-(`res2a_branch2a`, `bn_conv1`, …); TF 2.15's `keras.applications.ResNet50` is
-**v1.5** (stride moved to the 3×3) with new names (`conv2_block1_1_conv`, …).
-`load_weights(by_name=False)` needs an exact topology match; `by_name=True`
-misaligns and silently drops most tensors. Reconstruction attempt in
-`src/terratriage/_keras_infer.py`.
+The blocker was that TF 2.15's `keras.applications.ResNet50` is **v1.5** (stride on
+the 3×3, new layer names), incompatible with the file's **v1** ResNet50
+(`res2a_branch2a`, `bn_conv1`, stride on the first 1×1, every conv has a bias).
 
-**To finish it:** hand-build ResNet50-**v1** in `_keras_infer.py` (stride on the
-first 1×1 of each stage's conv block; layer names matching the h5 groups) and
-load with `by_name=True`. ~1–2 h, mechanical. Not done because Phase B is the
-bigger risk to the deliverable and the heuristic keeps the pipeline honest and
-working in the meantime.
+Fixed by hand-rebuilding ResNet50-v1 in `src/terratriage/_keras_infer.py`,
+name-for-name against the 106 HDF5 sublayers, wrapped as a submodel `resnet50`,
+loaded with `by_name=True`. `_keras_verify.py` confirms every checked tensor
+(stem, stage-3/5 convs, BN, custom convs, all 4 Dense) matches the HDF5 exactly
+(maxΔ = 0). Runs on CPU: ~60 s for 766 buildings.
+
+Preprocessing replicates `model/damage_inference.py`: `ImageDataGenerator(rescale=1.4)`
+on raw pixels, fed to both branches (no caffe `preprocess_input`).
+
+Caveats: this is the *baseline* (single-image post-only classifier), not the
+1st-place Siamese ensemble; trained on xBD, so a 2022→2024 cross-season pre/post
+pair is off-distribution. Still, it is the genuine trained model, faithfully
+loaded.
 
 ### 3. xView2 baseline localisation — Chainer
 
@@ -79,11 +89,13 @@ NumPy/torch U-Net forward pass if a learned localiser is ever wanted.
 
 ## Recommended next steps (in order)
 
-1. **Get the 1st-place zip** onto the machine out-of-band → segmentation path
-   works, best accuracy.
-2. Else **finish the baseline classifier** (ResNet50-v1 rebuild) → real trained
-   damage classes on OSM footprints.
-3. Else **fine-tune** `Dhyanesh18/xview2-damage-assesment-siamese-unet` (modern
-   PyTorch Siamese U-Net, MPS-capable) on an xBD flood subset — few hours.
-4. Recalibrate the heuristic against the validation maps regardless; it's the
-   safety net.
+1. ~~Finish the baseline classifier~~ — **DONE**, it's the default backend now.
+2. **Get the 1st-place zip** onto the machine out-of-band → the Siamese
+   segmentation ensemble (`scripts/run.py infer-seg`) lights up; highest accuracy,
+   uses pre *and* post. Architectures already ported.
+3. Optionally **fine-tune** `Dhyanesh18/xview2-damage-assesment-siamese-unet`
+   (modern PyTorch Siamese U-Net, MPS-capable) on an xBD flood subset for a
+   pre/post model without the framework baggage — few hours.
+4. Compare the baseline-classifier map against news coverage of Old Fort /
+   Spruce Pine (validation HTMLs in `data/output/`) and tune the crop size /
+   `pad` in `classify.extract_crops` if footprints look mis-cropped.

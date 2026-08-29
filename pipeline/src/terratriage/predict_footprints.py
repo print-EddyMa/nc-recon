@@ -56,12 +56,18 @@ def run(
         if backend == "keras" else
         "heuristic:change-detection (OSM footprints)"
     )
+    notes = (
+        "Damage from the xView2 CMU baseline classifier (ResNet50-v1 + CNN head), "
+        "trained on xBD; a per-building post-image classifier, not the 1st-place "
+        "ensemble. Footprints are OpenStreetMap."
+        if backend == "keras" else
+        "Damage from a change-detection heuristic, not a trained CNN. Footprints are OSM."
+    )
     meta = contract.RunMeta(
         event=event, area=area, model=model_name,
         pre_image=contract.ImageMeta(**(pre_meta or {"date": "unknown"})),
         post_image=contract.ImageMeta(**(post_meta or {"date": "unknown"})),
-        notes=None if backend == "keras" else
-        "Damage from a change-detection heuristic, not a trained CNN. Footprints are OSM.",
+        notes=notes,
     )
     fc = contract.collection(features, meta)
     fc["properties"]["runtime_sec"] = round(time.time() - t0, 1)

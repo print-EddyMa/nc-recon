@@ -57,9 +57,9 @@ Short version:
 | Maxar Helene imagery download | ✅ working (Old Fort, Spruce Pine, pre+post) |
 | Tiling + geo-referencing + polygonisation + contract | ✅ working, tested |
 | OSM footprints | ✅ working (766 buildings Old Fort, 139 Spruce Pine) |
-| Heuristic damage scorer | ✅ working end-to-end on real imagery |
-| xView2 **1st-place** weights | ⛔ `vdurnov.s3` returns AccessDenied; Wayback copy exists but archive.org unreachable here. Architecture ported & ready if the zip turns up. |
-| xView2 **baseline** classifier weights | ⚠️ downloaded (`weights/classification.hdf5`), but it's Keras 2.2.5 weights-only with a ResNet50 **v1** whose layer layout doesn't match TF2's `keras.applications.ResNet50` (v1.5). Loader in `_keras_infer.py`; needs a hand-built ResNet50-v1 to finish. |
+| xView2 **baseline** damage classifier | ✅ **working** — Keras 2.2.5 weights-only HDF5, ResNet50-v1 rebuilt name-for-name in `_keras_infer.py`, verified tensor-exact (`_keras_verify.py`). Default backend. |
+| Heuristic damage scorer | ✅ working — offline fallback |
+| xView2 **1st-place** weights | ⛔ `vdurnov.s3` AccessDenied; Wayback copy exists but archive.org unreachable here. Architectures ported (`models/`) & wired (`infer-seg`) — drop the zip in `weights/` to activate. |
 | xView2 **baseline** localisation weights | ⚠️ `weights/localization.h5` is a **Chainer** `save_npz` (dead framework) — superseded by OSM footprints. |
 
 ## TF env for `--backend keras`
