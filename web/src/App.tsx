@@ -9,6 +9,7 @@ import type { IngestState } from "./lib/useAssess";
 import EventPicker from "./components/EventPicker";
 import CommandMenu from "./components/CommandMenu";
 import ErrorBoundary from "./components/ErrorBoundary";
+import ShortcutsDialog from "./components/ShortcutsDialog";
 import { Toaster } from "sonner";
 import Landing from "./screens/Landing";
 import MapView from "./screens/MapView";
@@ -201,6 +202,7 @@ export default function App() {
           },
         }}
       />
+      <ShortcutsDialog onNav={(s) => go(s)} />
       <CommandMenu
         open={cmdkOpen}
         onOpenChange={setCmdkOpen}

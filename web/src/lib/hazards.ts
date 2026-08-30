@@ -11,6 +11,7 @@
  * Sentinel-1 radar is a documented stub — it needs Copernicus credentials.
  */
 import type { HazardType } from "./types";
+import { getSetting } from "./settings";
 
 export interface HazardPointProps {
   id: string;
@@ -161,7 +162,7 @@ export async function gdacsEvents(): Promise<HazardResult> {
 // NASA FIRMS — active fire hotspots, needs a free key
 // --------------------------------------------------------------------------- //
 export async function firmsFires(): Promise<HazardResult> {
-  const key = import.meta.env.VITE_FIRMS_KEY;
+  const key = getSetting("firmsKey") || import.meta.env.VITE_FIRMS_KEY;
   const now = Date.now();
   if (!key) {
     return {
@@ -169,7 +170,7 @@ export async function firmsFires(): Promise<HazardResult> {
       stale: false,
       disabled: true,
       reason:
-        "Add a free NASA FIRMS map key as VITE_FIRMS_KEY to enable near-real-time active-fire hotspots.",
+        "Add a free NASA FIRMS map key (Layers → key icon) to enable near-real-time active-fire hotspots.",
       source: "NASA FIRMS · not configured",
       fetchedAt: now,
     };

@@ -13,6 +13,7 @@ import {
 } from "../lib/hazards";
 import HazardIcon from "../components/HazardIcon";
 import AssessPanel from "../components/AssessPanel";
+import { useSettings } from "../lib/settings";
 import type { CatalogEvent } from "../lib/catalog";
 import type { IngestState } from "../lib/useAssess";
 import type { EventConfig } from "../lib/types";
@@ -55,6 +56,8 @@ export default function LiveMonitor({
   const [multi, setMulti] = useState<HazardResult | null>(null);
   const [fires, setFires] = useState<HazardResult | null>(null);
   const radar = useMemo(() => sentinel1(), []);
+  const { settings, set } = useSettings();
+  const [keyDraft, setKeyDraft] = useState("");
   const [on, setOn] = useState<Record<LayerId, boolean>>({
     quakes: true,
     multi: true,
@@ -65,8 +68,12 @@ export default function LiveMonitor({
   useEffect(() => {
     usgsQuakes().then(setQuakes);
     gdacsEvents().then(setMulti);
-    firmsFires().then(setFires);
   }, []);
+  // FIRMS re-fetches whenever the key changes
+  useEffect(() => {
+    setFires(null);
+    firmsFires().then(setFires);
+  }, [settings.firmsKey]);
 
   const results: Record<LayerId, HazardResult | null> = {
     quakes,
@@ -253,6 +260,44 @@ export default function LiveMonitor({
               );
             })}
           </ul>
+
+          {fires && fires.disabled && !settings.firmsKey && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                set("firmsKey", keyDraft.trim());
+              }}
+              className="mt-2.5 border-t border-line pt-2.5"
+            >
+              <label className="cap mb-1 block">NASA FIRMS map key</label>
+              <div className="flex gap-1.5">
+                <input
+                  value={keyDraft}
+                  onChange={(e) => setKeyDraft(e.target.value)}
+                  placeholder="paste key"
+                  className="min-w-0 flex-1 rounded-md border border-line bg-canvas px-2 py-1 text-2xs text-ink outline-none placeholder:text-ink-faint focus-visible:border-accent"
+                />
+                <button
+                  type="submit"
+                  disabled={!keyDraft.trim()}
+                  className="pressable rounded-md border border-line px-2 py-1 text-2xs text-ink-dim hover:text-ink disabled:opacity-40"
+                >
+                  save
+                </button>
+              </div>
+              <p className="mt-1 text-2xs leading-relaxed text-ink-faint">
+                Free at firms.modaps.eosdis.nasa.gov/api. Stored in this browser only.
+              </p>
+            </form>
+          )}
+          {settings.firmsKey && (
+            <button
+              onClick={() => set("firmsKey", undefined)}
+              className="pressable mt-2 border-t border-line pt-2 text-2xs text-ink-faint hover:text-ink"
+            >
+              remove FIRMS key
+            </button>
+          )}
           {radar.reason && on.radar === false && (
             <p className="mt-2 border-t border-line pt-2 text-2xs leading-relaxed text-ink-faint">
               {radar.reason}
