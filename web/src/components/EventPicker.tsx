@@ -37,7 +37,7 @@ export default function EventPicker({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const current = events.find((e) => e.id === value) ?? events[0];
+  const current = events.find((e) => e.id === value) ?? null;
   const ingestedIds = useMemo(() => new Set(events.map((e) => e.id)), [events]);
 
   const s = q.trim().toLowerCase();
@@ -96,10 +96,12 @@ export default function EventPicker({
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="pressable flex items-center gap-2 rounded-md border border-line bg-surface-2 px-2.5 py-1.5 text-xs text-ink"
+        className={`pressable flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs ${
+          current ? "border-line bg-surface-2 text-ink" : "border-accent/50 bg-accent/10 text-ink"
+        }`}
       >
         <HazardIcon hazard={current?.hazard ?? "other"} size={13} className="text-ink-dim" />
-        <span className="max-w-[13rem] truncate">{current?.name ?? "Select event"}</span>
+        <span className="max-w-[13rem] truncate">{current?.name ?? "Choose a disaster"}</span>
         <svg width="10" height="10" viewBox="0 0 12 12" className="text-ink-faint" aria-hidden>
           <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
         </svg>

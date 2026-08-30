@@ -25,6 +25,7 @@ interface Props {
   onOpenEvent: (id: string) => void;
   onNavMap: () => void;
   onIngest: (ev: { id: string; name: string; center: [number, number] | null }) => void;
+  onOpenAbout: () => void;
 }
 
 type LayerId = "quakes" | "multi" | "fires" | "radar";
@@ -44,6 +45,7 @@ export default function LiveMonitor({
   onOpenEvent,
   onNavMap,
   onIngest,
+  onOpenAbout,
 }: Props) {
   const { containerRef, mapRef, ready } = useMapLibre({ center: [10, 25], zoom: 1.4 });
   const overlayRef = useRef<MapboxOverlay | null>(null);
@@ -313,8 +315,9 @@ export default function LiveMonitor({
         </section>
       </aside>
 
-      {/* legend of ingested events, so the two halves of the app stay connected */}
-      <div className="absolute bottom-3 left-3 z-20 hidden max-w-[calc(100vw-1.5rem)] gap-2 sm:flex">
+      {/* bottom-left: jump straight to an already-assessed event, + About */}
+      <div className="absolute bottom-3 left-3 z-20 hidden max-w-[calc(100vw-1.5rem)] flex-wrap items-center gap-2 sm:flex">
+        {events.length > 0 && <span className="cap mr-0.5">assessed</span>}
         {events.map((e) => (
           <button
             key={e.id}
@@ -328,6 +331,12 @@ export default function LiveMonitor({
             {e.name}
           </button>
         ))}
+        <button
+          onClick={onOpenAbout}
+          className="pressable panel px-2.5 py-1.5 text-2xs text-ink-faint hover:text-ink"
+        >
+          About TerraTriage
+        </button>
       </div>
     </div>
   );

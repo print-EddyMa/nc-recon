@@ -90,7 +90,7 @@ export default function Landing({
                 onClick={onEnter}
                 className="pressable group inline-flex items-center gap-2.5 rounded-full bg-accent py-2.5 pl-5 pr-2.5 text-sm font-semibold text-[#05171a]"
               >
-                Open the damage map
+                Open the live monitor
                 <span className="grid h-7 w-7 place-items-center rounded-full bg-[#05171a]/12 transition-transform duration-200 ease-out group-hover:translate-x-0.5">
                   <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
                     <path

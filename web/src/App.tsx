@@ -8,6 +8,7 @@ import type { CatalogEvent } from "./lib/catalog";
 import type { IngestState } from "./lib/useAssess";
 import EventPicker from "./components/EventPicker";
 import CommandMenu from "./components/CommandMenu";
+import { Toaster } from "sonner";
 import Landing from "./screens/Landing";
 import MapView from "./screens/MapView";
 import LiveMonitor from "./screens/LiveMonitor";
@@ -17,7 +18,9 @@ import Stats from "./screens/Stats";
 type Screen = "landing" | "map" | "live" | "review" | "stats";
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("landing");
+  // the app opens on the global Live Monitor — no disaster is selected until the
+  // user picks one (from the monitor, the picker, or ⌘K)
+  const [screen, setScreen] = useState<Screen>("live");
   const [events, setEvents] = useState<EventConfig[] | null>(null);
   const [eventId, setEventId] = useState<string | null>(null);
   const [areaId, setAreaId] = useState<string | null>(null);
@@ -30,14 +33,14 @@ export default function App() {
       loadEvents()
         .then((evs) => {
           setEvents(evs);
-          setEventId((cur) => selectId ?? cur ?? evs[0]?.id ?? null);
-          const target = evs.find((e) => e.id === (selectId ?? eventId));
-          setAreaId((cur) =>
-            selectId ? (target?.areas[0]?.id ?? null) : (cur ?? evs[0]?.areas[0]?.id ?? null),
-          );
+          if (selectId) {
+            const target = evs.find((e) => e.id === selectId);
+            setEventId(selectId);
+            setAreaId(target?.areas[0]?.id ?? null);
+          }
         })
         .catch((e) => setError(String(e))),
-    [eventId],
+    [],
   );
 
   // load the event registry once
@@ -96,9 +99,11 @@ export default function App() {
       setEventId(id);
       const ev = events ? eventById(events, id) : null;
       setAreaId(ev?.areas[0]?.id ?? null);
+      setScreen("map");
     },
     [events],
   );
+  const hasEvent = !!event && !!area;
 
   // shared "ingest a Maxar catalogue event" flow — used by the top-bar picker,
   // the landing picker, and the Live Monitor's Assess panel
@@ -124,7 +129,7 @@ export default function App() {
       </div>
     );
   }
-  if (!events || !event || !area) {
+  if (!events) {
     return (
       <div className="grid h-full place-items-center">
         <div className="flex items-center gap-2.5 text-ink-dim">
@@ -140,43 +145,66 @@ export default function App() {
     );
   }
 
+  // event screens fall back to the monitor until a disaster is chosen
+  const effScreen: Screen =
+    !hasEvent && (screen === "map" || screen === "review" || screen === "stats")
+      ? "live"
+      : screen;
+
+  const showcase = event ?? events[0] ?? null;
+
   return (
     <>
       <a href="#main" className="skip-link">
         Skip to content
       </a>
+      <Toaster
+        theme="dark"
+        position="bottom-right"
+        toastOptions={{
+          className: "tt-toast",
+          style: {
+            background: "#161d26",
+            border: "1px solid #28313d",
+            color: "#ccd5df",
+            fontFamily: '"Geist", ui-sans-serif, system-ui, sans-serif',
+            fontSize: "13px",
+          },
+        }}
+      />
       <CommandMenu
         open={cmdkOpen}
         onOpenChange={setCmdkOpen}
         events={events}
         catalog={catalog}
-        currentEventId={event.id}
+        currentEventId={eventId ?? ""}
         online={online}
         jobs={jobs}
         onNav={go}
         onPickEvent={pickEvent}
         onIngest={ingest}
       />
-      {screen === "landing" ? (
+      {effScreen === "landing" && showcase ? (
         <Landing
-          event={event}
-          area={area}
-          fc={fc}
+          event={showcase}
+          area={area ?? showcase.areas[0]}
+          fc={area ? fc : (cache[showcase.areas[0]?.id] ?? null)}
           events={events}
           catalog={catalog}
           online={online}
           jobs={jobs}
           onPickEvent={pickEvent}
           onIngest={ingest}
-          onEnter={() => go("map")}
+          onEnter={() => go("live")}
         />
       ) : (
         <div className="flex h-full flex-col">
           <TopBar
-            screen={screen}
+            screen={effScreen}
+            hasEvent={hasEvent}
             events={events}
             event={event}
-            areaId={area.id}
+            areaId={area?.id ?? null}
             reviewOpen={reviewOpen}
             catalog={catalog}
             online={online}
@@ -196,8 +224,10 @@ export default function App() {
             </div>
           )}
           <main id="main" className="relative flex-1 overflow-hidden">
-            {screen === "map" && <MapView event={event} area={area} fc={fc} />}
-            {screen === "live" && (
+            {effScreen === "map" && event && area && (
+              <MapView event={event} area={area} fc={fc} />
+            )}
+            {effScreen === "live" && (
               <LiveMonitor
                 events={events}
                 catalog={catalog}
@@ -206,12 +236,13 @@ export default function App() {
                 onOpenEvent={pickEvent}
                 onNavMap={() => go("map")}
                 onIngest={ingest}
+                onOpenAbout={() => go("landing")}
               />
             )}
-            {screen === "review" && (
+            {effScreen === "review" && area && (
               <ReviewQueue area={area} fc={fc} onOpenMap={() => go("map")} />
             )}
-            {screen === "stats" && (
+            {effScreen === "stats" && event && area && (
               <Stats event={event} area={area} fc={fc} onOpenMap={() => go("map")} />
             )}
           </main>
@@ -226,19 +257,25 @@ export default function App() {
  * transition and no animation library. */
 function NavTabs({
   screen,
+  hasEvent,
   reviewOpen,
   onNav,
 }: {
   screen: Screen;
+  hasEvent: boolean;
   reviewOpen: number;
   onNav: (s: Screen) => void;
 }) {
-  const tabs = [
-    { id: "map", label: "Damage map" },
-    { id: "live", label: "Live monitor" },
-    { id: "review", label: "Review", badge: reviewOpen },
-    { id: "stats", label: "Summary" },
-  ] as const;
+  const tabs = (
+    hasEvent
+      ? [
+          { id: "live", label: "Live monitor" },
+          { id: "map", label: "Damage map" },
+          { id: "review", label: "Review", badge: reviewOpen },
+          { id: "stats", label: "Summary" },
+        ]
+      : [{ id: "live", label: "Live monitor" }]
+  ) as { id: Screen; label: string; badge?: number }[];
   const navRef = useRef<HTMLElement | null>(null);
   const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [ind, setInd] = useState<{ x: number; w: number } | null>(null);
@@ -251,7 +288,7 @@ function NavTabs({
       return;
     }
     setInd({ x: el.offsetLeft, w: el.offsetWidth });
-  }, [screen, reviewOpen]);
+  }, [screen, reviewOpen, hasEvent]);
 
   return (
     <nav ref={navRef} className="relative flex text-sm">
@@ -288,6 +325,7 @@ function NavTabs({
 
 function TopBar({
   screen,
+  hasEvent,
   events,
   event,
   areaId,
@@ -302,9 +340,10 @@ function TopBar({
   onOpenSearch,
 }: {
   screen: Screen;
+  hasEvent: boolean;
   events: EventConfig[];
-  event: EventConfig;
-  areaId: string;
+  event: EventConfig | null;
+  areaId: string | null;
   reviewOpen: number;
   catalog: CatalogEvent[];
   online: boolean | null;
@@ -318,7 +357,7 @@ function TopBar({
   return (
     <header className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-line bg-surface px-4 py-2">
       <button
-        onClick={() => onNav("landing")}
+        onClick={() => onNav("live")}
         className="pressable flex items-center gap-2 text-sm font-semibold tracking-tight"
       >
         <span className="grid h-6 w-6 place-items-center rounded-md bg-accent text-[#05171a]">
@@ -330,7 +369,21 @@ function TopBar({
         <span className="font-display">TerraTriage</span>
       </button>
 
-      <NavTabs screen={screen} reviewOpen={reviewOpen} onNav={onNav} />
+      <NavTabs screen={screen} hasEvent={hasEvent} reviewOpen={reviewOpen} onNav={onNav} />
+
+      {hasEvent && event && (
+        <span className="hidden items-center gap-1.5 text-xs text-ink-faint md:flex">
+          <span className="text-ink-dim">viewing</span>
+          <span className="text-ink">{event.name}</span>
+          <button
+            onClick={() => onNav("live")}
+            className="pressable rounded-sm px-1 text-ink-faint hover:text-ink"
+            aria-label="Back to global monitor"
+          >
+            ✕
+          </button>
+        </span>
+      )}
 
       <div className="ml-auto flex items-center gap-2">
         <button
@@ -348,13 +401,13 @@ function TopBar({
         <EventPicker
           events={events}
           catalog={catalog}
-          value={event.id}
+          value={event?.id ?? ""}
           online={online}
           jobs={jobs}
           onChange={onPickEvent}
           onIngest={onIngest}
         />
-        {event.areas.length > 1 && (
+        {event && event.areas.length > 1 && (
           <div className="flex overflow-hidden rounded-md border border-line">
             {event.areas.map((a) => (
               <button
