@@ -338,8 +338,16 @@ export default function LiveMonitor({
                   <span
                     className="mt-1 h-2 w-2 shrink-0 rounded-full"
                     style={{
-                      background: `hsl(${20 - it.severity * 8} 70% ${60 - it.severity * 8}%)`,
+                      background:
+                        it.severity >= 3
+                          ? "#d1495b"
+                          : it.severity === 2
+                            ? "#e8894a"
+                            : it.severity === 1
+                              ? "#f5d76e"
+                              : "#5a7c86",
                     }}
+                    title={["low", "moderate", "high", "severe"][it.severity] ?? "low"}
                   />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-xs text-ink">{it.title}</span>

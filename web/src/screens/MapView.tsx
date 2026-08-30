@@ -27,6 +27,8 @@ export default function MapView({ area, fc }: Props) {
   const { decisions } = useReviewDecisions(area.id);
   const overrides = useMemo(() => overrideClasses(decisions), [decisions]);
   const reviewedCount = useMemo(() => Object.keys(decisions).length, [decisions]);
+  // side panels are collapsible below lg so the map is usable on a small screen
+  const [panelsOpen, setPanelsOpen] = useState(true);
 
   // reset per-area
   useEffect(() => {
@@ -66,8 +68,30 @@ export default function MapView({ area, fc }: Props) {
         flyTarget={flyTarget}
       />
 
+      {/* collapse toggle — only matters below lg */}
+      <button
+        onClick={() => setPanelsOpen((v) => !v)}
+        className="pressable panel absolute left-3 top-3 z-30 flex items-center gap-1.5 px-2.5 py-1.5 text-2xs text-ink-dim hover:text-ink lg:hidden"
+        aria-expanded={panelsOpen}
+      >
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
+          <path
+            d={panelsOpen ? "M4 6l4 4 4-4" : "M6 4l4 4-4 4"}
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        {panelsOpen ? "Hide panels" : "Panels"}
+      </button>
+
       {/* left: hardest-hit + selection */}
-      <aside className="absolute left-3 top-3 z-20 flex max-h-[calc(100%-8.5rem)] w-[19rem] max-w-[calc(100vw-1.5rem)] flex-col gap-3 overflow-y-auto sm:left-4 sm:top-4">
+      <aside
+        className={`absolute left-3 top-3 z-20 flex max-h-[calc(100%-8.5rem)] w-[19rem] max-w-[calc(100vw-1.5rem)] flex-col gap-3 overflow-y-auto sm:left-4 sm:top-4 lg:!flex ${
+          panelsOpen ? "flex pt-11 lg:pt-0" : "hidden"
+        }`}
+      >
         <section className="panel px-3.5 py-3.5">
           <div className="mb-2.5 flex items-baseline justify-between">
             <h2 className="section-title">Hardest-hit clusters</h2>
@@ -90,7 +114,11 @@ export default function MapView({ area, fc }: Props) {
       </aside>
 
       {/* right: filter + counts */}
-      <aside className="absolute right-3 top-3 z-20 hidden w-[18rem] max-w-[calc(100vw-1.5rem)] md:block lg:right-4 lg:top-4">
+      <aside
+        className={`absolute right-3 top-3 z-20 hidden w-[18rem] max-w-[calc(100vw-1.5rem)] md:block lg:right-4 lg:top-4 ${
+          panelsOpen ? "" : "md:!hidden lg:!block"
+        }`}
+      >
         <section className="panel px-3.5 py-3.5">
           <div className="mb-2.5 flex items-baseline justify-between">
             <h2 className="section-title">{area.name}</h2>

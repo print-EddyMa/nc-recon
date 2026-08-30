@@ -46,6 +46,17 @@ export default function AssessPanel({
 
   const top = matches.filter((m) => m.score >= 0.35).slice(0, 6);
 
+  // C4 bridge: a strong match whose imagery is genuinely recent — "post-event
+  // imagery just published near something you're tracking"
+  const fresh = matches.find(
+    (m) =>
+      !m.ingested &&
+      m.type_match &&
+      m.imagery_age_days != null &&
+      m.imagery_age_days <= 120 &&
+      m.distance_km <= 200,
+  );
+
   const searchResults = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return [];
@@ -129,6 +140,23 @@ export default function AssessPanel({
         Live USGS and GDACS hazards matched to Maxar Open Data imagery. Ingest one
         to run the damage pipeline for that location.
       </p>
+
+      {fresh && (
+        <div className="mb-2.5 rounded-md border border-accent/50 bg-accent/10 px-2.5 py-2">
+          <div className="text-2xs font-medium text-accent">Fresh imagery available</div>
+          <p className="mt-0.5 text-2xs leading-relaxed text-ink-dim">
+            <span className="text-ink">{fresh.name}</span> — post-event imagery from{" "}
+            {fresh.capture_dates?.[fresh.capture_dates.length - 1]}, {fresh.distance_km.toFixed(0)} km
+            from an active {fresh.hazard_type ?? "hazard"}.
+          </p>
+          <button
+            onClick={() => act({ id: fresh.event, name: fresh.name, center: fresh.center })}
+            className="pressable mt-1.5 rounded-md border border-accent/60 px-2 py-0.5 text-2xs text-ink hover:bg-accent hover:text-[#05171a]"
+          >
+            {online ? "Ingest now" : "Show commands"}
+          </button>
+        </div>
+      )}
 
       {top.length > 0 && (
         <ol className="space-y-0.5">
