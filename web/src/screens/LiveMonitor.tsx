@@ -302,27 +302,21 @@ export default function LiveMonitor({
                 e.preventDefault();
                 set("firmsKey", keyDraft.trim());
               }}
-              className="mt-2.5 border-t border-line pt-2.5"
+              className="mt-2.5 flex gap-1.5 border-t border-line pt-2.5"
             >
-              <label className="cap mb-1 block">NASA FIRMS map key</label>
-              <div className="flex gap-1.5">
-                <input
-                  value={keyDraft}
-                  onChange={(e) => setKeyDraft(e.target.value)}
-                  placeholder="paste key"
-                  className="min-w-0 flex-1 rounded-md border border-line bg-canvas px-2 py-1 text-2xs text-ink outline-none placeholder:text-ink-faint focus-visible:border-accent"
-                />
-                <button
-                  type="submit"
-                  disabled={!keyDraft.trim()}
-                  className="pressable rounded-md border border-line px-2 py-1 text-2xs text-ink-dim hover:text-ink disabled:opacity-40"
-                >
-                  save
-                </button>
-              </div>
-              <p className="mt-1 text-2xs leading-relaxed text-ink-faint">
-                Free at firms.modaps.eosdis.nasa.gov/api. Stored in this browser only.
-              </p>
+              <input
+                value={keyDraft}
+                onChange={(e) => setKeyDraft(e.target.value)}
+                placeholder="NASA FIRMS key (optional)"
+                className="min-w-0 flex-1 rounded-md border border-line bg-canvas px-2 py-1 text-2xs text-ink outline-none placeholder:text-ink-faint focus-visible:border-accent"
+              />
+              <button
+                type="submit"
+                disabled={!keyDraft.trim()}
+                className="pressable rounded-md border border-line px-2 py-1 text-2xs text-ink-dim hover:text-ink disabled:opacity-40"
+              >
+                add
+              </button>
             </form>
           )}
           {settings.firmsKey && (
@@ -332,11 +326,6 @@ export default function LiveMonitor({
             >
               remove FIRMS key
             </button>
-          )}
-          {radar.reason && on.radar === false && (
-            <p className="mt-2 border-t border-line pt-2 text-2xs leading-relaxed text-ink-faint">
-              {radar.reason}
-            </p>
           )}
         </section>
 

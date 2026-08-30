@@ -19,7 +19,21 @@ export function tileForLonLat(lon: number, lat: number, z: number) {
 export async function loadArea(id: string): Promise<DamageCollection> {
   const res = await fetch(`${import.meta.env.BASE_URL}data/${id}.geojson`);
   if (!res.ok) throw new Error(`failed to load ${id}: ${res.status}`);
-  return (await res.json()) as DamageCollection;
+  const fc = (await res.json()) as DamageCollection;
+  if (fc?.type !== "FeatureCollection" || !Array.isArray(fc.features)) {
+    throw new Error(`${id}: not a GeoJSON FeatureCollection`);
+  }
+  // keep only well-formed building features so one bad row can't crash a screen
+  fc.features = fc.features.filter(
+    (f): f is BuildingFeature =>
+      !!f &&
+      f.geometry?.type === "Polygon" &&
+      Number.isInteger(f.properties?.damage_class) &&
+      f.properties.damage_class >= 0 &&
+      f.properties.damage_class <= 3 &&
+      Array.isArray(f.properties.centroid),
+  );
+  return fc;
 }
 
 export interface AreaStats {
