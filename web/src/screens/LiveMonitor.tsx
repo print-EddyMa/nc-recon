@@ -63,16 +63,31 @@ export default function LiveMonitor({
     source: string;
     coord: [number, number];
   } | null>(null);
-  const [on, setOn] = useState<Record<LayerId, boolean>>({
-    quakes: true,
-    multi: true,
-    fires: true,
-    radar: false,
+  const [on, setOn] = useState<Record<LayerId, boolean>>(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem("terratriage:layers") || "");
+      return { quakes: true, multi: true, fires: true, radar: false, ...s };
+    } catch {
+      return { quakes: true, multi: true, fires: true, radar: false };
+    }
   });
-
   useEffect(() => {
-    usgsQuakes().then(setQuakes);
-    gdacsEvents().then(setMulti);
+    try {
+      localStorage.setItem("terratriage:layers", JSON.stringify(on));
+    } catch {
+      /* private window */
+    }
+  }, [on]);
+
+  // fetch on mount, then refresh every 5 min (these are live feeds)
+  useEffect(() => {
+    const pull = () => {
+      usgsQuakes().then(setQuakes);
+      gdacsEvents().then(setMulti);
+    };
+    pull();
+    const t = window.setInterval(pull, 5 * 60_000);
+    return () => window.clearInterval(t);
   }, []);
   // FIRMS re-fetches whenever the key changes
   useEffect(() => {
@@ -92,23 +107,31 @@ export default function LiveMonitor({
     for (const id of ["quakes", "multi", "fires"] as const) {
       const res = results[id];
       if (!on[id] || !res || res.disabled) continue;
+      // quakes read as hollow rings, GDACS as filled discs, FIRMS as dense dots —
+      // so the layers stay legible where they overlap, not just by hue
+      const hollow = id === "quakes";
+      const dense = id === "fires";
       out.push(
         new ScatterplotLayer({
           id: `hz-${id}`,
           data: res.features.features,
           pickable: true,
           stroked: true,
-          filled: true,
+          filled: !hollow,
           radiusUnits: "pixels",
           getPosition: (f: HazardFC["features"][number]) => f.geometry.coordinates as [number, number],
-          getRadius: (f: HazardFC["features"][number]) => 3 + (f.properties.severity ?? 0) * 3.5,
+          getRadius: (f: HazardFC["features"][number]) =>
+            dense ? 2.5 : (hollow ? 4 : 3) + (f.properties.severity ?? 0) * 3.5,
           getFillColor: (f: HazardFC["features"][number]) => {
             const [r, g, b] = LAYER_COLOR[id];
-            return [r, g, b, 90 + (f.properties.severity ?? 0) * 45];
+            return [r, g, b, dense ? 150 : 80 + (f.properties.severity ?? 0) * 45];
           },
-          getLineColor: LAYER_COLOR[id],
+          getLineColor: (f: HazardFC["features"][number]) => {
+            const [r, g, b] = LAYER_COLOR[id];
+            return [r, g, b, hollow ? 180 + (f.properties.severity ?? 0) * 25 : 200];
+          },
           lineWidthUnits: "pixels",
-          getLineWidth: 1,
+          getLineWidth: hollow ? 1.5 : 0.75,
           onClick: (info) => {
             const f = info.object as HazardFC["features"][number] | undefined;
             if (f) {
