@@ -95,3 +95,42 @@ is built for a different context (SaaS dashboard, NFT gallery, marketing). A
 scroll-hijacking cinematic hero in particular is the decorative landing-page
 aesthetic the build brief names as the top risk to the judging score. Took the
 one good idea (sliding active-tab indicator), implemented natively.
+
+---
+
+## Third pass — 2026-08-30 (functionality + 21st.dev components + global-first)
+
+**21st.dev / shadcn-family components adopted**
+- `cmdk` — ⌘K command menu (`components/CommandMenu.tsx`): screen nav + search /
+  ingest across all 55 Maxar events.
+- `sonner` — toasts for the ingest lifecycle (start → step % → done / error),
+  wired in `lib/useAssess.ts`.
+- `@radix-ui/react-tooltip` → `components/ui/Tooltip.tsx` (override colour swatches,
+  truncated labels).
+- `@radix-ui/react-dialog` → `components/ui/Dialog.tsx`; used by the `?` keyboard
+  shortcuts reference (`components/ShortcutsDialog.tsx`).
+- `clsx` + `tailwind-merge` → `lib/utils.ts` `cn()` (the shadcn convention).
+
+**Functionality**
+- Ingests fixed: newer Maxar TSVs use `proj:code` / `utm_zone` instead of
+  `proj:epsg` — `download.row_epsg()` handles all three; catalogue centres and
+  `choose_tile` were silently failing for every 2025 event.
+- App opens on the global Live Monitor; event screens gated behind picking a
+  disaster; "viewing <event> ×" breadcrumb.
+- URL hash deep-linking (`#/live`, `#/about`, `#/e/<event>/<area>/<screen>`) with
+  `hashchange` re-sync.
+- `ErrorBoundary` around every screen.
+- Review queue: bulk "approve where the two passes agree", export decisions as JSON.
+- NASA FIRMS key: paste-in field (localStorage), no rebuild needed.
+- Keyboard: ⌘K, `?`, `g`-then-letter screen jumps.
+- Clickable hazard points on the monitor map → fly + "imagery N km away" coverage
+  check.
+- `poller.py` runs the full fetch→infer→tiles→registry sequence + geojson sync.
+- Collapsible map side panels below `lg`; two-row mobile header.
+- `loadArea` validates the FeatureCollection and drops malformed features.
+
+**Visual**
+- Panels de-glassed: 97% opaque, 3px blur, 5px corners — an instrument surface,
+  not frosted glass. Global radius scale tightened; primary CTA squared.
+- Stats gains a confidence breakdown (high vs review + agreement %).
+- Landing reframed as a product "About" page (was the forced entry).
