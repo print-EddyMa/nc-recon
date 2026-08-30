@@ -57,7 +57,7 @@ const USGS_URL =
 export async function usgsQuakes(): Promise<HazardResult> {
   const now = Date.now();
   try {
-    const r = await fetch(USGS_URL, { signal: AbortSignal.timeout(8000) });
+    const r = await fetch(USGS_URL, { signal: AbortSignal.timeout(12000) });
     if (!r.ok) throw new Error(String(r.status));
     const raw = (await r.json()) as GeoJSON.FeatureCollection;
     return {
@@ -116,7 +116,7 @@ const GDACS_TYPE: Record<string, HazardType> = {
 export async function gdacsEvents(): Promise<HazardResult> {
   const now = Date.now();
   try {
-    const r = await fetch(GDACS_URL, { signal: AbortSignal.timeout(8000) });
+    const r = await fetch(GDACS_URL, { signal: AbortSignal.timeout(12000) });
     if (!r.ok) throw new Error(String(r.status));
     const raw = (await r.json()) as GeoJSON.FeatureCollection;
     const items = raw.features ?? [];
