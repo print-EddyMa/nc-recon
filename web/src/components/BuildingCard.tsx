@@ -33,6 +33,27 @@ export default function BuildingCard({ feature, onClear }: Props) {
         </span>
       </div>
       <p className="mt-1.5 text-xs leading-relaxed text-ink-dim">{d.blurb}</p>
+
+      {p.confidence_tier && (
+        <div className="mt-2.5 flex items-center gap-2 text-xs">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-sm px-1.5 py-0.5 text-2xs ${
+              p.confidence_tier === "high"
+                ? "bg-accent/15 text-accent"
+                : "bg-dmg1/15 text-dmg1"
+            }`}
+          >
+            {p.confidence_tier === "high" ? "high confidence" : "needs review"}
+          </span>
+          {p.sources && (
+            <span className="tnum text-2xs text-ink-faint">
+              model {DAMAGE[p.sources.cnn as 0 | 1 | 2 | 3]?.short ?? p.sources.cnn} · 2nd pass{" "}
+              {DAMAGE[p.sources.heuristic as 0 | 1 | 2 | 3]?.short ?? p.sources.heuristic}
+            </span>
+          )}
+        </div>
+      )}
+
       <dl className="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
         <div className="flex justify-between">
           <dt className="text-ink-faint">Footprint</dt>

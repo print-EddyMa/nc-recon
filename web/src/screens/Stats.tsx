@@ -46,6 +46,15 @@ export default function Stats({ event, area, fc, onOpenMap }: Props) {
   const p = fc.properties;
   const reviewedDelta = reviewed && reviewed.severe !== stats.severe ? reviewed.severe : null;
 
+  const exportGeoJSON = () => {
+    const blob = new Blob([JSON.stringify(fc)], { type: "application/geo+json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `terratriage-${area.id}.geojson`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   return (
     <div className="mx-auto h-full max-w-4xl overflow-y-auto px-6 py-10">
       <p className="cap mb-3">
@@ -159,14 +168,20 @@ export default function Stats({ event, area, fc, onOpenMap }: Props) {
         </section>
       )}
 
-      <section className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-line pt-5 text-xs text-ink-faint">
+      <section className="mt-10 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-5 text-xs text-ink-faint">
         <button
           onClick={onOpenMap}
           className="pressable rounded-md border border-line px-3 py-1.5 text-ink-dim hover:border-accent hover:text-ink"
         >
           View on map →
         </button>
-        <span>
+        <button
+          onClick={exportGeoJSON}
+          className="pressable rounded-md border border-line px-3 py-1.5 text-ink-dim hover:border-accent hover:text-ink"
+        >
+          Export GeoJSON
+        </button>
+        <span className="ml-1">
           {modelLabel(p.model)}
           {p.runtime_sec ? ` · ${p.runtime_sec}s` : ""}
         </span>

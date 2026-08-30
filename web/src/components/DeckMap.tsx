@@ -211,6 +211,7 @@ export default function DeckMap({
 
 function HoverChip({ hover, cls }: { hover: NonNullable<Hover>; cls: number }) {
   const d = DAMAGE[cls];
+  const tier = hover.f.properties.confidence_tier;
   return (
     <div
       className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-[calc(100%+12px)] whitespace-nowrap rounded-sm border border-line bg-surface/95 px-2.5 py-1.5 text-xs shadow-lg backdrop-blur"
@@ -218,6 +219,7 @@ function HoverChip({ hover, cls }: { hover: NonNullable<Hover>; cls: number }) {
     >
       <span className="mr-1.5 inline-block h-2 w-2 rounded-[2px] align-middle" style={{ background: d.hex }} />
       <span className="font-medium" style={{ color: d.hex }}>{d.label}</span>
+      {tier === "review" && <span className="ml-2 text-2xs text-dmg1">needs review</span>}
       <span className="tnum ml-2 text-ink-faint">{hover.f.properties.id}</span>
     </div>
   );
