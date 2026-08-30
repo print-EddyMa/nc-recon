@@ -142,6 +142,16 @@ class AssessReq(BaseModel):
 JOBS: dict[str, dict] = {}
 
 
+def _reap_jobs(ttl_sec: int = 1800) -> None:
+    """Drop finished jobs older than ttl so JOBS doesn't grow unbounded."""
+    cutoff = time.time() - ttl_sec
+    for jid in [
+        k for k, v in JOBS.items()
+        if v["status"] in ("done", "error") and v.get("finished", v.get("started", 0)) < cutoff
+    ]:
+        JOBS.pop(jid, None)
+
+
 def _run_step(job: dict, label: str, args: list[str]) -> None:
     job["step"] = label
     p = subprocess.run(
@@ -183,10 +193,13 @@ def _assess_worker(job_id: str, req: AssessReq, area: str, event_date: str | Non
     except Exception as ex:  # noqa: BLE001
         job["status"] = "error"
         job["error"] = str(ex)
+    finally:
+        job["finished"] = time.time()
 
 
 @app.post("/assess")
 def assess(req: AssessReq):
+    _reap_jobs()
     from terratriage import events as ev
 
     cat = {c["id"]: c for c in ev.catalog(CACHE)}

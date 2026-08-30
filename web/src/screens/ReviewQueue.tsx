@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { heroTileUrl, tileForLonLat, summarize } from "../lib/data";
 import { DAMAGE } from "../lib/damage";
 import { useReviewDecisions, overrideClasses } from "../lib/review";
@@ -64,6 +64,8 @@ function Crop({
 export default function ReviewQueue({ area, fc, onOpenMap }: Props) {
   const { decisions, setDecision, clearAll } = useReviewDecisions(area.id);
   const [showResolved, setShowResolved] = useState(false);
+  const PAGE = 60;
+  const [limit, setLimit] = useState(PAGE);
 
   const queue = useMemo(() => {
     if (!fc) return [];
@@ -72,7 +74,11 @@ export default function ReviewQueue({ area, fc, onOpenMap }: Props) {
       .sort((a, b) => b.properties.area_m2 - a.properties.area_m2);
   }, [fc]);
 
-  const visible = showResolved ? queue : queue.filter((f) => !decisions[f.properties.id]);
+  // reset the window when the area or filter changes
+  useEffect(() => setLimit(PAGE), [area.id, showResolved]);
+
+  const filtered = showResolved ? queue : queue.filter((f) => !decisions[f.properties.id]);
+  const visible = filtered.slice(0, limit);
   const rawStats = useMemo(() => (fc ? summarize(fc) : null), [fc]);
   const overrideStats = useMemo(
     () => (fc ? summarize(fc, overrideClasses(decisions)) : null),
@@ -198,17 +204,32 @@ export default function ReviewQueue({ area, fc, onOpenMap }: Props) {
             : "Every flagged building has been reviewed."}
         </p>
       ) : (
-        <ul>
-          {visible.map((f) => (
-            <ReviewRow
-              key={f.properties.id}
-              feature={f}
-              areaId={area.id}
-              decision={decisions[f.properties.id] ?? null}
-              onDecide={(d) => setDecision(f.properties.id, d)}
-            />
-          ))}
-        </ul>
+        <>
+          <ul>
+            {visible.map((f) => (
+              <ReviewRow
+                key={f.properties.id}
+                feature={f}
+                areaId={area.id}
+                decision={decisions[f.properties.id] ?? null}
+                onDecide={(d) => setDecision(f.properties.id, d)}
+              />
+            ))}
+          </ul>
+          {filtered.length > visible.length && (
+            <div className="mt-6 flex items-center justify-center gap-3 text-xs text-ink-faint">
+              <span className="tnum">
+                showing {visible.length.toLocaleString()} of {filtered.length.toLocaleString()}
+              </span>
+              <button
+                onClick={() => setLimit((n) => n + PAGE)}
+                className="pressable rounded-md border border-line px-3 py-1.5 text-ink-dim hover:border-accent hover:text-ink"
+              >
+                Load {Math.min(PAGE, filtered.length - visible.length)} more
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
