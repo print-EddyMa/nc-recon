@@ -95,13 +95,15 @@
 }
 
 @layer components {
+  /* floating panel — near-opaque, sharp corner, hairline border. A control-room
+     surface, not frosted glass. A faint blur only so map labels don't bleed. */
   .panel {
-    background: color-mix(in srgb, theme("colors.surface") 88%, transparent);
+    background: color-mix(in srgb, theme("colors.surface") 97%, transparent);
     border: 1px solid theme("colors.line");
-    border-radius: 0.5rem;
+    border-radius: 5px;
     box-shadow: var(--shadow-1);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
   }
 
   /* pressable elements: instant, physical feedback on the press */

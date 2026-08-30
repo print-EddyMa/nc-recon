@@ -38,6 +38,14 @@ export default {
       fontSize: {
         "2xs": ["0.6875rem", { lineHeight: "1rem", letterSpacing: "0.04em" }],
       },
+      // sharper corners than the Tailwind defaults — a technical, signage feel
+      borderRadius: {
+        sm: "3px",
+        DEFAULT: "4px",
+        md: "5px",
+        lg: "6px",
+        xl: "8px",
+      },
     },
   },
   plugins: [],

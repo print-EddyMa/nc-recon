@@ -94,10 +94,10 @@ export default function Landing({
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <button
                 onClick={onEnter}
-                className="pressable group inline-flex items-center gap-2.5 rounded-full bg-accent py-2.5 pl-5 pr-2.5 text-sm font-semibold text-[#05171a]"
+                className="pressable group inline-flex items-center gap-2.5 rounded-md bg-accent py-2.5 pl-5 pr-2.5 text-sm font-semibold text-[#05171a]"
               >
                 Open the live monitor
-                <span className="grid h-7 w-7 place-items-center rounded-full bg-[#05171a]/12 transition-transform duration-200 ease-out group-hover:translate-x-0.5">
+                <span className="grid h-7 w-7 place-items-center rounded bg-[#05171a]/12 transition-transform duration-200 ease-out group-hover:translate-x-0.5">
                   <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
                     <path
                       d="M3 8h10M9 4l4 4-4 4"
