@@ -58,6 +58,11 @@ export default function LiveMonitor({
   const radar = useMemo(() => sentinel1(), []);
   const { settings, set } = useSettings();
   const [keyDraft, setKeyDraft] = useState("");
+  const [selectedHazard, setSelectedHazard] = useState<{
+    title: string;
+    source: string;
+    coord: [number, number];
+  } | null>(null);
   const [on, setOn] = useState<Record<LayerId, boolean>>({
     quakes: true,
     multi: true,
@@ -104,6 +109,17 @@ export default function LiveMonitor({
           getLineColor: LAYER_COLOR[id],
           lineWidthUnits: "pixels",
           getLineWidth: 1,
+          onClick: (info) => {
+            const f = info.object as HazardFC["features"][number] | undefined;
+            if (f) {
+              flyTo(f.geometry.coordinates as [number, number]);
+              setSelectedHazard({
+                title: f.properties.title,
+                source: f.properties.source,
+                coord: f.geometry.coordinates as [number, number],
+              });
+            }
+          },
         }),
       );
     }
@@ -114,7 +130,26 @@ export default function LiveMonitor({
   useEffect(() => {
     if (!ready || !mapRef.current) return;
     if (!overlayRef.current) {
-      overlayRef.current = new MapboxOverlay({ interleaved: false, layers: [] });
+      overlayRef.current = new MapboxOverlay({
+        interleaved: false,
+        layers: [],
+        getCursor: ({ isHovering }) => (isHovering ? "pointer" : "grab"),
+        getTooltip: (info) => {
+          const f = info.object as HazardFC["features"][number] | undefined;
+          if (!f) return null;
+          return {
+            text: f.properties.title,
+            style: {
+              background: "#161d26",
+              border: "1px solid #28313d",
+              color: "#ccd5df",
+              fontSize: "11px",
+              borderRadius: "4px",
+              padding: "4px 7px",
+            },
+          };
+        },
+      });
       mapRef.current.addControl(overlayRef.current as unknown as IControl);
     }
     overlayRef.current.setProps({ layers });
@@ -367,6 +402,70 @@ export default function LiveMonitor({
           </ol>
         </section>
       </aside>
+
+      {/* selected hazard — clicked on the map */}
+      {selectedHazard && (
+        <div className="absolute bottom-16 left-1/2 z-20 w-[min(420px,calc(100%-1.5rem))] -translate-x-1/2 sm:bottom-14">
+          <div className="panel enter-pop px-3.5 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="truncate text-sm text-ink">{selectedHazard.title}</div>
+                <div className="tnum text-2xs text-ink-faint">
+                  {selectedHazard.source.toUpperCase()} · {selectedHazard.coord[1].toFixed(2)},{" "}
+                  {selectedHazard.coord[0].toFixed(2)}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedHazard(null)}
+                className="pressable -m-1 grid h-6 w-6 shrink-0 place-items-center rounded-md text-ink-faint hover:text-ink"
+                aria-label="Dismiss"
+              >
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden>
+                  <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+            {(() => {
+              const near = catalog
+                .map((e) => {
+                  if (!e.center) return null;
+                  const dx = (e.center[0] - selectedHazard.coord[0]) * 111 *
+                    Math.cos((selectedHazard.coord[1] * Math.PI) / 180);
+                  const dy = (e.center[1] - selectedHazard.coord[1]) * 111;
+                  return { e, km: Math.hypot(dx, dy) };
+                })
+                .filter((x): x is { e: (typeof catalog)[number]; km: number } => !!x && x.km < 250)
+                .sort((a, b) => a.km - b.km)[0];
+              if (!near)
+                return (
+                  <p className="mt-2 text-2xs leading-relaxed text-ink-faint">
+                    No Maxar Open Data imagery within 250 km. Damage assessment isn't
+                    possible here until a provider publishes post-event imagery.
+                  </p>
+                );
+              const ing = events.some((x) => x.id === near.e.id);
+              return (
+                <div className="mt-2 flex items-center justify-between gap-2 border-t border-line pt-2 text-2xs">
+                  <span className="text-ink-dim">
+                    Imagery {near.km.toFixed(0)} km away ·{" "}
+                    <span className="text-ink">{near.e.name}</span>
+                  </span>
+                  <button
+                    onClick={() =>
+                      ing
+                        ? (onOpenEvent(near.e.id), onNavMap())
+                        : onIngest({ id: near.e.id, name: near.e.name, center: near.e.center })
+                    }
+                    className="pressable shrink-0 rounded-md border border-accent/60 px-2 py-0.5 text-ink hover:bg-accent hover:text-[#05171a]"
+                  >
+                    {ing ? "Open" : "Ingest"}
+                  </button>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* bottom-left: jump straight to an already-assessed event, + About */}
       <div className="absolute bottom-3 left-3 z-20 hidden max-w-[calc(100vw-1.5rem)] flex-wrap items-center gap-2 sm:flex">

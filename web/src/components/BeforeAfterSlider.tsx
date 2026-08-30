@@ -10,9 +10,9 @@ interface Props {
 }
 
 /**
- * The signature control. A single track drags the view from raw satellite
- * imagery on the left to the extruded 3-D damage model on the right; a
- * segmented toggle picks which capture the imagery half shows.
+ * The signature control. One track drags the view from raw satellite imagery on
+ * the left to the extruded 3-D damage model on the right; a segmented toggle
+ * picks which capture the imagery half shows.
  */
 export default function BeforeAfterSlider({
   value,
@@ -27,25 +27,19 @@ export default function BeforeAfterSlider({
 
   return (
     <div className="panel px-4 py-3">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="cap">Imagery</span>
-        <div className="flex overflow-hidden rounded-md border border-line text-2xs">
-          {(["pre", "post"] as const).map((k) => (
-            <button
-              key={k}
-              onClick={() => onImageryChange(k)}
-              aria-pressed={imagery === k}
-              className={`px-2 py-1 font-mono uppercase tracking-wider transition-colors duration-200 ease-out active:opacity-70 ${
-                imagery === k
-                  ? "bg-accent text-[#05171a]"
-                  : "text-ink-dim hover:text-ink"
-              }`}
-            >
-              {k === "pre" ? `Before${preDate ? " · " + preDate : ""}` : `After${postDate ? " · " + postDate : ""}`}
-            </button>
-          ))}
-        </div>
-        <span className="cap">Assessment</span>
+      <div className="mb-2 flex items-center justify-center gap-1.5">
+        {(["pre", "post"] as const).map((k) => (
+          <button
+            key={k}
+            onClick={() => onImageryChange(k)}
+            aria-pressed={imagery === k}
+            className={`tnum rounded-md px-2.5 py-1 text-2xs uppercase tracking-wider transition-colors duration-200 ease-out active:opacity-70 ${
+              imagery === k ? "bg-accent text-[#05171a]" : "border border-line text-ink-dim hover:text-ink"
+            }`}
+          >
+            {k === "pre" ? `Before${preDate ? " · " + preDate : ""}` : `After${postDate ? " · " + postDate : ""}`}
+          </button>
+        ))}
       </div>
 
       <input
@@ -60,9 +54,9 @@ export default function BeforeAfterSlider({
         style={{ ["--pct" as string]: `${pct}%` }}
       />
 
-      <div className="mt-1.5 flex justify-between text-2xs text-ink-faint">
+      <div className="mt-1.5 flex items-baseline justify-between text-2xs text-ink-faint">
         <span>Satellite</span>
-        <span className="tnum">{pct}%</span>
+        <span className="tnum text-ink-dim">{pct}%</span>
         <span>3-D damage model</span>
       </div>
     </div>
