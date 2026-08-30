@@ -8,5 +8,8 @@ pyproj>=3.6
 mercantile
 geopandas
 folium
+# server.py (optional API + on-demand /assess)
+fastapi
+uvicorn[standard]
 # torch/torchvision are used by the model wrapper; install separately to match your platform:
 #   pip install torch torchvision

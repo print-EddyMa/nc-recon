@@ -50,3 +50,48 @@ rescue-coordination tool read as *more* trend-chasing, which is the opposite of
 the goal. The build brief's anti-AI move was to ground the design in real
 emergency-response cartography (USGS / NOAA / FEMA), and that's kept. Craft,
 motion, and typography lessons were taken; the decorative agency tropes were not.
+
+---
+
+## Second pass — 2026-08-30 (de-AI the Phase C/D screens)
+
+Re-ran the `redesign-existing-projects` audit + `ui-ux-pro-max` after Phases C/D
+added Live Monitor, Review queue, the event picker and the assess panel — parts
+built faster than the original landing.
+
+Design read: *redesign of an emergency-response operational tool, trust-first /
+control-room, one type family, low motion, data-dense; preserve not overhaul.*
+
+Fixed:
+- **Emoji as icons** (🌀🔥🌊⚡ in the picker / live monitor / assess panel) →
+  `components/HazardIcon.tsx`, one schematic 1.5px-stroke line-icon per hazard
+  family, `currentColor`.
+- **Space Grotesk display face** (the "vibe-coded 2024" pairing with Geist) →
+  **Archivo**. One type family: Archivo display, Geist body, Geist Mono figures.
+- **Generic bordered cards** (border + shadow + bg) on Summary and Review, and
+  the "four equal stat tiles in a row" → asymmetric figure block (lead % +
+  left-border ticks) on Summary; a hairline-divided worklist on Review. `.panel`
+  is now used only where it floats over the map (elevation earns its keep).
+- **Red score bars** on the map cluster list collided with the damage ramp's
+  meaning → new neutral `meter` token; red is now exclusively per-building damage.
+- **ALL-CAPS as a section-header device** → `.section-title` (sentence case, in
+  the display face). `.cap` kept for true legend micro-labels only.
+- **"Loading…" text** → `.skel` skeleton blocks shaped like the panels/rows.
+- **Raw model slug** (`fusion:cmu-classifier + …`) on the polished Summary →
+  `modelLabel()` renders it as prose.
+- **Unicode glyph chevrons** (`›`, `▸`) → inline SVG.
+- Landing: strengthened the topographic backdrop + a single soft ambient light
+  (skill: "empty flat sections with no visual depth").
+- Nav: one indicator that **slides** between the active tab (CSS transition, no
+  animation library) — the one transferable idea from the pill-nav components
+  that were suggested.
+
+## Still deliberately NOT applied
+
+Three 21st.dev components were suggested during this pass (a `motion/react` pill
+nav, a scroll-locked video hero, a list/card/"pack" layout switcher). Declined:
+each adds a heavy dependency (`motion/react`, `lucide-react`, `@hugeicons`) and
+is built for a different context (SaaS dashboard, NFT gallery, marketing). A
+scroll-hijacking cinematic hero in particular is the decorative landing-page
+aesthetic the build brief names as the top risk to the judging score. Took the
+one good idea (sliding active-tab indicator), implemented natively.

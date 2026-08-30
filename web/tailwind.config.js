@@ -4,23 +4,25 @@ export default {
   theme: {
     extend: {
       colors: {
-        canvas: "#10151c",
+        canvas: "#0f141b",
         surface: "#161d26",
         "surface-2": "#1c2530",
-        line: "#2a333f",
+        line: "#28313d",
         "line-strong": "#3a4655",
-        ink: "#c9d3de",
-        "ink-dim": "#8593a3",
-        "ink-faint": "#5b6875",
-        accent: "#3fb6c4",
+        ink: "#ccd5df",
+        "ink-dim": "#8894a3",
+        "ink-faint": "#5a6673",
+        accent: "#4cb5c2",
         "accent-dim": "#2b7f8a",
+        // neutral emphasis bar (scores, meters) — never the damage ramp
+        meter: "#5a7c86",
         dmg0: "#f5d76e",
         dmg1: "#e8894a",
         dmg2: "#d1495b",
         dmg3: "#8b1e3f",
       },
       fontFamily: {
-        display: ['"Space Grotesk"', "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ['"Archivo"', "ui-sans-serif", "system-ui", "sans-serif"],
         sans: ['"Geist"', "ui-sans-serif", "system-ui", "sans-serif"],
         mono: ['"Geist Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
       },

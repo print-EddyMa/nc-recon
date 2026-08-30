@@ -10,6 +10,14 @@ export interface ImageMeta {
   url: string | null;
 }
 
+export type ConfidenceTier = "high" | "review";
+
+export interface ReviewMeta {
+  total_review: number;
+  total_high: number;
+  model_agreement_pct: number | null;
+}
+
 export interface RunMeta {
   event: string;
   area: string;
@@ -24,6 +32,13 @@ export interface RunMeta {
   n_buildings: number;
   bounds?: [number, number, number, number]; // [w, s, e, n]
   runtime_sec?: number;
+  review?: ReviewMeta; // schema 1.1
+}
+
+export interface BuildingSources {
+  heuristic: number;
+  cnn: number;
+  margin: number;
 }
 
 export interface BuildingProps {
@@ -33,6 +48,10 @@ export interface BuildingProps {
   confidence: number;
   area_m2: number;
   centroid: [number, number]; // [lon, lat]
+  // schema 1.1 — optional; absent = treat as "high" / "osm"
+  confidence_tier?: ConfidenceTier;
+  sources?: BuildingSources;
+  footprint_source?: string;
 }
 
 export type BuildingFeature = GeoJSON.Feature<GeoJSON.Polygon, BuildingProps>;
@@ -49,4 +68,33 @@ export interface AreaConfig {
   center: [number, number]; // [lon, lat]
   zoom: number;
   hero: [number, number, number]; // [z, x, y] tile for the landing before/after
+  pre_date?: string;
+  post_date?: string;
+  model?: string | null;
+  notes?: string | null;
+  n_buildings?: number | null;
+}
+
+export type HazardType =
+  | "hurricane"
+  | "cyclone"
+  | "wildfire"
+  | "flood"
+  | "earthquake"
+  | "tornado"
+  | "volcano"
+  | "landslide"
+  | "tsunami"
+  | "other";
+
+export interface EventConfig {
+  id: string;
+  event: string;
+  name: string;
+  hazard: HazardType;
+  region: string | null;
+  event_date: string | null;
+  bbox: [number, number, number, number] | null;
+  capture_dates: string[];
+  areas: AreaConfig[];
 }

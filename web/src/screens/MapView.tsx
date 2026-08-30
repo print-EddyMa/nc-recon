@@ -5,9 +5,11 @@ import ClassBar from "../components/ClassBar";
 import HotspotList from "../components/HotspotList";
 import BuildingCard from "../components/BuildingCard";
 import { hotspots, summarize } from "../lib/data";
-import type { AreaConfig, DamageCollection } from "../lib/types";
+import { useReviewDecisions, overrideClasses } from "../lib/review";
+import type { AreaConfig, DamageCollection, EventConfig } from "../lib/types";
 
 interface Props {
+  event: EventConfig;
   area: AreaConfig;
   fc: DamageCollection | null;
 }
@@ -21,6 +23,10 @@ export default function MapView({ area, fc }: Props) {
   const [flyTarget, setFlyTarget] = useState<
     { center: [number, number]; zoom?: number; nonce: number } | null
   >(null);
+
+  const { decisions } = useReviewDecisions(area.id);
+  const overrides = useMemo(() => overrideClasses(decisions), [decisions]);
+  const reviewedCount = useMemo(() => Object.keys(decisions).length, [decisions]);
 
   // reset per-area
   useEffect(() => {
@@ -48,6 +54,7 @@ export default function MapView({ area, fc }: Props) {
       <DeckMap
         area={area}
         fc={fc}
+        overrides={overrides}
         assessment={assessment}
         imagery={imagery}
         selectedId={selectedId}
@@ -61,10 +68,10 @@ export default function MapView({ area, fc }: Props) {
 
       {/* left: hardest-hit + selection */}
       <aside className="absolute left-3 top-3 z-20 flex max-h-[calc(100%-8.5rem)] w-[19rem] max-w-[calc(100vw-1.5rem)] flex-col gap-3 overflow-y-auto sm:left-4 sm:top-4">
-        <section className="panel px-3 py-3">
-          <div className="mb-2 flex items-baseline justify-between">
-            <h2 className="font-display text-sm text-ink">Hardest-hit clusters</h2>
-            <span className="cap">Ranked</span>
+        <section className="panel px-3.5 py-3.5">
+          <div className="mb-2.5 flex items-baseline justify-between">
+            <h2 className="section-title">Hardest-hit clusters</h2>
+            <span className="cap">ranked</span>
           </div>
           <HotspotList
             items={spots}
@@ -84,11 +91,13 @@ export default function MapView({ area, fc }: Props) {
 
       {/* right: filter + counts */}
       <aside className="absolute right-3 top-3 z-20 hidden w-[18rem] max-w-[calc(100vw-1.5rem)] md:block lg:right-4 lg:top-4">
-        <section className="panel px-3 py-3">
-          <div className="mb-2 flex items-baseline justify-between">
-            <h2 className="font-display text-sm text-ink">{area.name}</h2>
+        <section className="panel px-3.5 py-3.5">
+          <div className="mb-2.5 flex items-baseline justify-between">
+            <h2 className="section-title">{area.name}</h2>
             {stats && (
-              <span className="tnum text-2xs text-ink-dim">{stats.total} buildings</span>
+              <span className="tnum text-2xs text-ink-dim">
+                {stats.total.toLocaleString()} buildings
+              </span>
             )}
           </div>
           {stats && (
@@ -100,6 +109,21 @@ export default function MapView({ area, fc }: Props) {
                 {stats.severePct.toFixed(0)}%
               </span>{" "}
               major or destroyed
+            </div>
+          )}
+          {fc?.properties.review && (
+            <div className="mt-1.5 flex items-center justify-between text-2xs text-ink-faint">
+              <span>
+                <span className="tnum text-ink-dim">
+                  {fc.properties.review.total_review.toLocaleString()}
+                </span>{" "}
+                flagged for review
+              </span>
+              {reviewedCount > 0 && (
+                <span className="tnum rounded-sm bg-accent/15 px-1.5 py-0.5 text-accent">
+                  {reviewedCount} reviewed
+                </span>
+              )}
             </div>
           )}
         </section>
@@ -118,8 +142,14 @@ export default function MapView({ area, fc }: Props) {
       </div>
 
       {!fc && (
-        <div className="absolute inset-0 grid place-items-center bg-canvas/70">
-          <span className="cap animate-pulse">Loading assessment…</span>
+        <div className="absolute inset-0 z-30 bg-canvas/80">
+          <div className="absolute left-3 top-3 w-[19rem] max-w-[calc(100vw-1.5rem)] space-y-2 sm:left-4 sm:top-4">
+            <div className="skel h-4 w-40" />
+            <div className="skel h-16 w-full" />
+            <div className="skel h-16 w-full" />
+            <div className="skel h-16 w-full" />
+          </div>
+          <div className="absolute bottom-4 left-1/2 h-20 w-[min(560px,calc(100%-2rem))] -translate-x-1/2 skel" />
         </div>
       )}
     </div>

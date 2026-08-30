@@ -10,6 +10,8 @@ import type { AreaConfig, BuildingFeature, DamageCollection } from "../lib/types
 interface Props {
   area: AreaConfig;
   fc: DamageCollection | null;
+  /** featureId -> human-reviewed damage class (Phase D3), overrides the model */
+  overrides?: Record<string, number>;
   /** 0 = flat imagery/plan, 1 = full 3-D damage model */
   assessment: number;
   imagery: "pre" | "post";
@@ -25,6 +27,7 @@ type Hover = { x: number; y: number; f: BuildingFeature } | null;
 export default function DeckMap({
   area,
   fc,
+  overrides,
   assessment,
   imagery,
   selectedId,
@@ -32,6 +35,8 @@ export default function DeckMap({
   onSelect,
   flyTarget,
 }: Props) {
+  const effClass = (f: { properties: BuildingFeature["properties"] }): number =>
+    overrides?.[f.properties.id] ?? f.properties.damage_class;
   const { containerRef, mapRef, ready } = useMapLibre({
     center: area.center,
     zoom: area.zoom,
@@ -136,12 +141,13 @@ export default function DeckMap({
         lineWidthUnits: "pixels",
         getLineWidth: (f) => (f.properties.id === selectedId ? 2.5 : 0.5),
         getElevation: (f) => {
-          const base = DAMAGE[f.properties.damage_class].height * (0.04 + 0.96 * t);
+          const base = DAMAGE[effClass(f)].height * (0.04 + 0.96 * t);
           return f.properties.id === selectedId ? base + 12 : base;
         },
         getFillColor: (f) => {
-          if (!filter.has(f.properties.damage_class)) return EMPTY_RGBA;
-          const [r, g, b] = DAMAGE[f.properties.damage_class].rgb;
+          const c = effClass(f);
+          if (!filter.has(c)) return EMPTY_RGBA;
+          const [r, g, b] = DAMAGE[c].rgb;
           const a = f.properties.id === selectedId ? 255 : 175 + Math.round(45 * t);
           return [r, g, b, a];
         },
@@ -152,8 +158,8 @@ export default function DeckMap({
           ? {}
           : { getElevation: { duration: 450 }, getFillColor: { duration: 250 } },
         updateTriggers: {
-          getFillColor: [selectedId, t, [...filter].join()],
-          getElevation: [selectedId, t],
+          getFillColor: [selectedId, t, [...filter].join(), overrides],
+          getElevation: [selectedId, t, overrides],
           getLineWidth: [selectedId],
         },
         onClick: (info: PickingInfo) => {
@@ -163,7 +169,8 @@ export default function DeckMap({
         onHover,
       }),
     ];
-  }, [fc, assessment, selectedId, filter, onSelect, onHover, reduced]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fc, overrides, assessment, selectedId, filter, onSelect, onHover, reduced]);
 
   useEffect(() => {
     if (!ready || !mapRef.current) return;
@@ -197,13 +204,13 @@ export default function DeckMap({
     <div className="absolute inset-0">
       {/* maplibre-gl.css forces position:relative on this node, so size it explicitly */}
       <div ref={containerRef} className="h-full w-full" aria-label={`Damage map for ${area.name}`} />
-      {hover && <HoverChip hover={hover} />}
+      {hover && <HoverChip hover={hover} cls={effClass(hover.f)} />}
     </div>
   );
 }
 
-function HoverChip({ hover }: { hover: NonNullable<Hover> }) {
-  const d = DAMAGE[hover.f.properties.damage_class];
+function HoverChip({ hover, cls }: { hover: NonNullable<Hover>; cls: number }) {
+  const d = DAMAGE[cls];
   return (
     <div
       className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-[calc(100%+12px)] whitespace-nowrap rounded-sm border border-line bg-surface/95 px-2.5 py-1.5 text-xs shadow-lg backdrop-blur"

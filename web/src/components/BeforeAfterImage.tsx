@@ -4,13 +4,14 @@ import type { AreaConfig } from "../lib/types";
 
 interface Props {
   area: AreaConfig;
+  eventName?: string;
   preDate?: string;
   postDate?: string;
 }
 
-/** A wipe comparison of the pre- and post-storm Maxar tile over one block of
- * town. Drag the handle (or use the arrow keys) to sweep between them. */
-export default function BeforeAfterImage({ area, preDate, postDate }: Props) {
+/** A wipe comparison of the pre- and post-event Maxar tile over one block of
+ * the affected area. Drag the handle (or use the arrow keys) to sweep between them. */
+export default function BeforeAfterImage({ area, eventName, preDate, postDate }: Props) {
   const [pos, setPos] = useState(52); // % from left showing "after"
   const boxRef = useRef<HTMLDivElement | null>(null);
   const dragging = useRef(false);
@@ -38,14 +39,14 @@ export default function BeforeAfterImage({ area, preDate, postDate }: Props) {
         {/* after (full) */}
         <img
           src={heroTileUrl(area.id, "post", area.hero)}
-          alt={`${area.name} after Hurricane Helene`}
+          alt={`${area.name} after ${eventName ?? "the event"}`}
           className="absolute inset-0 h-full w-full object-cover"
           draggable={false}
         />
         {/* before (clipped to the left of the handle) */}
         <img
           src={heroTileUrl(area.id, "pre", area.hero)}
-          alt={`${area.name} before Hurricane Helene`}
+          alt={`${area.name} before ${eventName ?? "the event"}`}
           className="absolute inset-0 h-full w-full object-cover"
           style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
           draggable={false}
@@ -81,7 +82,7 @@ export default function BeforeAfterImage({ area, preDate, postDate }: Props) {
         />
       </div>
       <figcaption className="mt-2 text-2xs text-ink-faint">
-        {area.name}, NC — Maxar Open Data. Drag to compare.
+        {area.name} — Maxar Open Data. Drag to compare.
       </figcaption>
     </figure>
   );

@@ -44,6 +44,8 @@ def run(
     post_meta: dict | None = None,
     limit_tiles: int | None = None,
     mock: bool = False,
+    osm_filter: bool = False,
+    cache_dir: str | None = None,
 ) -> dict[str, Any]:
     t0 = time.time()
 
@@ -91,10 +93,38 @@ def run(
         loc_mask.astype("float32"), dmg_mask, dmg_conf,
         transform, crs, loc_thr=loc_thr, min_area_px=min_area_px, area_prefix=area,
     )
-    features = [
-        contract.feature(f"{area}-{i:06d}", ring, dc, conf, area_m2, cen)
-        for i, (_, ring, dc, conf, area_m2, cen) in enumerate(features_raw)
-    ]
+    # Phase D1: constrain the model's invented footprints with real OSM buildings
+    verified: list[bool] | None = None
+    if osm_filter and cache_dir:
+        try:
+            from shapely.geometry import Polygon as _Poly
+            from .footprints import fetch_osm_buildings, aoi_bounds_lonlat
+
+            osm_ll = fetch_osm_buildings(
+                aoi_bounds_lonlat(pre_path),
+                cache_path=os.path.join(cache_dir, f"{area}_osm.json"),
+            )
+            pred_ll = [_Poly(ring[0]) for _, ring, *_ in features_raw]
+            from .footprints import filter_by_osm
+
+            _, dropped, verified = filter_by_osm(pred_ll, osm_ll, min_iou=0.1)
+            print(f"[predict] OSM filter: {len(dropped)}/{len(pred_ll)} predictions "
+                  f"do not overlap a mapped building -> tier=review")
+        except Exception as ex:  # noqa: BLE001
+            print(f"[predict] OSM filter skipped ({ex})")
+            verified = None
+
+    features = []
+    for i, (_, ring, dc, conf, area_m2, cen) in enumerate(features_raw):
+        tier = fsrc = None
+        if verified is not None:
+            ok = verified[i]
+            tier = "high" if ok else "review"
+            fsrc = "model+osm" if ok else "model"
+        features.append(
+            contract.feature(f"{area}-{i:06d}", ring, dc, conf, area_m2, cen,
+                             tier=tier, footprint_source=fsrc)
+        )
 
     meta = contract.RunMeta(
         event=event,

@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Geist:wght@400;450;500;600&family=Geist+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Geist:wght@400;450;500;600&family=Geist+Mono:wght@400;500;600&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -66,7 +66,7 @@
   h3 {
     font-family: theme("fontFamily.display");
     font-weight: 600;
-    letter-spacing: -0.02em; /* negative tracking grows with size; headings tighten */
+    letter-spacing: -0.011em; /* Archivo sits tighter than Space Grotesk; ease off */
     text-wrap: balance;
   }
 
@@ -123,13 +123,48 @@
     letter-spacing: -0.01em;
   }
 
-  /* small cartographic caption — used sparingly, for section eyebrows only */
+  /* small cartographic caption — legend keys, units, eyebrows. Not section titles. */
   .cap {
     font-family: theme("fontFamily.mono");
     font-size: 0.6875rem;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: theme("colors.ink-faint");
+  }
+
+  /* section title — quiet, sentence case, in the display face */
+  .section-title {
+    font-family: theme("fontFamily.display");
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.005em;
+    color: theme("colors.ink");
+  }
+
+  /* skeleton block — matches layout shape while data loads */
+  .skel {
+    position: relative;
+    overflow: hidden;
+    background: theme("colors.surface-2");
+    border-radius: 4px;
+  }
+  .skel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, theme("colors.line-strong") 55%, transparent),
+      transparent
+    );
+    animation: skel 1.4s ease-in-out infinite;
+  }
+  @keyframes skel {
+    to {
+      transform: translateX(100%);
+    }
   }
 
   /* staggered list/tile entrance */

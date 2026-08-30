@@ -7,6 +7,9 @@ heuristic : change-detection on the pre/post crop (offline, always available)
 keras     : the xView2 baseline CMU classifier (ResNet50 + small CNN head) run in
             the `terratriage-tf` conda env via `_keras_infer.py`. 128px POST crop,
             reference `rescale=1.4` preprocessing.
+fusion    : run `heuristic` and `keras` both, then `fusion.fuse_scores` -> a
+            per-building confidence tier ("high" / "review") from their agreement
+            plus the CNN softmax margin. Returns 4-tuples, not 2-tuples.
 """
 from __future__ import annotations
 
@@ -107,7 +110,8 @@ def _conda_python(env: str = "terratriage-tf") -> str | None:
     return None
 
 
-def _keras_scores(crops, weights_path: str) -> list[tuple[int, float]]:
+def _keras_probs(crops, weights_path: str) -> np.ndarray:
+    """(N, 4) softmax probabilities from the xView2 baseline classifier."""
     py = _conda_python()
     if not py:
         raise RuntimeError("terratriage-tf conda env not found; run scripts/setup_tf_env.sh")
@@ -127,14 +131,35 @@ def _keras_scores(crops, weights_path: str) -> list[tuple[int, float]]:
         pred = np.load(outp)  # (N,4) activations
     probs = np.exp(pred - pred.max(axis=1, keepdims=True))
     probs /= probs.sum(axis=1, keepdims=True)
+    return probs
+
+
+def _keras_scores(crops, weights_path: str) -> list[tuple[int, float]]:
+    probs = _keras_probs(crops, weights_path)
     idx = probs.argmax(axis=1)
     return [(int(k), float(probs[i, k])) for i, k in enumerate(idx)]
 
 
+def _softmax_margin(probs: np.ndarray) -> np.ndarray:
+    """Per-row top1 - top2 probability gap, (N,)."""
+    part = np.sort(probs, axis=1)
+    return part[:, -1] - part[:, -2]
+
+
 # --------------------------------------------------------------------------- #
 def score_buildings(pre_path, post_path, polys, dst_crs, *, backend="heuristic",
-                    weights_path=None) -> list[tuple[int, float]]:
+                    weights_path=None):
+    """Return per-building results.
+
+    backend in {heuristic, keras}  -> list[(class, confidence)]
+    backend == "fusion"            -> list[(class, confidence, tier, sources)]
+                                      (falls back to keras/heuristic 2-tuples if
+                                      the CNN can't run)
+    """
     crops = list(extract_crops(pre_path, post_path, polys, dst_crs))
+    if backend == "heuristic":
+        return _heuristic_scores(crops)
+
     if backend == "keras":
         if not weights_path or not os.path.exists(weights_path):
             raise FileNotFoundError(f"keras backend needs classification weights at {weights_path!r}")
@@ -143,4 +168,21 @@ def score_buildings(pre_path, post_path, polys, dst_crs, *, backend="heuristic",
         except Exception as ex:  # noqa: BLE001
             print(f"[classify] keras backend failed ({ex}); falling back to heuristic")
             return _heuristic_scores(crops)
-    return _heuristic_scores(crops)
+
+    if backend == "fusion":
+        from . import fusion
+
+        if not weights_path or not os.path.exists(weights_path):
+            raise FileNotFoundError(f"fusion backend needs CNN weights at {weights_path!r}")
+        heur = _heuristic_scores(crops)
+        try:
+            probs = _keras_probs(crops, weights_path)
+        except Exception as ex:  # noqa: BLE001
+            print(f"[classify] fusion: CNN pass failed ({ex}); returning heuristic only")
+            return heur
+        cnn = [(int(k), float(probs[i, k])) for i, k in enumerate(probs.argmax(axis=1))]
+        margins = _softmax_margin(probs).tolist()
+        areas = [float(p.area) for p in polys]
+        return fusion.fuse_scores(heur, cnn, areas, margins)
+
+    raise ValueError(f"unknown backend {backend!r}")

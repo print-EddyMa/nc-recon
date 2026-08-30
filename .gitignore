@@ -26,7 +26,10 @@ pipeline/data/cache/*
 !pipeline/data/cache/.gitkeep
 pipeline/vendor_xview2_1st/
 
-# web build + generated raster tiles (regenerate: pipeline/scripts/make_tiles.py)
+# web build
 web/dist/
-web/public/tiles/
-web/public/data/*.geojson
+
+# The demo dataset (tiles + contract GeoJSON + event registry + live snapshots)
+# IS committed so the app runs on a fresh clone with no pipeline run. Regenerate
+# with pipeline/scripts/{run.py,make_tiles.py} + web/scripts/refresh_live_snapshots.mjs.
+# Raw Maxar COGs and pipeline scratch stay ignored (rules above).

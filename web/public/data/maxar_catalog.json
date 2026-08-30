@@ -1,0 +1,1212 @@
+[
+  {
+    "id": "Morocco-Flooding-Dec-2025",
+    "name": "Morocco Flooding",
+    "hazard": "flood",
+    "center": [
+      -9.22992,
+      32.28947
+    ],
+    "bbox": [
+      -9.32282,
+      32.21881,
+      -9.13702,
+      32.36013
+    ],
+    "capture_dates": [
+      "2025-11-11",
+      "2025-12-18"
+    ],
+    "suggested_event_date": "2025-11-29",
+    "n_captures": 37,
+    "n_quadkeys": 25
+  },
+  {
+    "id": "Cyclone-Ditwah-Sri-Lanka-Nov-2025",
+    "name": "Cyclone Ditwah Sri Lanka",
+    "hazard": "cyclone",
+    "center": [
+      79.97723,
+      6.74917
+    ],
+    "bbox": [
+      79.75553,
+      5.96947,
+      80.19894,
+      7.52887
+    ],
+    "capture_dates": [
+      "2025-01-17",
+      "2025-12-05"
+    ],
+    "suggested_event_date": "2025-06-24",
+    "n_captures": 433,
+    "n_quadkeys": 242
+  },
+  {
+    "id": "Cyclone-Senyar-Thailand-Nov-2025",
+    "name": "Cyclone Senyar Thailand",
+    "hazard": "cyclone",
+    "center": [
+      100.55541,
+      6.8342
+    ],
+    "bbox": [
+      100.32726,
+      6.48797,
+      100.78355,
+      7.18042
+    ],
+    "capture_dates": [
+      "2025-12-01",
+      "2025-12-01"
+    ],
+    "suggested_event_date": "2025-12-01",
+    "n_captures": 127,
+    "n_quadkeys": 103
+  },
+  {
+    "id": "Cyclone-Senyar-Indonesia-Nov-2025",
+    "name": "Cyclone Senyar Indonesia",
+    "hazard": "cyclone",
+    "center": [
+      99.02648,
+      1.76263
+    ],
+    "bbox": [
+      98.88575,
+      1.61732,
+      99.16721,
+      1.90793
+    ],
+    "capture_dates": [
+      "2025-11-30",
+      "2025-11-30"
+    ],
+    "suggested_event_date": "2025-11-30",
+    "n_captures": 44,
+    "n_quadkeys": 44
+  },
+  {
+    "id": "Typhoon-Kalmaegi-Nov-2025",
+    "name": "Typhoon Kalmaegi",
+    "hazard": "hurricane",
+    "center": [
+      116.80118,
+      12.96915
+    ],
+    "bbox": [
+      107.79853,
+      6.98634,
+      125.80382,
+      18.95196
+    ],
+    "capture_dates": [
+      "2025-03-04",
+      "2025-11-14"
+    ],
+    "suggested_event_date": "2025-07-07",
+    "n_captures": 1420,
+    "n_quadkeys": 1141
+  },
+  {
+    "id": "Hurricane-Melissa-Oct-2025",
+    "name": "Hurricane Melissa",
+    "hazard": "hurricane",
+    "center": [
+      -74.86198,
+      20.08161
+    ],
+    "bbox": [
+      -78.95769,
+      17.38163,
+      -70.76627,
+      22.78159
+    ],
+    "capture_dates": [
+      "2022-10-13",
+      "2025-11-09"
+    ],
+    "suggested_event_date": "2025-07-13",
+    "n_captures": 8469,
+    "n_quadkeys": 4939
+  },
+  {
+    "id": "Texas-Flooding-July-2025",
+    "name": "Texas Flooding July",
+    "hazard": "flood",
+    "center": [
+      -99.24398,
+      30.04341
+    ],
+    "bbox": [
+      -99.46358,
+      29.93954,
+      -99.02438,
+      30.14728
+    ],
+    "capture_dates": [
+      "2025-07-08",
+      "2025-07-09"
+    ],
+    "suggested_event_date": "2025-07-08",
+    "n_captures": 124,
+    "n_quadkeys": 46
+  },
+  {
+    "id": "Nigeria-Flooding-May-2025",
+    "name": "Nigeria Flooding",
+    "hazard": "flood",
+    "center": [
+      5.05365,
+      9.29533
+    ],
+    "bbox": [
+      5.00511,
+      9.24773,
+      5.10218,
+      9.34294
+    ],
+    "capture_dates": [
+      "2023-10-09",
+      "2025-06-02"
+    ],
+    "suggested_event_date": "2024-08-05",
+    "n_captures": 18,
+    "n_quadkeys": 9
+  },
+  {
+    "id": "Earthquake-Myanmar-March-2025",
+    "name": "Myanmar Earthquake",
+    "hazard": "earthquake",
+    "center": [
+      98.23335,
+      17.86031
+    ],
+    "bbox": [
+      95.85699,
+      13.73233,
+      100.6097,
+      21.9883
+    ],
+    "capture_dates": [
+      "2025-02-02",
+      "2025-04-04"
+    ],
+    "suggested_event_date": "2025-02-22",
+    "n_captures": 202,
+    "n_quadkeys": 61
+  },
+  {
+    "id": "WildFires-LosAngeles-Jan-2025",
+    "name": "LA Wildfires (Palisades / Eaton)",
+    "hazard": "wildfire",
+    "center": [
+      -118.4023,
+      34.16562
+    ],
+    "bbox": [
+      -118.83659,
+      33.94792,
+      -117.96801,
+      34.38331
+    ],
+    "capture_dates": [
+      "2024-12-14",
+      "2025-01-20"
+    ],
+    "suggested_event_date": "2024-12-17",
+    "n_captures": 518,
+    "n_quadkeys": 117
+  },
+  {
+    "id": "Cyclone-Chido-Dec15",
+    "name": "Cyclone Chido",
+    "hazard": "cyclone",
+    "center": [
+      42.88986,
+      -12.88014
+    ],
+    "bbox": [
+      40.47058,
+      -13.04767,
+      45.30914,
+      -12.7126
+    ],
+    "capture_dates": [
+      "2024-05-23",
+      "2025-01-01"
+    ],
+    "suggested_event_date": "2024-10-18",
+    "n_captures": 118,
+    "n_quadkeys": 58
+  },
+  {
+    "id": "Vanuatu-Earthquake-Dec17",
+    "name": "Vanuatu Earthquake",
+    "hazard": "earthquake",
+    "center": [
+      168.31999,
+      -17.74001
+    ],
+    "bbox": [
+      168.27212,
+      -17.7856,
+      168.36786,
+      -17.69441
+    ],
+    "capture_dates": [
+      "2024-09-21",
+      "2024-12-02"
+    ],
+    "suggested_event_date": "2024-10-30",
+    "n_captures": 18,
+    "n_quadkeys": 9
+  },
+  {
+    "id": "Floods-Spain-Oct24",
+    "name": "Spain Floods",
+    "hazard": "flood",
+    "center": [
+      -0.3931,
+      39.46003
+    ],
+    "bbox": [
+      -0.47899,
+      39.39128,
+      -0.30721,
+      39.52879
+    ],
+    "capture_dates": [
+      "2024-03-14",
+      "2024-11-10"
+    ],
+    "suggested_event_date": "2024-08-10",
+    "n_captures": 136,
+    "n_quadkeys": 48
+  },
+  {
+    "id": "HurricaneMilton-Oct24",
+    "name": "Hurricane Milton",
+    "hazard": "hurricane",
+    "center": [
+      -82.56855,
+      27.71508
+    ],
+    "bbox": [
+      -82.94622,
+      26.91364,
+      -82.19088,
+      28.51653
+    ],
+    "capture_dates": [
+      "2023-11-04",
+      "2024-10-10"
+    ],
+    "suggested_event_date": "2024-08-06",
+    "n_captures": 1066,
+    "n_quadkeys": 459
+  },
+  {
+    "id": "HurricaneHelene-Oct24",
+    "name": "Hurricane Helene",
+    "hazard": "hurricane",
+    "center": [
+      -83.72698,
+      33.72364
+    ],
+    "bbox": [
+      -85.89369,
+      29.09426,
+      -81.56027,
+      38.35301
+    ],
+    "capture_dates": [
+      "2019-11-09",
+      "2024-10-06"
+    ],
+    "suggested_event_date": "2021-01-23",
+    "n_captures": 651,
+    "n_quadkeys": 422
+  },
+  {
+    "id": "Nepal-Floods-Sept-2024",
+    "name": "Nepal Floods",
+    "hazard": "flood",
+    "center": [
+      85.59199,
+      27.06918
+    ],
+    "bbox": [
+      83.8894,
+      26.35222,
+      87.29457,
+      27.78615
+    ],
+    "capture_dates": [
+      "2022-03-26",
+      "2024-10-06"
+    ],
+    "suggested_event_date": "2023-09-10",
+    "n_captures": 533,
+    "n_quadkeys": 305
+  },
+  {
+    "id": "Belize-Wildfires-June24",
+    "name": "Belize Wildfires June24",
+    "hazard": "wildfire",
+    "center": [
+      -88.98818,
+      16.96703
+    ],
+    "bbox": [
+      -89.16477,
+      16.82944,
+      -88.81158,
+      17.10462
+    ],
+    "capture_dates": [
+      "2019-08-29",
+      "2024-06-03"
+    ],
+    "suggested_event_date": "2021-03-26",
+    "n_captures": 90,
+    "n_quadkeys": 43
+  },
+  {
+    "id": "PNG-Landslide-June24",
+    "name": "PNG Landslide June24",
+    "hazard": "landslide",
+    "center": [
+      143.3737,
+      -5.38109
+    ],
+    "bbox": [
+      143.29621,
+      -5.48341,
+      143.45118,
+      -5.27877
+    ],
+    "capture_dates": [
+      "2023-06-27",
+      "2024-05-27"
+    ],
+    "suggested_event_date": "2023-12-11",
+    "n_captures": 48,
+    "n_quadkeys": 30
+  },
+  {
+    "id": "Brazil-Flooding-May24",
+    "name": "Brazil Flooding",
+    "hazard": "flood",
+    "center": [
+      -51.31187,
+      -29.75585
+    ],
+    "bbox": [
+      -51.56185,
+      -30.11682,
+      -51.0619,
+      -29.39488
+    ],
+    "capture_dates": [
+      "2018-12-17",
+      "2024-05-17"
+    ],
+    "suggested_event_date": "2020-01-01",
+    "n_captures": 824,
+    "n_quadkeys": 279
+  },
+  {
+    "id": "Kenya-Flooding-May24",
+    "name": "Kenya Flooding",
+    "hazard": "flood",
+    "center": [
+      36.84857,
+      -1.26263
+    ],
+    "bbox": [
+      36.72406,
+      -1.38461,
+      36.97309,
+      -1.14065
+    ],
+    "capture_dates": [
+      "2023-11-30",
+      "2024-05-11"
+    ],
+    "suggested_event_date": "2024-02-19",
+    "n_captures": 55,
+    "n_quadkeys": 34
+  },
+  {
+    "id": "Nigeria-Floods-Sept-2024",
+    "name": "Nigeria Floods",
+    "hazard": "flood",
+    "center": [
+      13.18887,
+      11.82259
+    ],
+    "bbox": [
+      13.11981,
+      11.76525,
+      13.25794,
+      11.87992
+    ],
+    "capture_dates": [
+      "2024-01-12",
+      "2024-03-25"
+    ],
+    "suggested_event_date": "2024-02-17",
+    "n_captures": 18,
+    "n_quadkeys": 12
+  },
+  {
+    "id": "SmokeHouseCreek-Wildfires-Texas-Mar24",
+    "name": "Smoke House Creek Wildfires Texas",
+    "hazard": "wildfire",
+    "center": [
+      -100.99964,
+      36.02007
+    ],
+    "bbox": [
+      -101.68093,
+      35.46201,
+      -100.31834,
+      36.57812
+    ],
+    "capture_dates": [
+      "2021-07-31",
+      "2024-03-04"
+    ],
+    "suggested_event_date": "2022-03-10",
+    "n_captures": 782,
+    "n_quadkeys": 360
+  },
+  {
+    "id": "Japan-Earthquake-Jan-2024",
+    "name": "Japan Earthquake",
+    "hazard": "earthquake",
+    "center": [
+      137.83564,
+      37.20012
+    ],
+    "bbox": [
+      136.58313,
+      36.50432,
+      139.08815,
+      37.89592
+    ],
+    "capture_dates": [
+      "2023-08-29",
+      "2024-01-02"
+    ],
+    "suggested_event_date": "2023-12-04",
+    "n_captures": 242,
+    "n_quadkeys": 159
+  },
+  {
+    "id": "Nepal-Earthquake-Nov-2023",
+    "name": "Nepal Earthquake",
+    "hazard": "earthquake",
+    "center": [
+      82.2317,
+      28.79482
+    ],
+    "bbox": [
+      81.66499,
+      28.29126,
+      82.79841,
+      29.29838
+    ],
+    "capture_dates": [
+      "2014-12-04",
+      "2023-11-09"
+    ],
+    "suggested_event_date": "2019-05-22",
+    "n_captures": 697,
+    "n_quadkeys": 432
+  },
+  {
+    "id": "Nepal-Earthquake-Apr-2015",
+    "name": "Nepal Earthquake",
+    "hazard": "earthquake",
+    "center": [
+      85.53225,
+      28.21002
+    ],
+    "bbox": [
+      85.45388,
+      28.15943,
+      85.61062,
+      28.26061
+    ],
+    "capture_dates": [
+      "2023-10-25",
+      "2023-10-25"
+    ],
+    "suggested_event_date": "2023-10-25",
+    "n_captures": 12,
+    "n_quadkeys": 12
+  },
+  {
+    "id": "India-Floods-Oct-2023",
+    "name": "India Floods",
+    "hazard": "flood",
+    "center": [
+      88.39307,
+      27.55
+    ],
+    "bbox": [
+      88.09956,
+      27.11459,
+      88.68659,
+      27.9854
+    ],
+    "capture_dates": [
+      "2022-03-07",
+      "2023-10-06"
+    ],
+    "suggested_event_date": "2022-08-26",
+    "n_captures": 51,
+    "n_quadkeys": 36
+  },
+  {
+    "id": "Libya-Floods-Sept-2023",
+    "name": "Libya Floods",
+    "hazard": "flood",
+    "center": [
+      21.10902,
+      31.64892
+    ],
+    "bbox": [
+      19.49149,
+      30.38651,
+      22.72655,
+      32.91133
+    ],
+    "capture_dates": [
+      "2023-01-22",
+      "2023-09-22"
+    ],
+    "suggested_event_date": "2023-04-08",
+    "n_captures": 186,
+    "n_quadkeys": 76
+  },
+  {
+    "id": "Morocco-Earthquake-Sept-2023",
+    "name": "Morocco Earthquake",
+    "hazard": "earthquake",
+    "center": [
+      -8.28975,
+      31.28387
+    ],
+    "bbox": [
+      -9.72346,
+      30.14687,
+      -6.85603,
+      32.42087
+    ],
+    "capture_dates": [
+      "2010-06-02",
+      "2023-09-11"
+    ],
+    "suggested_event_date": "2015-09-09",
+    "n_captures": 8724,
+    "n_quadkeys": 1660
+  },
+  {
+    "id": "Hurricane-Idalia-Florida-Aug23",
+    "name": "Hurricane Idalia Florida",
+    "hazard": "hurricane",
+    "center": [
+      -83.13437,
+      29.48885
+    ],
+    "bbox": [
+      -83.86476,
+      28.74599,
+      -82.40399,
+      30.23172
+    ],
+    "capture_dates": [
+      "2017-10-20",
+      "2023-08-30"
+    ],
+    "suggested_event_date": "2020-01-29",
+    "n_captures": 677,
+    "n_quadkeys": 365
+  },
+  {
+    "id": "NWT-Canada-Aug-23",
+    "name": "NWT Canada",
+    "hazard": "other",
+    "center": [
+      -116.98007,
+      56.1624
+    ],
+    "bbox": [
+      -119.71748,
+      49.78177,
+      -114.24266,
+      62.54302
+    ],
+    "capture_dates": [
+      "2023-08-08",
+      "2023-08-21"
+    ],
+    "suggested_event_date": "2023-08-11",
+    "n_captures": 86,
+    "n_quadkeys": 60
+  },
+  {
+    "id": "Maui-Hawaii-fires-Aug-23",
+    "name": "Maui Wildfires",
+    "hazard": "wildfire",
+    "center": [
+      -156.49635,
+      20.82438
+    ],
+    "bbox": [
+      -156.75444,
+      20.61855,
+      -156.23827,
+      21.03021
+    ],
+    "capture_dates": [
+      "2023-08-09",
+      "2023-08-12"
+    ],
+    "suggested_event_date": "2023-08-10",
+    "n_captures": 123,
+    "n_quadkeys": 81
+  },
+  {
+    "id": "shovi-georgia-landslide-8Aug23",
+    "name": "Shovi Georgia Landslide 8Aug23",
+    "hazard": "landslide",
+    "center": [
+      43.69669,
+      42.71441
+    ],
+    "bbox": [
+      43.60782,
+      42.64996,
+      43.78556,
+      42.77885
+    ],
+    "capture_dates": [
+      "2011-09-19",
+      "2023-08-08"
+    ],
+    "suggested_event_date": "2020-07-17",
+    "n_captures": 18,
+    "n_quadkeys": 12
+  },
+  {
+    "id": "Iceland-Volcano_Eruption-Dec-2023",
+    "name": "Iceland Volcano Eruption",
+    "hazard": "volcano",
+    "center": [
+      -22.40592,
+      63.92677
+    ],
+    "bbox": [
+      -22.57476,
+      63.75676,
+      -22.23709,
+      64.09677
+    ],
+    "capture_dates": [
+      "2023-07-08",
+      "2023-07-08"
+    ],
+    "suggested_event_date": "2023-07-08",
+    "n_captures": 32,
+    "n_quadkeys": 32
+  },
+  {
+    "id": "Emilia-Romagna-Italy-flooding-may23",
+    "name": "Emilia Romagna Italy Flooding",
+    "hazard": "flood",
+    "center": [
+      12.09861,
+      44.15922
+    ],
+    "bbox": [
+      11.48581,
+      43.7827,
+      12.71142,
+      44.53575
+    ],
+    "capture_dates": [
+      "2015-05-28",
+      "2023-05-23"
+    ],
+    "suggested_event_date": "2018-12-12",
+    "n_captures": 245,
+    "n_quadkeys": 169
+  },
+  {
+    "id": "BayofBengal-Cyclone-Mocha-May-23",
+    "name": "Bayof Bengal Cyclone Mocha",
+    "hazard": "cyclone",
+    "center": [
+      92.40276,
+      20.82426
+    ],
+    "bbox": [
+      91.83125,
+      19.98208,
+      92.97427,
+      21.66645
+    ],
+    "capture_dates": [
+      "2023-01-03",
+      "2023-05-22"
+    ],
+    "suggested_event_date": "2023-04-17",
+    "n_captures": 206,
+    "n_quadkeys": 134
+  },
+  {
+    "id": "Kalehe-DRC-Flooding-5-8-23",
+    "name": "Kalehe DRC Flooding",
+    "hazard": "flood",
+    "center": [
+      28.89024,
+      -2.02758
+    ],
+    "bbox": [
+      28.82292,
+      -2.10551,
+      28.95756,
+      -1.94964
+    ],
+    "capture_dates": [
+      "2023-04-10",
+      "2023-05-12"
+    ],
+    "suggested_event_date": "2023-04-26",
+    "n_captures": 24,
+    "n_quadkeys": 16
+  },
+  {
+    "id": "Kahramanmaras-turkey-earthquake-23",
+    "name": "Kahramanmaras Turkey Earthquake",
+    "hazard": "earthquake",
+    "center": [
+      37.8065,
+      37.17355
+    ],
+    "bbox": [
+      35.30166,
+      35.87397,
+      40.31135,
+      38.47312
+    ],
+    "capture_dates": [
+      "2021-02-28",
+      "2023-03-11"
+    ],
+    "suggested_event_date": "2022-02-06",
+    "n_captures": 2115,
+    "n_quadkeys": 1054
+  },
+  {
+    "id": "New-Zealand-Flooding23",
+    "name": "New Zealand Flooding23",
+    "hazard": "flood",
+    "center": [
+      174.68233,
+      -36.74548
+    ],
+    "bbox": [
+      174.5914,
+      -36.79668,
+      174.77326,
+      -36.69428
+    ],
+    "capture_dates": [
+      "2022-11-01",
+      "2023-02-08"
+    ],
+    "suggested_event_date": "2023-01-09",
+    "n_captures": 37,
+    "n_quadkeys": 14
+  },
+  {
+    "id": "Indonesia-Earthquake22",
+    "name": "Indonesia Earthquake22",
+    "hazard": "earthquake",
+    "center": [
+      107.04012,
+      -6.87667
+    ],
+    "bbox": [
+      106.90473,
+      -6.97846,
+      107.17551,
+      -6.77487
+    ],
+    "capture_dates": [
+      "2021-07-04",
+      "2022-11-28"
+    ],
+    "suggested_event_date": "2022-05-10",
+    "n_captures": 124,
+    "n_quadkeys": 30
+  },
+  {
+    "id": "pakistan-flooding22",
+    "name": "Pakistan Flooding22",
+    "hazard": "flood",
+    "center": [
+      69.81013,
+      30.32613
+    ],
+    "bbox": [
+      66.31092,
+      24.7288,
+      73.30934,
+      35.92346
+    ],
+    "capture_dates": [
+      "2019-11-29",
+      "2022-10-11"
+    ],
+    "suggested_event_date": "2021-07-19",
+    "n_captures": 2549,
+    "n_quadkeys": 975
+  },
+  {
+    "id": "Hurricane-Ian-9-26-2022",
+    "name": "Hurricane Ian",
+    "hazard": "hurricane",
+    "center": [
+      -81.33287,
+      28.07438
+    ],
+    "bbox": [
+      -83.90127,
+      22.17931,
+      -78.76446,
+      33.96945
+    ],
+    "capture_dates": [
+      "2021-04-29",
+      "2022-10-08"
+    ],
+    "suggested_event_date": "2021-11-03",
+    "n_captures": 4207,
+    "n_quadkeys": 1005
+  },
+  {
+    "id": "Hurricane-Fiona-9-19-2022",
+    "name": "Hurricane Fiona",
+    "hazard": "hurricane",
+    "center": [
+      -67.31331,
+      31.36358
+    ],
+    "bbox": [
+      -71.1876,
+      17.95413,
+      -63.43902,
+      44.77303
+    ],
+    "capture_dates": [
+      "2022-02-07",
+      "2022-09-29"
+    ],
+    "suggested_event_date": "2022-04-01",
+    "n_captures": 274,
+    "n_quadkeys": 108
+  },
+  {
+    "id": "Sudan-flooding-8-22-2022",
+    "name": "Sudan Flooding",
+    "hazard": "flood",
+    "center": [
+      29.84561,
+      12.99512
+    ],
+    "bbox": [
+      23.26394,
+      10.48476,
+      36.42729,
+      15.50547
+    ],
+    "capture_dates": [
+      "2022-03-23",
+      "2022-09-07"
+    ],
+    "suggested_event_date": "2022-05-15",
+    "n_captures": 57,
+    "n_quadkeys": 18
+  },
+  {
+    "id": "Gambia-flooding-8-11-2022",
+    "name": "Gambia Flooding",
+    "hazard": "flood",
+    "center": [
+      -16.65563,
+      13.41119
+    ],
+    "bbox": [
+      -16.7427,
+      13.32855,
+      -16.56857,
+      13.49383
+    ],
+    "capture_dates": [
+      "2022-03-15",
+      "2022-08-13"
+    ],
+    "suggested_event_date": "2022-07-01",
+    "n_captures": 80,
+    "n_quadkeys": 23
+  },
+  {
+    "id": "kentucky-flooding-7-29-2022",
+    "name": "Kentucky Flooding",
+    "hazard": "flood",
+    "center": [
+      -83.09815,
+      37.20183
+    ],
+    "bbox": [
+      -83.40081,
+      37.0159,
+      -82.79548,
+      37.38776
+    ],
+    "capture_dates": [
+      "2021-07-03",
+      "2022-08-07"
+    ],
+    "suggested_event_date": "2022-03-18",
+    "n_captures": 185,
+    "n_quadkeys": 62
+  },
+  {
+    "id": "McDougallCreekWildfire-BC-Canada-Aug-23",
+    "name": "Mc Dougall Creek Wildfire BC Canada",
+    "hazard": "wildfire",
+    "center": [
+      -119.52327,
+      49.9179
+    ],
+    "bbox": [
+      -119.67637,
+      49.84664,
+      -119.37017,
+      49.98916
+    ],
+    "capture_dates": [
+      "2022-05-18",
+      "2022-07-14"
+    ],
+    "suggested_event_date": "2022-06-15",
+    "n_captures": 31,
+    "n_quadkeys": 24
+  },
+  {
+    "id": "afghanistan-earthquake22",
+    "name": "Afghanistan Earthquake22",
+    "hazard": "earthquake",
+    "center": [
+      79.33779,
+      29.60083
+    ],
+    "bbox": [
+      69.18355,
+      25.87191,
+      89.49202,
+      33.32975
+    ],
+    "capture_dates": [
+      "2021-06-09",
+      "2022-06-27"
+    ],
+    "suggested_event_date": "2021-10-07",
+    "n_captures": 395,
+    "n_quadkeys": 170
+  },
+  {
+    "id": "yellowstone-flooding22",
+    "name": "Yellowstone Flooding22",
+    "hazard": "flood",
+    "center": [
+      -110.72476,
+      45.27152
+    ],
+    "bbox": [
+      -110.94201,
+      44.7758,
+      -110.50751,
+      45.76724
+    ],
+    "capture_dates": [
+      "2022-06-15",
+      "2022-06-18"
+    ],
+    "suggested_event_date": "2022-06-17",
+    "n_captures": 280,
+    "n_quadkeys": 175
+  },
+  {
+    "id": "southafrica-flooding22",
+    "name": "Southafrica Flooding22",
+    "hazard": "flood",
+    "center": [
+      31.3219,
+      -29.57762
+    ],
+    "bbox": [
+      30.45617,
+      -30.47846,
+      32.18763,
+      -28.67678
+    ],
+    "capture_dates": [
+      "2022-04-12",
+      "2022-04-21"
+    ],
+    "suggested_event_date": "2022-04-17",
+    "n_captures": 933,
+    "n_quadkeys": 453
+  },
+  {
+    "id": "cyclone-emnati22",
+    "name": "Cyclone Emnati22",
+    "hazard": "cyclone",
+    "center": [
+      47.67606,
+      -23.01924
+    ],
+    "bbox": [
+      46.95734,
+      -25.09008,
+      48.39477,
+      -20.9484
+    ],
+    "capture_dates": [
+      "2020-08-11",
+      "2022-02-28"
+    ],
+    "suggested_event_date": "2021-01-19",
+    "n_captures": 794,
+    "n_quadkeys": 662
+  },
+  {
+    "id": "ghana-explosion22",
+    "name": "Ghana Explosion22",
+    "hazard": "other",
+    "center": [
+      -2.05225,
+      5.34811
+    ],
+    "bbox": [
+      -2.16308,
+      4.68687,
+      -1.94143,
+      6.00935
+    ],
+    "capture_dates": [
+      "2020-01-06",
+      "2022-01-22"
+    ],
+    "suggested_event_date": "2021-01-10",
+    "n_captures": 223,
+    "n_quadkeys": 160
+  },
+  {
+    "id": "tonga-volcano21",
+    "name": "Tonga Volcano21",
+    "hazard": "volcano",
+    "center": [
+      -175.10892,
+      -21.09784
+    ],
+    "bbox": [
+      -175.4969,
+      -21.81191,
+      -174.72093,
+      -20.38377
+    ],
+    "capture_dates": [
+      "2021-03-27",
+      "2022-01-18"
+    ],
+    "suggested_event_date": "2021-08-20",
+    "n_captures": 339,
+    "n_quadkeys": 223
+  },
+  {
+    "id": "Marshall-Fire-21-Update",
+    "name": "Marshall Fire Update",
+    "hazard": "wildfire",
+    "center": [
+      -105.20026,
+      39.96586
+    ],
+    "bbox": [
+      -105.31117,
+      39.92114,
+      -105.08934,
+      40.01057
+    ],
+    "capture_dates": [
+      "2021-12-30",
+      "2021-12-30"
+    ],
+    "suggested_event_date": "2021-12-30",
+    "n_captures": 15,
+    "n_quadkeys": 15
+  },
+  {
+    "id": "volcano-indonesia21",
+    "name": "Volcano Indonesia21",
+    "hazard": "volcano",
+    "center": [
+      113.06484,
+      -8.04499
+    ],
+    "bbox": [
+      112.77842,
+      -8.46552,
+      113.35126,
+      -7.62447
+    ],
+    "capture_dates": [
+      "2019-05-18",
+      "2021-12-11"
+    ],
+    "suggested_event_date": "2020-09-12",
+    "n_captures": 284,
+    "n_quadkeys": 154
+  },
+  {
+    "id": "Hurricane-Maria-PuertoRico-Oct-2017",
+    "name": "Hurricane Maria Puerto Rico",
+    "hazard": "hurricane",
+    "center": [
+      -66.14568,
+      18.37676
+    ],
+    "bbox": [
+      -66.21536,
+      18.27419,
+      -66.07599,
+      18.47934
+    ],
+    "capture_dates": [
+      "2017-08-29",
+      "2017-10-12"
+    ],
+    "suggested_event_date": "2017-09-20",
+    "n_captures": 46,
+    "n_quadkeys": 24
+  }
+]

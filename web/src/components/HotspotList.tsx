@@ -21,31 +21,34 @@ export default function HotspotList({ items, activeKey, onPick }: Props) {
             <button
               onClick={() => onPick(h)}
               aria-pressed={active}
-              className={`pressable group flex w-full items-center gap-3 rounded-md border px-2.5 py-2 text-left ${
-                active
-                  ? "border-accent/70 bg-surface-2"
-                  : "border-transparent hover:border-line hover:bg-surface-2"
+              className={`pressable group flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left ${
+                active ? "bg-surface-2" : "hover:bg-surface-2"
               }`}
             >
-              <span className="tnum w-5 text-center text-sm text-ink-faint">{i + 1}</span>
-              <span className="flex-1">
+              <span className="tnum w-5 shrink-0 text-center text-sm text-ink-faint">{i + 1}</span>
+              <span className="min-w-0 flex-1">
                 <span className="block text-sm text-ink">{h.label}</span>
                 <span className="tnum block text-2xs text-ink-dim">
                   {h.count} buildings · {h.severe} severe
                 </span>
-                <span className="mt-1 block h-1 w-full overflow-hidden rounded-full bg-line">
+                {/* score bar is a neutral meter — red is reserved for the damage ramp */}
+                <span className="mt-1.5 block h-[3px] w-full overflow-hidden rounded-full bg-line">
                   <span
-                    className="block h-full bg-dmg2 transition-[width] duration-500 ease-out"
+                    className="block h-full bg-meter transition-[width] duration-500 ease-out"
                     style={{ width: `${(h.score / max) * 100}%` }}
                   />
                 </span>
               </span>
-              <span
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 12 12"
+                fill="none"
                 aria-hidden
-                className="text-ink-faint transition-transform duration-200 ease-out group-hover:translate-x-0.5"
+                className="shrink-0 text-ink-faint transition-transform duration-200 ease-out group-hover:translate-x-0.5"
               >
-                ›
-              </span>
+                <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
           </li>
         );

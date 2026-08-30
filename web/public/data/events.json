@@ -1,0 +1,102 @@
+[
+  {
+    "id": "HurricaneHelene-Oct24",
+    "event": "HurricaneHelene-Oct24",
+    "name": "Hurricane Helene",
+    "hazard": "hurricane",
+    "region": "McDowell County, NC",
+    "event_date": "2024-09-26",
+    "bbox": [
+      -85.89369,
+      29.09426,
+      -81.56027,
+      38.35301
+    ],
+    "capture_dates": [
+      "2019-11-09",
+      "2024-10-06"
+    ],
+    "areas": [
+      {
+        "id": "old_fort",
+        "name": "Old Fort",
+        "subtitle": "McDowell County, NC",
+        "center": [
+          -82.1804,
+          35.6293
+        ],
+        "zoom": 15.2,
+        "hero": [
+          16,
+          17807,
+          25818
+        ],
+        "pre_date": "2022-01-07",
+        "post_date": "2024-10-05",
+        "model": "fusion:cmu-classifier + change-detection (OSM footprints)",
+        "notes": "Damage class from the xView2 CMU baseline classifier (ResNet50-v1 + CNN head, trained on xBD); a per-building confidence tier is fused from that model's softmax margin and agreement with an independent change-detection pass. 'review'-tier buildings are routed to the human review queue. Footprints are OpenStreetMap.",
+        "n_buildings": 766
+      },
+      {
+        "id": "spruce_pine",
+        "name": "Spruce Pine",
+        "subtitle": "Mitchell County, NC",
+        "center": [
+          -82.0643,
+          35.9151
+        ],
+        "zoom": 15.4,
+        "hero": [
+          16,
+          17827,
+          25754
+        ],
+        "pre_date": "2024-02-03",
+        "post_date": "2024-10-05",
+        "model": "fusion:cmu-classifier + change-detection (OSM footprints)",
+        "notes": "Damage class from the xView2 CMU baseline classifier (ResNet50-v1 + CNN head, trained on xBD); a per-building confidence tier is fused from that model's softmax margin and agreement with an independent change-detection pass. 'review'-tier buildings are routed to the human review queue. Footprints are OpenStreetMap.",
+        "n_buildings": 139
+      }
+    ]
+  },
+  {
+    "id": "WildFires-LosAngeles-Jan-2025",
+    "event": "WildFires-LosAngeles-Jan-2025",
+    "name": "LA Wildfires (Palisades / Eaton)",
+    "hazard": "wildfire",
+    "region": "Los Angeles, CA",
+    "event_date": "2025-01-07",
+    "bbox": [
+      -118.83659,
+      33.94792,
+      -117.96801,
+      34.38331
+    ],
+    "capture_dates": [
+      "2024-12-14",
+      "2025-01-20"
+    ],
+    "areas": [
+      {
+        "id": "palisades",
+        "name": "Pacific Palisades",
+        "subtitle": "Los Angeles, CA",
+        "center": [
+          -118.5576,
+          34.0834
+        ],
+        "zoom": 15.2,
+        "hero": [
+          16,
+          11185,
+          26161
+        ],
+        "pre_date": "2024-12-21",
+        "post_date": "2025-01-13",
+        "model": "fusion:cmu-classifier + change-detection (OSM footprints)",
+        "notes": "Damage class from the xView2 CMU baseline classifier (ResNet50-v1 + CNN head, trained on xBD); a per-building confidence tier is fused from that model's softmax margin and agreement with an independent change-detection pass. 'review'-tier buildings are routed to the human review queue. Footprints are OpenStreetMap.",
+        "n_buildings": 1038
+      }
+    ]
+  }
+]

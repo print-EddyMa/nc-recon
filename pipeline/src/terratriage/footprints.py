@@ -107,3 +107,42 @@ def load_for_area(pre_path: str, cache_dir: str, area: str):
     polys = [p for p in polys if p.geom_type == "Polygon" and p.area >= 8.0]
     print(f"[footprints] {area}: {len(polys)} OSM building polygons in AOI")
     return polys, dst_crs
+
+
+def load_osm_polys(pre_path: str, cache_dir: str, area: str):
+    """Just the OSM footprints for an AOI, in the raster CRS — for use as a
+    filter over a *separate* set of model-predicted polygons (Phase D1)."""
+    polys, dst_crs = load_for_area(pre_path, cache_dir, area)
+    return polys, dst_crs
+
+
+def filter_by_osm(pred_polys, osm_polys, min_iou: float = 0.1):
+    """Split model-predicted polygons by whether they overlap a real OSM
+    building. Returns (kept, dropped) index lists + a per-poly bool.
+
+    Used by the segmentation pipeline, where the model invents its own
+    footprints and can mistake terrain / shadow / vegetation for a structure.
+    The primary footprints pipeline starts from OSM so every building already
+    passes this by construction.
+    """
+    from shapely.strtree import STRtree
+
+    if not osm_polys:
+        return list(range(len(pred_polys))), [], [True] * len(pred_polys)
+    tree = STRtree(osm_polys)
+    verified = []
+    for p in pred_polys:
+        ok = False
+        for j in tree.query(p):
+            o = osm_polys[int(j)]
+            inter = p.intersection(o).area
+            if inter <= 0:
+                continue
+            union = p.area + o.area - inter
+            if union > 0 and inter / union >= min_iou:
+                ok = True
+                break
+        verified.append(ok)
+    kept = [i for i, v in enumerate(verified) if v]
+    dropped = [i for i, v in enumerate(verified) if not v]
+    return kept, dropped, verified

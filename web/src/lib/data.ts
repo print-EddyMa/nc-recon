@@ -1,29 +1,20 @@
-import type { AreaConfig, BuildingFeature, DamageClass, DamageCollection } from "./types";
+import type { BuildingFeature, DamageClass, DamageCollection } from "./types";
 import { isSevere } from "./damage";
-
-export const AREAS: AreaConfig[] = [
-  {
-    id: "old_fort",
-    name: "Old Fort",
-    subtitle: "McDowell County, NC",
-    center: [-82.1804, 35.6293],
-    zoom: 15.2,
-    hero: [16, 17807, 25818],
-  },
-  {
-    id: "spruce_pine",
-    name: "Spruce Pine",
-    subtitle: "Mitchell County, NC",
-    center: [-82.0643, 35.9151],
-    zoom: 15.4,
-    hero: [16, 17827, 25754],
-  },
-];
 
 export const heroTileUrl = (id: string, kind: "pre" | "post", [z, x, y]: [number, number, number]) =>
   `${import.meta.env.BASE_URL}tiles/${id}/${kind}/${z}/${x}/${y}.jpg`;
 
-export const areaById = (id: string) => AREAS.find((a) => a.id === id) ?? AREAS[0];
+/** XYZ tile + within-tile fractional offset for a lon/lat — used by the review
+ * queue to show a tight pre/post crop of one building from the committed tiles. */
+export function tileForLonLat(lon: number, lat: number, z: number) {
+  const n = 2 ** z;
+  const xf = ((lon + 180) / 360) * n;
+  const latRad = (lat * Math.PI) / 180;
+  const yf = ((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2) * n;
+  const x = Math.floor(xf);
+  const y = Math.floor(yf);
+  return { z, x, y, fx: xf - x, fy: yf - y };
+}
 
 export async function loadArea(id: string): Promise<DamageCollection> {
   const res = await fetch(`${import.meta.env.BASE_URL}data/${id}.geojson`);
@@ -39,11 +30,15 @@ export interface AreaStats {
   assessedAreaKm2: number;
 }
 
-export function summarize(fc: DamageCollection): AreaStats {
+export function summarize(
+  fc: DamageCollection,
+  overrides?: Record<string, DamageClass>,
+): AreaStats {
   const counts: Record<DamageClass, number> = { 0: 0, 1: 0, 2: 0, 3: 0 };
   let area = 0;
   for (const f of fc.features) {
-    counts[f.properties.damage_class]++;
+    const c = overrides?.[f.properties.id] ?? f.properties.damage_class;
+    counts[c]++;
     area += f.properties.area_m2;
   }
   const total = fc.features.length;

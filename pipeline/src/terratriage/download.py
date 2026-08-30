@@ -44,20 +44,55 @@ def fetch_catalog(event: str, cache_dir: str) -> list[dict]:
         return list(csv.DictReader(fh, delimiter="\t"))
 
 
+def row_epsg(row: dict) -> int:
+    """EPSG for a catalog row. Older Maxar TSVs have `proj:epsg` (a bare int);
+    newer ones only carry `proj:code` ("EPSG:32629") and `utm_zone`."""
+    v = row.get("proj:epsg")
+    if v:
+        return int(v)
+    code = row.get("proj:code") or ""
+    if code.upper().startswith("EPSG:"):
+        return int(code.split(":")[1])
+    zone = row.get("utm_zone")
+    if zone:
+        z = int(zone)
+        # hemisphere: infer from the bbox northing (southern UTM uses a false N)
+        try:
+            _, miny, _, maxy = (float(x) for x in row["proj:bbox"].split(","))
+            north = ((miny + maxy) / 2) < 8_000_000  # southern rows are offset +10e6
+        except Exception:  # noqa: BLE001
+            north = True
+        return (32600 if north else 32700) + z
+    raise KeyError("row has no proj:epsg / proj:code / utm_zone")
+
+
 def _contains(row: dict, lat: float, lon: float) -> bool:
     from pyproj import Transformer
 
-    epsg = int(row["proj:epsg"])
+    epsg = row_epsg(row)
     x, y = Transformer.from_crs(4326, epsg, always_xy=True).transform(lon, lat)
     minx, miny, maxx, maxy = (float(v) for v in row["proj:bbox"].split(","))
     return minx <= x <= maxx and miny <= y <= maxy
+
+
+def _row_centroid_lonlat(row: dict) -> tuple[float, float]:
+    from pyproj import Transformer
+
+    epsg = row_epsg(row)
+    minx, miny, maxx, maxy = (float(v) for v in row["proj:bbox"].split(","))
+    lon, lat = Transformer.from_crs(epsg, 4326, always_xy=True).transform(
+        (minx + maxx) / 2, (miny + maxy) / 2
+    )
+    return lon, lat
 
 
 def choose_tile(
     rows: list[dict], area: str, lat: float, lon: float, event_date: dt.date
 ) -> TileChoice:
     """Nearest pre (before event) + nearest post (on/after event) for the tile
-    containing (lat, lon). Raises if no such pair exists."""
+    containing (lat, lon). If no tile contains the point, fall back to the
+    quadkey nearest the point that still has a usable pre/post pair. Raises only
+    if the whole event has no pre/post pair anywhere."""
     from collections import defaultdict
 
     by_qk: dict[str, list[dict]] = defaultdict(list)
@@ -65,7 +100,25 @@ def choose_tile(
         if _contains(r, lat, lon):
             by_qk[r["quadkey"]].append(r)
     if not by_qk:
-        raise LookupError(f"{area}: no Maxar tile covers ({lat}, {lon}) in this event")
+        # nearest-quadkey fallback: group ALL rows, keep those with a pre+post,
+        # pick the group whose centroid is closest to the requested point
+        import math
+
+        allq: dict[str, list[dict]] = defaultdict(list)
+        for r in rows:
+            allq[r["quadkey"]].append(r)
+        ranked = []
+        for qk, rs in allq.items():
+            clon, clat = _row_centroid_lonlat(rs[0])
+            d = math.hypot(clon - lon, clat - lat)
+            ranked.append((d, qk, rs))
+        ranked.sort(key=lambda t: t[0])
+        by_qk = {}
+        for _, qk, rs in ranked[:8]:
+            by_qk[qk] = rs
+        if not by_qk:
+            raise LookupError(f"{area}: event has no tiles at all")
+        print(f"[download] ({lat},{lon}) not inside any tile; using nearest quadkey(s)")
 
     best: TileChoice | None = None
     best_gap = None
@@ -81,7 +134,7 @@ def choose_tile(
             best_gap = gap
             p, q = pre[0], post[0]
             best = TileChoice(
-                area=area, quadkey=qk, epsg=int(p["proj:epsg"]), grid=p["grid:code"],
+                area=area, quadkey=qk, epsg=row_epsg(p), grid=p.get("grid:code", ""),
                 pre_date=p["_d"].isoformat(), pre_url=p["visual"],
                 pre_catalog_id=p["catalog_id"], pre_gsd=float(p["gsd"]),
                 post_date=q["_d"].isoformat(), post_url=q["visual"],

@@ -39,30 +39,49 @@ def run(
     scores = score_buildings(
         pre_path, post_path, polys, dst_crs, backend=backend, weights_path=cls_weights
     )
+    fused = bool(scores) and len(scores[0]) == 4
 
     to_wgs = Transformer.from_crs(dst_crs, 4326, always_xy=True).transform
     features = []
-    for i, (poly, (cls, conf)) in enumerate(zip(polys, scores)):
+    for i, (poly, score) in enumerate(zip(polys, scores)):
+        if fused:
+            cls, conf, tier, srcs = score
+        else:
+            cls, conf = score
+            tier, srcs = None, None
         poly_s = poly.simplify(0.4, preserve_topology=True) or poly
         pw = shapely_transform(to_wgs, poly_s if not poly_s.is_empty else poly)
         ring = [[float(x), float(y)] for x, y in pw.exterior.coords]
         cen = pw.centroid
         features.append(
-            contract.feature(f"{area}-{i:06d}", [ring], cls, conf, poly.area, (cen.x, cen.y))
+            contract.feature(
+                f"{area}-{i:06d}", [ring], cls, conf, poly.area, (cen.x, cen.y),
+                tier=tier, sources=srcs, footprint_source="osm",
+            )
         )
 
-    model_name = (
-        "xview2_baseline:cmu-classifier (ResNet50+CNN, OSM footprints)"
-        if backend == "keras" else
-        "heuristic:change-detection (OSM footprints)"
-    )
-    notes = (
-        "Damage from the xView2 CMU baseline classifier (ResNet50-v1 + CNN head), "
-        "trained on xBD; a per-building post-image classifier, not the 1st-place "
-        "ensemble. Footprints are OpenStreetMap."
-        if backend == "keras" else
-        "Damage from a change-detection heuristic, not a trained CNN. Footprints are OSM."
-    )
+    if fused:
+        model_name = "fusion:cmu-classifier + change-detection (OSM footprints)"
+    elif backend == "keras":
+        model_name = "xview2_baseline:cmu-classifier (ResNet50+CNN, OSM footprints)"
+    else:
+        model_name = "heuristic:change-detection (OSM footprints)"
+    if fused:
+        notes = (
+            "Damage class from the xView2 CMU baseline classifier (ResNet50-v1 + CNN "
+            "head, trained on xBD); a per-building confidence tier is fused from that "
+            "model's softmax margin and agreement with an independent change-detection "
+            "pass. 'review'-tier buildings are routed to the human review queue. "
+            "Footprints are OpenStreetMap."
+        )
+    elif backend == "keras":
+        notes = (
+            "Damage from the xView2 CMU baseline classifier (ResNet50-v1 + CNN head), "
+            "trained on xBD; a per-building post-image classifier, not the 1st-place "
+            "ensemble. Footprints are OpenStreetMap."
+        )
+    else:
+        notes = "Damage from a change-detection heuristic, not a trained CNN. Footprints are OSM."
     meta = contract.RunMeta(
         event=event, area=area, model=model_name,
         pre_image=contract.ImageMeta(**(pre_meta or {"date": "unknown"})),
