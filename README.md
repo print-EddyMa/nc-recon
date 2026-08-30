@@ -5,13 +5,14 @@ imagery** of an area, TerraTriage locates every building, rates its damage on
 the four-level xView2 scale — **no damage → minor → major → destroyed** — fuses
 two independent models into a per-building **confidence tier**, and puts the
 result on an interactive 3-D map with a **human review queue** for the uncertain
-calls. A separate **Live Monitor** tracks hazards happening right now (USGS
-quakes, GDACS multi-hazard, NASA FIRMS fires) — explicitly *detection*, not
-damage assessment.
+calls.
 
-Works for **any Maxar Open Data event**, chosen from an in-app event picker.
-Ingested so far: **Hurricane Helene** (Old Fort & Spruce Pine, NC, Sept–Oct 2024)
-and the **January 2025 LA Wildfires** (Pacific Palisades, CA).
+The app opens on a **Live Monitor**: a worldwide map of hazards happening right
+now (USGS quakes, GDACS multi-hazard, optional NASA FIRMS fires) — explicitly
+*detection*, not damage assessment. From there you pick or **ingest on demand**
+any of the ~55 events in the Maxar Open Data catalogue. Pre-baked: **Hurricane
+Helene** (Old Fort & Spruce Pine, NC, Sept–Oct 2024) and the **January 2025 LA
+Wildfires** (Pacific Palisades, CA).
 
 |  |  |
 |--|--|
@@ -98,21 +99,28 @@ npm run refresh-live       # seed public/data/live/*_snapshot.geojson (offline f
 npm run dev
 ```
 
-`npm run build` → static `dist/`. No backend — the app reads the GeoJSON, the
-event registry, the live snapshots and the tiles as static files.
-`VITE_FIRMS_KEY=<key>` (a free NASA FIRMS map key) enables the active-fire layer.
+`npm run build` → static `dist/`. The app reads the GeoJSON, the event registry,
+the live snapshots and the tiles as static files. `server.py` (optional) adds the
+on-demand `/assess` ingest; a free NASA FIRMS map key can be pasted in-app
+(Layers panel) or set as `VITE_FIRMS_KEY`.
 
-## Demo flow
+## Using it
 
-Landing → drag the before/after wipe → **Open the damage map** → drag the bottom
-slider from *3-D damage model* to *Satellite* and back → click a ranked
-"hardest-hit cluster" to fly there → hover / click a building → open **Review**,
-approve or override a flagged building (watch it redraw on the map) → open
-**Live monitor** for the global hazard picture → in **Assess a live hazard**,
-pick a current disaster that has Maxar imagery and hit **Ingest** (with
-`server.py` running) to build its damage map on the spot → **Event picker → LA
-Wildfires** to see the same pipeline on a pre-baked second disaster → **Summary**
-for the headline number.
+The app **opens on the global Live Monitor** — no disaster is selected. Pick one
+from the monitor's "Assess a live hazard" panel, the top-bar picker, or **⌘K**
+(searches all 55 Maxar events, ingests any of them if `server.py` is up). Once an
+event is open you get the **Damage map** (before/after slider → 3-D extrusion,
+ranked hardest-hit clusters, click a building for its confidence tier), the
+**Review** queue (approve / reject / override the flagged buildings; bulk-approve
+where the two model passes agree; export decisions), and the **Summary**
+(headline number, distribution, confidence split, GeoJSON export).
+
+Every view is deep-linkable: `#/live`, `#/about`,
+`#/e/<event>/<area>/<screen>` (there's a copy-link button next to the event
+name). Keyboard: **⌘K** command menu, **?** shortcut list, **g** then
+`l`/`m`/`r`/`s` to jump screens.
+
+Work in progress lives on the **`phase-cd-and-redesign`** branch.
 
 ## Credits & data
 
