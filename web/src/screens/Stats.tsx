@@ -116,6 +116,49 @@ export default function Stats({ event, area, fc, onOpenMap }: Props) {
         </div>
       </section>
 
+      {p.review && (p.review.total_high || p.review.total_review) && (
+        <section className="mt-12 border-t border-line pt-6">
+          <div className="section-title mb-4">Confidence</div>
+          <div className="flex items-center gap-3">
+            <span className="w-24 shrink-0 text-xs text-ink-dim">High confidence</span>
+            <span className="relative h-4 flex-1 overflow-hidden rounded-sm bg-surface-2">
+              <span
+                className="absolute inset-y-0 left-0 bg-accent"
+                style={{
+                  width: `${(p.review.total_high / (p.review.total_high + p.review.total_review || 1)) * 100}%`,
+                }}
+              />
+            </span>
+            <span className="tnum w-14 shrink-0 text-right text-sm text-ink">
+              {p.review.total_high.toLocaleString()}
+            </span>
+            <span className="tnum w-14 shrink-0 text-right text-xs text-ink-faint" />
+          </div>
+          <div className="mt-3 flex items-center gap-3">
+            <span className="w-24 shrink-0 text-xs text-ink-dim">Needs review</span>
+            <span className="relative h-4 flex-1 overflow-hidden rounded-sm bg-surface-2">
+              <span
+                className="absolute inset-y-0 left-0 bg-meter"
+                style={{
+                  width: `${(p.review.total_review / (p.review.total_high + p.review.total_review || 1)) * 100}%`,
+                }}
+              />
+            </span>
+            <span className="tnum w-14 shrink-0 text-right text-sm text-ink">
+              {p.review.total_review.toLocaleString()}
+            </span>
+            <span className="tnum w-14 shrink-0 text-right text-xs text-ink-faint" />
+          </div>
+          <p className="mt-3 max-w-[64ch] text-xs leading-relaxed text-ink-faint">
+            {p.review.model_agreement_pct != null
+              ? `The CNN classifier and the change-detection pass agree on ${p.review.model_agreement_pct}% of buildings. `
+              : ""}
+            Where they disagree or the model is not decisive, the building is routed to
+            the review queue rather than reported as certain.
+          </p>
+        </section>
+      )}
+
       <section className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-line pt-5 text-xs text-ink-faint">
         <button
           onClick={onOpenMap}
@@ -123,14 +166,6 @@ export default function Stats({ event, area, fc, onOpenMap }: Props) {
         >
           View on map →
         </button>
-        {p.review && (
-          <span className="tnum">
-            {p.review.total_review.toLocaleString()} flagged for review
-            {p.review.model_agreement_pct != null
-              ? ` · ${p.review.model_agreement_pct}% model agreement`
-              : ""}
-          </span>
-        )}
         <span>
           {modelLabel(p.model)}
           {p.runtime_sec ? ` · ${p.runtime_sec}s` : ""}

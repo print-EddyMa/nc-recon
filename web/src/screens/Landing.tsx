@@ -48,7 +48,7 @@ export default function Landing({
   const stats = useMemo(() => (fc ? summarize(fc) : null), [fc]);
   const blurb =
     HAZARD_BLURB[event.hazard] ??
-    "The event's footprint is only legible by comparing imagery from before and after.";
+    "The damage footprint is only legible by comparing imagery from before and after.";
 
   return (
     <main id="main" className="relative min-h-full overflow-y-auto">
@@ -58,8 +58,7 @@ export default function Landing({
         <div className="mb-7 flex items-center justify-between gap-3">
           <p className="cap flex items-center gap-2">
             <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-            Rapid damage assessment · {event.name}
-            {event.event_date ? ` · ${event.event_date}` : ""}
+            About TerraTriage
           </p>
           <EventPicker
             events={events}
@@ -79,10 +78,17 @@ export default function Landing({
             </h1>
 
             <p className="mt-6 max-w-[46ch] text-[0.95rem] leading-relaxed text-ink-dim">
-              {blurb} TerraTriage pairs pre- and post-event satellite imagery, finds
-              every structure, rates its damage on a four-level scale, and routes the
-              uncertain calls to a human review queue — turning two photographs into a
-              map a response coordinator can act on.
+              TerraTriage pairs pre- and post-event satellite imagery for any disaster
+              with Maxar Open Data coverage, finds every structure, rates its damage on
+              a four-level scale, and routes the uncertain calls to a human review
+              queue. A live global monitor tracks hazards worldwide before any imagery
+              exists.
+            </p>
+
+            <p className="mt-3 max-w-[46ch] text-xs leading-relaxed text-ink-faint">
+              Featured: <span className="text-ink-dim">{event.name}</span>
+              {event.event_date ? `, ${event.event_date}` : ""}.{" "}
+              {blurb}
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-4">

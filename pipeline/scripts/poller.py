@@ -111,25 +111,40 @@ def main():
             print(f"[poller] MATCH {ev} <- {hits[0]['hazard']} ({hits[0]['distance_km']} km)")
 
     if not a.dry_run:
+        import shutil
+
         os.makedirs(OUT, exist_ok=True)
+        web_data = os.path.join(ROOT, "..", "web", "public", "data")
         for ev, summ, hit in matched:
             c = summ.get("center")
             if not c:
                 continue
             area = ev.lower().replace("-", "_")[:40]
             stamp = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
-            for cmd in (
-                ["fetch", "--event", ev, "--area", area,
-                 "--lat", str(c[1]), "--lon", str(c[0])],
-                ["infer", "--area", area],
-            ):
+            steps = [
+                ("run.py", ["fetch", "--event", ev, "--area", area,
+                            "--lat", str(c[1]), "--lon", str(c[0])]),
+                ("run.py", ["infer", "--area", area]),
+                ("make_tiles.py", ["--area", area]),
+                ("run.py", ["events", "registry"]),
+            ]
+            ok = True
+            for script, cmd in steps:
                 r = subprocess.run(
-                    [sys.executable, os.path.join(ROOT, "scripts", "run.py"), *cmd],
+                    [sys.executable, os.path.join(ROOT, "scripts", script), *cmd],
                     capture_output=True, text=True,
                 )
                 print(r.stdout[-500:] or r.stderr[-500:])
+                if r.returncode != 0:
+                    ok = False
+                    break
+            if ok:
+                src = os.path.join(OUT, f"{area}.geojson")
+                if os.path.exists(src):
+                    os.makedirs(web_data, exist_ok=True)
+                    shutil.copy2(src, os.path.join(web_data, f"{area}.geojson"))
             with open(LOG, "a") as fh:
-                fh.write(f"{stamp}\t{ev}\t{hit['hazard']}\t{hit['distance_km']}km\n")
+                fh.write(f"{stamp}\t{ev}\t{hit['hazard']}\t{hit['distance_km']}km\t{'ok' if ok else 'FAILED'}\n")
 
     # remember what we've now seen
     os.makedirs(CACHE, exist_ok=True)
