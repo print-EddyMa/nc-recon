@@ -8,6 +8,7 @@ import type { CatalogEvent } from "./lib/catalog";
 import type { IngestState } from "./lib/useAssess";
 import EventPicker from "./components/EventPicker";
 import CommandMenu from "./components/CommandMenu";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from "sonner";
 import Landing from "./screens/Landing";
 import MapView from "./screens/MapView";
@@ -104,6 +105,34 @@ export default function App() {
     [events],
   );
   const hasEvent = !!event && !!area;
+
+  // --- URL hash deep-linking: #/live · #/about · #/e/<event>/<area>/<screen> ---
+  const hydrated = useRef(false);
+  useEffect(() => {
+    if (!events || hydrated.current) return;
+    hydrated.current = true;
+    const m = window.location.hash.match(/^#\/(live|about|e\/([^/]+)\/([^/]+)\/(map|review|stats))/);
+    if (!m) return;
+    if (m[1] === "about") setScreen("landing");
+    else if (m[1] === "live") setScreen("live");
+    else if (m[2]) {
+      const ev = events.find((e) => e.id === decodeURIComponent(m[2]));
+      if (ev) {
+        setEventId(ev.id);
+        const a = ev.areas.find((x) => x.id === decodeURIComponent(m[3])) ?? ev.areas[0];
+        setAreaId(a?.id ?? null);
+        setScreen(m[4] as Screen);
+      }
+    }
+  }, [events]);
+  useEffect(() => {
+    if (!events || !hydrated.current) return;
+    let hash = "#/live";
+    if (screen === "landing") hash = "#/about";
+    else if (eventId && areaId && (screen === "map" || screen === "review" || screen === "stats"))
+      hash = `#/e/${encodeURIComponent(eventId)}/${encodeURIComponent(areaId)}/${screen}`;
+    if (hash !== window.location.hash) window.history.replaceState(null, "", hash);
+  }, [screen, eventId, areaId, events]);
 
   // shared "ingest a Maxar catalogue event" flow — used by the top-bar picker,
   // the landing picker, and the Live Monitor's Assess panel
@@ -225,25 +254,33 @@ export default function App() {
           )}
           <main id="main" className="relative flex-1 overflow-hidden">
             {effScreen === "map" && event && area && (
-              <MapView event={event} area={area} fc={fc} />
+              <ErrorBoundary label="The damage map">
+                <MapView event={event} area={area} fc={fc} />
+              </ErrorBoundary>
             )}
             {effScreen === "live" && (
-              <LiveMonitor
-                events={events}
-                catalog={catalog}
-                online={online}
-                jobs={jobs}
-                onOpenEvent={pickEvent}
-                onNavMap={() => go("map")}
-                onIngest={ingest}
-                onOpenAbout={() => go("landing")}
-              />
+              <ErrorBoundary label="The live monitor">
+                <LiveMonitor
+                  events={events}
+                  catalog={catalog}
+                  online={online}
+                  jobs={jobs}
+                  onOpenEvent={pickEvent}
+                  onNavMap={() => go("map")}
+                  onIngest={ingest}
+                  onOpenAbout={() => go("landing")}
+                />
+              </ErrorBoundary>
             )}
             {effScreen === "review" && area && (
-              <ReviewQueue area={area} fc={fc} onOpenMap={() => go("map")} />
+              <ErrorBoundary label="The review queue">
+                <ReviewQueue area={area} fc={fc} onOpenMap={() => go("map")} />
+              </ErrorBoundary>
             )}
             {effScreen === "stats" && event && area && (
-              <Stats event={event} area={area} fc={fc} onOpenMap={() => go("map")} />
+              <ErrorBoundary label="The summary">
+                <Stats event={event} area={area} fc={fc} onOpenMap={() => go("map")} />
+              </ErrorBoundary>
             )}
           </main>
         </div>

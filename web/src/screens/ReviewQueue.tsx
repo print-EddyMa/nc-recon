@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { heroTileUrl, tileForLonLat, summarize } from "../lib/data";
 import { DAMAGE } from "../lib/damage";
 import { useReviewDecisions, overrideClasses } from "../lib/review";
+import { Tooltip } from "../components/ui/Tooltip";
 import type { ReviewDecision } from "../lib/review";
 import type {
   AreaConfig,
@@ -95,6 +96,35 @@ export default function ReviewQueue({ area, fc, onOpenMap }: Props) {
   const resolved = queue.length - queue.filter((f) => !decisions[f.properties.id]).length;
   const open = queue.length - resolved;
 
+  // buildings where the second pass actually agrees with the model — safe to
+  // clear in bulk (they were flagged only for a low decision margin)
+  const agreeing = queue.filter((f) => {
+    const s = f.properties.sources;
+    return s && s.heuristic === s.cnn && !decisions[f.properties.id];
+  });
+
+  const approveMany = (list: typeof queue) => {
+    const at = Date.now();
+    for (const f of list) setDecision(f.properties.id, { action: "approve", at });
+  };
+
+  const exportDecisions = () => {
+    const rows = Object.entries(decisions).map(([id, d]) => ({
+      id,
+      action: d.action,
+      override_class: d.damage_class ?? null,
+      at: new Date(d.at).toISOString(),
+    }));
+    const blob = new Blob([JSON.stringify({ area: area.id, decisions: rows }, null, 2)], {
+      type: "application/json",
+    });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `terratriage-review-${area.id}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   return (
     <div className="mx-auto h-full max-w-4xl overflow-y-auto px-6 py-10">
       <p className="cap mb-3">
@@ -135,10 +165,23 @@ export default function ReviewQueue({ area, fc, onOpenMap }: Props) {
           />
           show resolved
         </label>
-        {resolved > 0 && (
-          <button onClick={clearAll} className="pressable text-ink-faint hover:text-ink">
-            reset decisions
+        {agreeing.length > 0 && (
+          <button
+            onClick={() => approveMany(agreeing)}
+            className="pressable rounded-md border border-line px-2.5 py-1 text-ink-dim hover:border-accent hover:text-ink"
+          >
+            approve {agreeing.length} where passes agree
           </button>
+        )}
+        {resolved > 0 && (
+          <>
+            <button onClick={exportDecisions} className="pressable text-ink-faint hover:text-ink">
+              export
+            </button>
+            <button onClick={clearAll} className="pressable text-ink-faint hover:text-ink">
+              reset
+            </button>
+          </>
         )}
         <button
           onClick={onOpenMap}
@@ -254,24 +297,25 @@ function ReviewRow({
           >
             <XMark /> Reject
           </button>
-          <span className="mx-1 text-2xs text-ink-faint">override</span>
+          <span className="mx-1 text-2xs text-ink-faint">override to</span>
           {DAMAGE.map((d) => {
             const on = decision?.action === "override" && decision.damage_class === d.index;
             return (
-              <button
-                key={d.index}
-                onClick={() =>
-                  onDecide(on ? null : { action: "override", damage_class: d.index, at: now() })
-                }
-                aria-pressed={on}
-                title={d.label}
-                className={`pressable h-6 w-6 rounded-sm text-[10px] font-semibold ring-1 ring-inset ${
-                  on ? "ring-ink" : "ring-black/20"
-                }`}
-                style={{ background: d.hex, color: "#0a1416" }}
-              >
-                {d.short[0]}
-              </button>
+              <Tooltip key={d.index} content={d.label}>
+                <button
+                  onClick={() =>
+                    onDecide(on ? null : { action: "override", damage_class: d.index, at: now() })
+                  }
+                  aria-pressed={on}
+                  aria-label={`Override to ${d.label}`}
+                  className={`pressable h-6 w-6 rounded-sm text-[10px] font-semibold ring-1 ring-inset ${
+                    on ? "ring-ink" : "ring-black/20"
+                  }`}
+                  style={{ background: d.hex, color: "#0a1416" }}
+                >
+                  {d.short[0]}
+                </button>
+              </Tooltip>
             );
           })}
         </div>
