@@ -196,6 +196,10 @@ def assess(req: AssessReq):
     area = re.sub(r"[^a-z0-9_]+", "_", (req.name or req.event).lower()).strip("_")[:40] or "aoi"
     if os.path.exists(os.path.join(OUT, f"{area}.geojson")):
         return {"job_id": None, "status": "done", "area": area, "note": "already assessed"}
+    # coalesce concurrent requests for the same AOI
+    for jid, j in JOBS.items():
+        if j.get("area") == area and j["status"] in ("queued", "running"):
+            return {"job_id": jid, "status": j["status"], "area": area, "note": "already running"}
     job_id = uuid.uuid4().hex[:12]
     JOBS[job_id] = {"status": "queued", "step": "queued", "started": time.time(), "area": area}
     threading.Thread(

@@ -10,7 +10,7 @@ import EventPicker from "./components/EventPicker";
 import CommandMenu from "./components/CommandMenu";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ShortcutsDialog from "./components/ShortcutsDialog";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 import Landing from "./screens/Landing";
 import MapView from "./screens/MapView";
 import LiveMonitor from "./screens/LiveMonitor";
@@ -197,7 +197,7 @@ export default function App() {
       </a>
       <Toaster
         theme="dark"
-        position="bottom-right"
+        position="top-right"
         toastOptions={{
           className: "tt-toast",
           style: {
@@ -426,6 +426,25 @@ function TopBar({
         <span className="hidden items-center gap-1.5 text-xs text-ink-faint lg:flex">
           <span className="text-ink-dim">viewing</span>
           <span className="text-ink">{event.name}</span>
+          <button
+            onClick={() => {
+              navigator.clipboard?.writeText(window.location.href).then(
+                () => toast.success("Link copied", { description: "Opens straight to this view." }),
+                () => void 0,
+              );
+            }}
+            className="pressable rounded-sm px-1 text-ink-faint hover:text-ink"
+            aria-label="Copy a link to this view"
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
+              <path
+                d="M6 10a3 3 0 004 0l2-2a3 3 0 00-4-4l-1 1M10 6a3 3 0 00-4 0L4 8a3 3 0 004 4l1-1"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
           <button
             onClick={() => onNav("live")}
             className="pressable rounded-sm px-1 text-ink-faint hover:text-ink"
