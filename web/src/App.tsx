@@ -110,21 +110,28 @@ export default function App() {
   // --- URL hash deep-linking: #/live · #/about · #/e/<event>/<area>/<screen> ---
   const hydrated = useRef(false);
   useEffect(() => {
-    if (!events || hydrated.current) return;
-    hydrated.current = true;
-    const m = window.location.hash.match(/^#\/(live|about|e\/([^/]+)\/([^/]+)\/(map|review|stats))/);
-    if (!m) return;
-    if (m[1] === "about") setScreen("landing");
-    else if (m[1] === "live") setScreen("live");
-    else if (m[2]) {
-      const ev = events.find((e) => e.id === decodeURIComponent(m[2]));
-      if (ev) {
-        setEventId(ev.id);
-        const a = ev.areas.find((x) => x.id === decodeURIComponent(m[3])) ?? ev.areas[0];
-        setAreaId(a?.id ?? null);
-        setScreen(m[4] as Screen);
+    if (!events) return;
+    const applyHash = () => {
+      const m = window.location.hash.match(
+        /^#\/(live|about|e\/([^/]+)\/([^/]+)\/(map|review|stats))/,
+      );
+      hydrated.current = true;
+      if (!m) return;
+      if (m[1] === "about") setScreen("landing");
+      else if (m[1] === "live") setScreen("live");
+      else if (m[2]) {
+        const ev = events.find((e) => e.id === decodeURIComponent(m[2]));
+        if (ev) {
+          setEventId(ev.id);
+          const a = ev.areas.find((x) => x.id === decodeURIComponent(m[3])) ?? ev.areas[0];
+          setAreaId(a?.id ?? null);
+          setScreen(m[4] as Screen);
+        }
       }
-    }
+    };
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
   }, [events]);
   useEffect(() => {
     if (!events || !hydrated.current) return;
@@ -330,11 +337,14 @@ function NavTabs({
   }, [screen, reviewOpen, hasEvent]);
 
   return (
-    <nav ref={navRef} className="relative flex text-sm">
+    <nav
+      ref={navRef}
+      className="relative -mb-2 flex overflow-x-auto pb-2 text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
       {ind && (
         <span
           aria-hidden
-          className="absolute bottom-0 h-[2px] rounded-full bg-accent transition-all duration-300 ease-out"
+          className="absolute bottom-2 h-[2px] rounded-full bg-accent transition-all duration-300 ease-out"
           style={{ transform: `translateX(${ind.x}px)`, width: ind.w }}
         />
       )}
@@ -346,7 +356,7 @@ function NavTabs({
           }}
           onClick={() => onNav(t.id as Screen)}
           aria-current={screen === t.id ? "page" : undefined}
-          className={`pressable relative px-3 py-2 transition-colors duration-200 ${
+          className={`pressable relative shrink-0 px-3 py-2 transition-colors duration-200 ${
             screen === t.id ? "text-ink" : "text-ink-dim hover:text-ink"
           }`}
         >
@@ -394,24 +404,26 @@ function TopBar({
   onOpenSearch: () => void;
 }) {
   return (
-    <header className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-line bg-surface px-4 py-2">
-      <button
-        onClick={() => onNav("live")}
-        className="pressable flex items-center gap-2 text-sm font-semibold tracking-tight"
-      >
-        <span className="grid h-6 w-6 place-items-center rounded-md bg-accent text-[#05171a]">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-            <path d="M2 12L8 3l6 9" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-            <path d="M2 12h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          </svg>
-        </span>
-        <span className="font-display">TerraTriage</span>
-      </button>
+    <header className="flex flex-col gap-2 border-b border-line bg-surface px-4 py-2 md:flex-row md:flex-wrap md:items-center md:gap-x-5">
+      <div className="flex items-center gap-x-5">
+        <button
+          onClick={() => onNav("live")}
+          className="pressable flex items-center gap-2 text-sm font-semibold tracking-tight"
+        >
+          <span className="grid h-6 w-6 place-items-center rounded-md bg-accent text-[#05171a]">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+              <path d="M2 12L8 3l6 9" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+              <path d="M2 12h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </span>
+          <span className="font-display">TerraTriage</span>
+        </button>
 
-      <NavTabs screen={screen} hasEvent={hasEvent} reviewOpen={reviewOpen} onNav={onNav} />
+        <NavTabs screen={screen} hasEvent={hasEvent} reviewOpen={reviewOpen} onNav={onNav} />
+      </div>
 
       {hasEvent && event && (
-        <span className="hidden items-center gap-1.5 text-xs text-ink-faint md:flex">
+        <span className="hidden items-center gap-1.5 text-xs text-ink-faint lg:flex">
           <span className="text-ink-dim">viewing</span>
           <span className="text-ink">{event.name}</span>
           <button
@@ -424,7 +436,7 @@ function TopBar({
         </span>
       )}
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="flex items-center gap-2 md:ml-auto">
         <button
           onClick={onOpenSearch}
           className="pressable hidden items-center gap-2 rounded-md border border-line bg-surface-2 px-2 py-1.5 text-xs text-ink-faint hover:text-ink-dim lg:flex"
