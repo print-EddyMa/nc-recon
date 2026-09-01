@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import DeckMap from "../components/DeckMap";
 import BeforeAfterSlider from "../components/BeforeAfterSlider";
 import ClassBar from "../components/ClassBar";
@@ -46,6 +46,13 @@ export default function MapView({ area, fc }: Props) {
       return next.size ? next : new Set([0, 1, 2, 3]);
     });
 
+  // stable so DeckMap's layer memo doesn't rebuild the GeoJsonLayer on every
+  // incidental re-render (panel toggle, review decision, hover)
+  const handleSelect = useCallback((id: string | null, center?: [number, number]) => {
+    setSelectedId(id);
+    if (id && center) setFlyTarget({ center, zoom: 17.5, nonce: Date.now() });
+  }, []);
+
   return (
     <div className="relative h-full">
       <DeckMap
@@ -56,10 +63,7 @@ export default function MapView({ area, fc }: Props) {
         imagery={imagery}
         selectedId={selectedId}
         filter={filter}
-        onSelect={(id, center) => {
-          setSelectedId(id);
-          if (id && center) setFlyTarget({ center, zoom: 17.5, nonce: Date.now() });
-        }}
+        onSelect={handleSelect}
         flyTarget={flyTarget}
       />
 

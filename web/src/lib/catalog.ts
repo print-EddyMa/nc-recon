@@ -70,9 +70,15 @@ export function ncPointFor(ev: CatalogEvent): [number, number] | null {
 }
 
 export async function loadCatalog(): Promise<CatalogEvent[]> {
-  const res = await fetch(`${import.meta.env.BASE_URL}data/maxar_catalog.json`);
-  if (!res.ok) return [];
-  return (await res.json()) as CatalogEvent[];
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}data/maxar_catalog.json`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? (data as CatalogEvent[]) : [];
+  } catch {
+    // offline / asset missing — the Assess screen still works (manual commands)
+    return [];
+  }
 }
 
 export interface EventCoverage {

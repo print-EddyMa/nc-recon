@@ -132,7 +132,68 @@ them and add input lag. Scroll stays native.
 - `prefers-reduced-motion` block also zeroes `animation-delay` now, so the Home
   stagger doesn't hold tiles blank through their delay under that setting.
 
-### One-sentence identity
+## G6. Deep functional / perf review
+
+A full read of the core client modules (`lib/`, the map components, every screen).
+The codebase is mature and defensive; six real items were patched.
+
+**Holes / correctness**
+
+- `catalog.ts loadCatalog` — a bare `fetch` with no `try/catch`. On a network
+  failure it rejected, and `useAssess`'s `loadCatalog().then(...)` had no
+  `.catch` → unhandled promise rejection. Now returns `[]` on any failure
+  (matches `serverUp` / `loadCoverage`), and both call sites got a `.catch`.
+- `useAssess.ts` — the `/assess` poll `setInterval` had no upper bound. A hung
+  job, or one the server reaps after 30 min (then `/assess/{id}` 404s and the
+  poll silently no-ops), left the toast spinning and `inFlight` locked so the
+  AOI could never be retried without a reload. Added a 12-minute elapsed cap
+  that releases, shows an error, and lets the user retry.
+- `nc.ts nwsToFC` — feature id fell back to `Math.random()` when an NWS alert
+  had no `id`, giving the same alert a different key every render. Now a stable
+  index (`nws-idx<n>`).
+- `History.tsx` — the timeline axis started at 1993 while the FEMA data and the
+  on-screen label both say "since 1990". A 1990-1992 NC declaration would render
+  at negative x, off the left edge of a track that can't scroll past 0. Axis
+  and `START` moved to 1990.
+
+**Perf**
+
+- `nc.ts` — `ncFires` and `ncClimate` were the only two feeds not run through
+  the 90-second `memoFeed` cache, so Home ↔ Live-map navigation re-hit FIRMS /
+  CLOUDS every time a key was set. Now memoized with the key value in the cache
+  key, so pasting a new key still forces a fresh fetch.
+- `MapView.tsx` — the `onSelect` handler passed to `DeckMap` was an inline
+  arrow, rebuilt every render, and it sits in `DeckMap`'s layer `useMemo` deps —
+  so an incidental re-render (panel toggle, review decision) rebuilt the
+  764-feature `GeoJsonLayer`. Wrapped in `useCallback`.
+
+Not changed (verified fine): the MapLibre teardown-race guards, the
+`useSyncExternalStore` review store, the NCDashboard radar effects, the
+localStorage guards, the `loadArea` feature validation, the ReviewQueue crop
+404 → zoom-out retry. `npm audit` is 0; server hardening and the earlier perf
+pass (memoized feeds, lazy screens) still hold.
+
+## G7. The showcase artifact — anti-slop pass
+
+`docs/how-it-works.html` ("Inside TerraTriage",
+https://claude.ai/code/artifact/1788532d-f5c8-4a5d-831e-debcd46092b1) audited
+against the same Hallmark rules and re-published to the same URL. Four fixes,
+no content or data changes:
+
+- **Gate 54 (hard ban)** — each act's number chip sat in a row to the *left* of
+  its `<h2>` (`.act-head { display: flex; align-items: baseline }`). Now stacks
+  vertically: number above heading, same column.
+- **Uppercase mono-cap eyebrows** — `.cap`, `.feed .src`, `.duo h4` used
+  `text-transform: uppercase` + wide tracking + Geist Mono. The app's own
+  `.cap` moved to quiet sentence-case in the design pass; the artifact now
+  matches (no transform, Geist, minimal tracking).
+- **Animate-on-scroll on everything** — every `<figure>` faded up on
+  intersection. Neutralised: the figures are just present when scrolled to; the
+  charts inside still draw their own values in (that part is communicative).
+- **Side-stripe card** — the disagreement `.bcard` had a 3px accent left
+  border. Now a hairline tinted on all four sides, like the app's `BuildingCard`.
+
+## One-sentence identity
 
 TerraTriage looks like a government field instrument — warm paper, a single
 blue "this is live" accent, a fixed FEMA-style green→red damage ramp, a squared

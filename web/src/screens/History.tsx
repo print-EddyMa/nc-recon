@@ -11,7 +11,9 @@ interface Props {
 }
 
 const DAY = 86_400_000;
-const START = Date.UTC(1993, 0, 1);
+// matches nc.ts FEMA_SINCE_YEAR so a 1990-1992 declaration isn't positioned
+// off the left edge of the (un-scrollable-past-0) track
+const START = Date.UTC(1990, 0, 1);
 
 /** colour + label per FEMA incident type, quiet enough to read as one system */
 const TYPE_STYLE: Record<string, { color: string; short: string }> = {
@@ -104,7 +106,7 @@ export default function History({ areas, onOpenAssess, onOpenArea }: Props) {
   // year (and, when zoomed in, month) gridlines
   const ticks = useMemo(() => {
     const out: { x: number; label: string; major: boolean }[] = [];
-    const y0 = 1993;
+    const y0 = 1990;
     const y1 = new Date(now).getFullYear();
     const monthly = pxPerDay > 1.4;
     for (let y = y0; y <= y1; y++) {

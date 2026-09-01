@@ -86,9 +86,11 @@
   .tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
 
   .wrap { max-width: 940px; margin: 0 auto; padding: 0 24px; }
+  /* quiet, sentence-case label - matches the app's index.css .cap (which moved
+     off uppercase-mono in the design pass) */
   .cap {
-    font-family: "Geist Mono", monospace; font-size: 11px; letter-spacing: 0.08em;
-    text-transform: uppercase; color: rgb(var(--ink-faint));
+    font-size: 11px; font-weight: 500; letter-spacing: 0.005em;
+    color: rgb(var(--ink-faint));
   }
 
   /* ---- app components ---- */
@@ -138,10 +140,12 @@
   main { padding: 6px 0 88px; }
   section.act { padding: 54px 0; border-bottom: 1px solid rgb(var(--line)); scroll-margin-top: 18px; }
   section.act:last-of-type { border-bottom: 0; }
-  .act-head { display: flex; align-items: baseline; gap: 15px; }
+  /* number stacked ABOVE the heading, same column - the tag-left / heading-right
+     row is a templated-editorial tell (Hallmark gate 54) */
+  .act-head { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
   .act-n {
-    font-family: "Geist Mono", monospace; font-size: 12px; color: rgb(var(--accent));
-    border: 1px solid rgb(var(--accent)); border-radius: 6px; padding: 3px 7px; flex: none;
+    font-family: "Geist Mono", monospace; font-size: 11px; color: rgb(var(--accent));
+    border: 1px solid rgb(var(--accent) / 0.45); border-radius: 5px; padding: 2px 6px;
     font-variant-numeric: tabular-nums;
   }
   section.act h2 { font-size: clamp(1.4rem, 3.3vw, 1.9rem); }
@@ -150,8 +154,10 @@
   section.act p { max-width: 66ch; color: rgb(var(--ink-dim)); }
   section.act p strong { color: rgb(var(--ink)); font-weight: 600; }
 
-  .reveal { opacity: 0; transform: translateY(12px); transition: opacity 0.55s ease, transform 0.55s ease; }
-  .reveal.in { opacity: 1; transform: none; }
+  /* figures are just present when scrolled to - the charts inside them draw
+     their own values in (that's communicative); a blanket fade-up on every
+     figure is the "animate-on-scroll on everything" tell, so it's dropped */
+  .reveal, .reveal.in { opacity: 1; transform: none; }
 
   figure { margin: 22px 0; }
   figure.card { border: 1px solid rgb(var(--line)); border-radius: 10px; background: rgb(var(--surface)); padding: 20px; overflow-x: auto; }
@@ -214,7 +220,9 @@
   .heat-note .big { font-family: "Archivo"; font-weight: 700; font-size: 1.5rem; color: rgb(var(--ink)); display: block; letter-spacing: -0.02em; margin-bottom: 4px; }
 
   /* ---- building card (disagreement walkthrough) ---- */
-  .bcard { border: 1px solid var(--edge, rgb(var(--line))); border-left-width: 3px; border-radius: 9px; background: rgb(var(--surface)); padding: 16px 18px; }
+  /* hairline tinted on all four sides (like the app's BuildingCard), not a
+     thick left side-stripe */
+  .bcard { border: 1px solid var(--edge, rgb(var(--line))); border-radius: 9px; background: rgb(var(--surface)); padding: 16px 18px; }
   .bcard .crops { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
   .bcard .crops figure { margin: 0; position: relative; }
   .bcard .crops img { width: 100%; border-radius: 6px; display: block; border: 1px solid rgb(var(--line)); }
@@ -228,7 +236,7 @@
   /* ---- priors bar + donut ---- */
   .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
   @media (max-width: 640px) { .duo { grid-template-columns: 1fr; } }
-  .duo h4 { font-family: "Geist Mono", monospace; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: rgb(var(--ink-dim)); margin: 0 0 12px; font-weight: 400; }
+  .duo h4 { font-family: "Geist", ui-sans-serif, sans-serif; font-size: 12px; letter-spacing: 0; color: rgb(var(--ink-dim)); margin: 0 0 12px; font-weight: 500; }
   .sbar { display: flex; height: 24px; border-radius: 5px; overflow: hidden; background: rgb(var(--surface-2)); }
   .sbar span { display: block; height: 100%; width: 0; transition: width 0.9s var(--ease-out); }
   .sbar-key { margin-top: 11px; display: grid; gap: 5px; font-size: 12px; color: rgb(var(--ink-dim)); }
@@ -259,7 +267,7 @@
 
   .feeds { display: grid; grid-template-columns: repeat(auto-fit, minmax(228px, 1fr)); gap: 1px; background: rgb(var(--line)); border: 1px solid rgb(var(--line)); border-radius: 10px; overflow: hidden; margin: 22px 0; }
   .feed { background: rgb(var(--surface)); padding: 13px 15px; }
-  .feed .src { font-family: "Geist Mono", monospace; font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: rgb(var(--meter)); }
+  .feed .src { font-family: "Geist Mono", monospace; font-size: 10.5px; letter-spacing: 0.01em; color: rgb(var(--meter)); }
   .feed .name { font-weight: 600; margin-top: 3px; font-size: 13.5px; }
   .feed .note { font-size: 12px; color: rgb(var(--ink-dim)); margin-top: 3px; }
 

@@ -269,19 +269,21 @@ async function _ncAlerts(): Promise<NCResult<NCGeomFC>> {
 
 function nwsToFC(raw: GeoJSON.FeatureCollection): NCGeomFC {
   const feats: NCGeomFC["features"] = [];
-  for (const f of raw.features ?? []) {
+  (raw.features ?? []).forEach((f, i) => {
     const p = (f.properties ?? {}) as Record<string, unknown>;
     const event = String(p.event ?? "Alert");
     const sev = NWS_SEVERITY[String(p.severity ?? "Unknown")] ?? 1;
     // fire-weather / flood events get bumped, they're the ones this app cares about
     const isPriority = /flood|red flag|fire|hurricane|tropical|tornado/i.test(event);
     const geom = f.geometry as NCGeomFC["features"][number]["geometry"] | null;
-    if (!geom) continue; // zone-only alerts have null geometry; skip the polygon, keep for count below
+    if (!geom) return; // zone-only alerts have null geometry; skip the polygon
     feats.push({
       type: "Feature",
       geometry: geom,
       properties: {
-        id: `nws-${String(f.id ?? p.id ?? Math.random())}`,
+        // f.id (the alert URL) is normally present; fall back to a stable
+        // index so the id never changes between renders of the same fetch
+        id: `nws-${String(f.id ?? p.id ?? `idx${i}`)}`,
         layer: "alert",
         title: event,
         detail: String(p.headline ?? p.areaDesc ?? ""),
@@ -291,7 +293,7 @@ function nwsToFC(raw: GeoJSON.FeatureCollection): NCGeomFC {
         time: p.effective ? Date.parse(String(p.effective)) : null,
       },
     });
-  }
+  });
   return { type: "FeatureCollection", features: feats };
 }
 
@@ -409,7 +411,7 @@ function strField(p: CloudsFeatureProps, ...names: string[]): string | null {
   return null;
 }
 
-export async function ncClimate(): Promise<NCResult<NCPointFC>> {
+async function _ncClimate(): Promise<NCResult<NCPointFC>> {
   const now = Date.now();
   const hash = getSetting("cloudsKey");
   if (!hash) {
@@ -500,6 +502,11 @@ export async function ncClimate(): Promise<NCResult<NCPointFC>> {
     };
   }
 }
+
+// keyed by the CLOUDS hash so pasting a new key re-fetches instead of serving
+// the cached "not configured" result; keyless callers share one cache entry
+export const ncClimate = () =>
+  memoFeed(`climate:${getSetting("cloudsKey") ?? ""}`, _ncClimate);
 
 // --------------------------------------------------------------------------- //
 // E7. USGS streamflow (NWIS instantaneous values), NC statewide.
@@ -603,7 +610,7 @@ export const ncStreamflow = () => memoFeed("streamflow", _ncStreamflow);
 // E8. NASA FIRMS active-fire hotspots, clipped to NC. Needs a free map key
 // (same key as the global layer; paste under Layers → key, or VITE_FIRMS_KEY).
 // --------------------------------------------------------------------------- //
-export async function ncFires(): Promise<NCResult<NCPointFC>> {
+async function _ncFires(): Promise<NCResult<NCPointFC>> {
   const now = Date.now();
   const key = getSetting("firmsKey") || import.meta.env.VITE_FIRMS_KEY;
   if (!key) {
@@ -672,6 +679,13 @@ export async function ncFires(): Promise<NCResult<NCPointFC>> {
     };
   }
 }
+
+// keyed by the FIRMS key so pasting one re-fetches; shared entry when keyless
+export const ncFires = () =>
+  memoFeed(
+    `fires:${getSetting("firmsKey") || import.meta.env.VITE_FIRMS_KEY || ""}`,
+    _ncFires,
+  );
 
 // --------------------------------------------------------------------------- //
 // E9. OpenFEMA federally-declared disasters in NC. Open, keyless, CORS-enabled.

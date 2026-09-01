@@ -42,6 +42,11 @@ const STEP_PCT: Record<string, number> = {
   done: 100,
 };
 
+// a pipeline run is fetch + infer + tiles + registry; ~2 min is typical, so give
+// up polling well after that rather than spinning forever if a job hangs or the
+// server reaps it (then /assess/{id} 404s and the poll no-ops).
+const MAX_POLL_MS = 12 * 60_000;
+
 export function useAssess(onIngested: (areaSlug: string) => void) {
   const [catalog, setCatalog] = useState<CatalogEvent[]>([]);
   const [online, setOnline] = useState<boolean | null>(null);
@@ -54,8 +59,10 @@ export function useAssess(onIngested: (areaSlug: string) => void) {
   });
 
   useEffect(() => {
-    loadCatalog().then(setCatalog);
-    serverUp().then(setOnline);
+    loadCatalog()
+      .then(setCatalog)
+      .catch(() => setCatalog([]));
+    serverUp().then(setOnline).catch(() => setOnline(false));
     const running = timers.current;
     return () => {
       for (const id of Object.values(running)) window.clearInterval(id);
@@ -125,6 +132,18 @@ export function useAssess(onIngested: (areaSlug: string) => void) {
     timers.current[ev.id] = window.setInterval(async () => {
       // a later callback can still be queued after we clear the interval
       if (!timers.current[ev.id]) return;
+      if (Date.now() - started > MAX_POLL_MS) {
+        release();
+        setJobs((j) => ({
+          ...j,
+          [ev.id]: { phase: "error", error: "assessment timed out" },
+        }));
+        toast.error(`${ev.name}: assessment timed out`, {
+          id: tId,
+          description: "The job is taking longer than expected. Check the service, then retry.",
+        });
+        return;
+      }
       const st = await pollAssess(jobId);
       if (!st || !timers.current[ev.id]) return;
       if (st.status === "done") {
