@@ -3,6 +3,7 @@ import { heroTileUrl, tileForLonLat, summarize } from "../lib/data";
 import { DAMAGE } from "../lib/damage";
 import { useReviewDecisions, overrideClasses } from "../lib/review";
 import { Tooltip } from "../components/ui/Tooltip";
+import StatNumber from "../components/StatNumber";
 import type { ReviewDecision } from "../lib/review";
 import type {
   AreaConfig,
@@ -157,7 +158,7 @@ export default function ReviewQueue({ area, fc, onOpenMap }: Props) {
         {area.subtitle ? `, ${area.subtitle}` : ""}
       </p>
       <h1 className="max-w-2xl font-display text-[1.7rem] leading-tight text-ink">
-        <span className="tnum text-dmg1">{open.toLocaleString()}</span> building
+        <StatNumber value={open} className="tnum text-dmg1" /> building
         {open === 1 ? "" : "s"} need a second look
       </h1>
       <p className="mt-4 max-w-[64ch] text-sm leading-relaxed text-ink-dim">

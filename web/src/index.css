@@ -168,6 +168,22 @@
     color: rgb(var(--ink));
   }
 
+  /* the one orchestrated entrance: Home's status tiles + area cards on first
+     paint, staggered via inline animation-delay. See DESIGN.md § Motion. */
+  @keyframes reveal {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .reveal {
+    animation: reveal 320ms var(--ease-out) both;
+  }
+
   .skel {
     position: relative;
     overflow: hidden;

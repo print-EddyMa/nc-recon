@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { summarize } from "../lib/data";
 import { DAMAGE } from "../lib/damage";
 import { useReviewDecisions, overrideClasses } from "../lib/review";
+import StatNumber from "../components/StatNumber";
 import type { AreaConfig, DamageCollection, EventConfig } from "../lib/types";
 
 interface Props {
@@ -63,8 +64,8 @@ export default function Stats({ event, area, fc, onOpenMap }: Props) {
       </p>
 
       <h1 className="max-w-3xl font-display text-[2rem] leading-[1.12] text-ink">
-        <span className="tnum text-dmg2">{stats.severe.toLocaleString()}</span> of{" "}
-        <span className="tnum">{stats.total.toLocaleString()}</span> buildings sustained
+        <StatNumber value={stats.severe} className="tnum text-dmg2" /> of{" "}
+        <StatNumber value={stats.total} className="tnum" /> buildings sustained
         major damage or were destroyed.
       </h1>
 
@@ -87,7 +88,7 @@ export default function Stats({ event, area, fc, onOpenMap }: Props) {
         <div>
           <div className="cap mb-1.5">Major or destroyed</div>
           <div className="tnum text-6xl font-semibold leading-none text-dmg2">
-            {stats.severePct.toFixed(1)}
+            <StatNumber value={stats.severePct} decimals={1} />
             <span className="text-3xl text-ink-faint">%</span>
           </div>
         </div>

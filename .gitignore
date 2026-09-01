@@ -24,6 +24,10 @@ web/.vite/
 # OS
 .DS_Store
 
+# Design tooling (Hallmark anti-slop skill, installed locally via `npx skills add`)
+.agents/
+.claude/
+
 # pipeline data cache
 pipeline/data/cache/*
 !pipeline/data/cache/.gitkeep

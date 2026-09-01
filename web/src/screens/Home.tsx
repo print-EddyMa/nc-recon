@@ -17,6 +17,7 @@ import {
   type NCHistory,
 } from "../lib/nc";
 import { DAMAGE } from "../lib/damage";
+import StatNumber from "../components/StatNumber";
 import type { EventConfig } from "../lib/types";
 
 interface Props {
@@ -366,19 +367,21 @@ export default function Home({
       <div className="mx-auto w-full max-w-6xl px-5 pb-14 md:px-10">
         {/* status */}
         <div className="-mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {tiles.map((t) => (
+          {tiles.map((t, i) => (
             <button
               key={t.label}
               onClick={onOpenMonitor}
-              className="pressable panel px-4 py-3.5 text-left"
+              className="pressable panel reveal px-4 py-3.5 text-left"
+              style={{ animationDelay: `${i * 45}ms` }}
             >
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full" style={{ background: rgb(t.sev) }} />
                 <span className="text-2xs font-medium text-ink-dim">{t.label}</span>
               </div>
-              <div className="mt-1.5 text-[1.6rem] font-semibold leading-none text-ink">
-                {t.value}
-              </div>
+              <StatNumber
+                value={t.value}
+                className="mt-1.5 block text-[1.6rem] font-semibold leading-none text-ink"
+              />
               <div className="mt-1.5 text-2xs leading-snug text-ink-faint">{t.sub}</div>
             </button>
           ))}
@@ -400,7 +403,7 @@ export default function Home({
         </p>
 
         <div className="mt-4 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-          {areas.map(({ event, area }) => {
+          {areas.map(({ event, area }, i) => {
             const c = area.counts ?? {};
             const total = area.n_buildings ?? 0;
             const severe = (c["2"] ?? 0) + (c["3"] ?? 0);
@@ -409,7 +412,8 @@ export default function Home({
               <button
                 key={area.id}
                 onClick={() => onOpenArea(area.id)}
-                className="pressable panel flex flex-col gap-2.5 px-4 py-4 text-left"
+                className="pressable panel reveal flex flex-col gap-2.5 px-4 py-4 text-left"
+                style={{ animationDelay: `${i * 45}ms` }}
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="font-display text-[0.95rem] font-semibold text-ink">

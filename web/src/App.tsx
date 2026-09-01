@@ -373,7 +373,7 @@ function NavTabs({
       {ind && (
         <span
           aria-hidden
-          className="absolute bottom-2 h-[2px] rounded-full bg-accent transition-all duration-300 ease-out"
+          className="absolute bottom-2 h-[2px] rounded-full bg-accent transition-[transform,width] duration-300 ease-out"
           style={{ transform: `translateX(${ind.x}px)`, width: ind.w }}
         />
       )}
