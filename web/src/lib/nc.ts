@@ -31,7 +31,10 @@ import { API_URL } from "./catalog";
 async function feedFetch(name: string, directUrl: string, init?: RequestInit): Promise<Response> {
   if (API_URL) {
     try {
-      const r = await fetch(`${API_URL}/feed/${name}`, { signal: AbortSignal.timeout(15000) });
+      // the proxy caps its own upstream at 20s (USGS NWIS can genuinely take
+      // ~18s cold, then it's cached 5 min) — give it headroom past that so a
+      // slow first load still lands live instead of dropping to the snapshot
+      const r = await fetch(`${API_URL}/feed/${name}`, { signal: AbortSignal.timeout(26000) });
       if (r.ok) return r;
     } catch {
       /* server down or slow — fall through to the upstream */
