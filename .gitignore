@@ -4,6 +4,9 @@ __pycache__/
 .venv/
 venv/
 .env
+.env.local
+.env.*.local
+!.env.example
 # Data & weights (large, not committed)
 pipeline/weights/*
 !pipeline/weights/.gitkeep
@@ -29,7 +32,15 @@ pipeline/vendor_xview2_1st/
 # web build
 web/dist/
 
-# The demo dataset (tiles + contract GeoJSON + event registry + live snapshots)
-# IS committed so the app runs on a fresh clone with no pipeline run. Regenerate
-# with pipeline/scripts/{run.py,make_tiles.py} + web/scripts/refresh_live_snapshots.mjs.
-# Raw Maxar COGs and pipeline scratch stay ignored (rules above).
+# No sample assessment data is committed. Map tiles and per-area contract
+# GeoJSON are generated on demand by the pipeline (locally or the hosted
+# service) and served from web/public — never checked in.
+web/public/tiles/
+web/public/data/*.geojson
+# ...but the committed feeds ARE kept: the NC risk snapshots, the global live
+# hazard snapshots, the Maxar catalogue metadata, and the (initially empty)
+# NC event registry.
+!web/public/data/events.json
+!web/public/data/maxar_catalog.json
+!web/public/data/nc/
+!web/public/data/live/

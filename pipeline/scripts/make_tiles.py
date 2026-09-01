@@ -19,7 +19,11 @@ from rasterio.windows import from_bounds
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WEB_TILES = os.path.join(ROOT, "..", "web", "public", "tiles")
+# Override for container deploys where ../web is not on disk; the service then
+# serves tiles from here via GET /tiles/...
+WEB_TILES = os.environ.get("TERRATRIAGE_TILES_DIR") or os.path.join(
+    ROOT, "..", "web", "public", "tiles"
+)
 R = 6378137.0
 ORIGIN = math.pi * R
 

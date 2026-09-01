@@ -1,4 +1,4 @@
-// Mirrors pipeline/src/terratriage/contract.py — the Phase A → Phase B contract.
+// Mirrors pipeline/src/terratriage/contract.py, the Phase A → Phase B contract.
 
 export type DamageClass = 0 | 1 | 2 | 3;
 
@@ -48,7 +48,7 @@ export interface BuildingProps {
   confidence: number;
   area_m2: number;
   centroid: [number, number]; // [lon, lat]
-  // schema 1.1 — optional; absent = treat as "high" / "osm"
+  // schema 1.1, optional; absent = treat as "high" / "osm"
   confidence_tier?: ConfidenceTier;
   sources?: BuildingSources;
   footprint_source?: string;
@@ -67,12 +67,16 @@ export interface AreaConfig {
   subtitle: string;
   center: [number, number]; // [lon, lat]
   zoom: number;
-  hero: [number, number, number]; // [z, x, y] tile for the landing before/after
+  hero: [number, number, number] | null; // [z, x, y] tile for the landing before/after
   pre_date?: string;
   post_date?: string;
   model?: string | null;
   notes?: string | null;
   n_buildings?: number | null;
+  /** damage-class histogram { "0":n, "1":n, "2":n, "3":n }, from the registry */
+  counts?: Record<string, number> | null;
+  review?: ReviewMeta | null;
+  generated?: string | null;
 }
 
 export type HazardType =

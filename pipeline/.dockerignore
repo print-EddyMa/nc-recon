@@ -1,0 +1,14 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+data/raw/*
+data/output/*
+data/cache/*
+data/tiles/*
+weights/*
+!weights/.gitkeep
+!weights/README.md
+vendor_xview2_1st/
+*.tsv
+*.tif

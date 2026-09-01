@@ -1,12 +1,13 @@
 import { useCallback, useSyncExternalStore } from "react";
 
 /**
- * Per-viewer settings kept in localStorage (never leaves the browser). Right now
- * just the optional NASA FIRMS map key so the active-fire layer can be enabled
- * without a rebuild.
+ * Per-viewer settings kept in localStorage (never leaves the browser): the
+ * optional NASA FIRMS map key for the global active-fire layer, and the NC
+ * State Climate Office CLOUDS API hash for the Phase E current-conditions layer.
  */
 export interface Settings {
   firmsKey?: string;
+  cloudsKey?: string;
 }
 
 const KEY = "terratriage:settings";

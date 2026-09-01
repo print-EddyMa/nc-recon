@@ -30,7 +30,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               {this.props.label ? `${this.props.label} hit an error` : "Something broke"}
             </div>
             <p className="text-sm text-ink-dim">
-              This view failed to render. The rest of the app is still usable — switch
+              This view failed to render. The rest of the app is still usable, switch
               screens, or reload.
             </p>
             <pre className="mt-3 overflow-x-auto rounded bg-surface-2 px-2.5 py-2 text-left text-2xs text-ink-faint">

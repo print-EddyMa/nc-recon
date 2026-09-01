@@ -32,7 +32,12 @@ sys.path.insert(0, os.path.join(ROOT, "src"))
 RAW = os.path.join(ROOT, "data", "raw")
 OUT = os.path.join(ROOT, "data", "output")
 CACHE = os.path.join(ROOT, "data", "cache")
-WEB_DATA = os.path.join(ROOT, "..", "web", "public", "data")
+# where the web app (or the hosted service) reads registries + area GeoJSON.
+# Override for container deploys where ../web is not on disk.
+WEB_DATA = os.environ.get("TERRATRIAGE_WEB_DATA_DIR") or os.path.join(
+    ROOT, "..", "web", "public", "data"
+)
+os.makedirs(WEB_DATA, exist_ok=True)
 
 DEFAULT_CLS_WEIGHTS = os.path.join(ROOT, "weights", "classification.hdf5")
 
@@ -129,11 +134,14 @@ def cmd_events(a):
                 m = json.load(fh)
             gj = os.path.join(OUT, f"{m['area']}.geojson")
             if os.path.exists(gj):
-                with open(gj) as fh:
+                with open(gj, encoding="utf-8") as fh:
                     props = json.load(fh)["properties"]
                 m.setdefault("model", props.get("model"))
                 m.setdefault("notes", props.get("notes"))
                 m["n_buildings"] = props.get("n_buildings")
+                m["counts"] = props.get("counts")
+                m["review"] = props.get("review")
+                m["generated"] = props.get("generated")
                 m.setdefault("pre_date", props.get("pre_image", {}).get("date"))
                 m.setdefault("post_date", props.get("post_image", {}).get("date"))
             metas.append(m)
@@ -181,6 +189,7 @@ def cmd_infer(a):
         event=event, area=a.area, cache_dir=CACHE,
         backend=backend, cls_weights=a.cls_weights,
         pre_meta=_meta(pre), post_meta=_meta(post), limit=a.limit,
+        footprint_source=a.source, nc_context=a.nc_context,
     )
     _save_area_meta(a.area, {
         "model": fc["properties"].get("model"),
@@ -241,6 +250,16 @@ def main():
     )
     i.add_argument("--cls-weights", default=DEFAULT_CLS_WEIGHTS)
     i.add_argument("--limit", type=int, default=None)
+    i.add_argument(
+        "--source", choices=["auto", "osm", "nc_onemap"], default="auto",
+        help="building footprints: auto = NC OneMap in NC (needs "
+             "TERRATRIAGE_NC_FOOTPRINTS_URL), else OpenStreetMap",
+    )
+    i.add_argument(
+        "--nc-context", action="store_true",
+        help="fold NC flood-stage / FEMA-declaration / terrain priors into the "
+             "confidence tiers (network calls; fusion backend only)",
+    )
     i.set_defaults(fn=cmd_infer)
 
     s = sub.add_parser("infer-seg")

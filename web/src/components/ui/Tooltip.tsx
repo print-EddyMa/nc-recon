@@ -2,7 +2,7 @@ import * as RT from "@radix-ui/react-tooltip";
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
 
-/** shadcn-style tooltip on Radix — for icon-only controls and truncated labels. */
+/** shadcn-style tooltip on Radix, for icon-only controls and truncated labels. */
 export function Tooltip({
   content,
   children,
@@ -29,7 +29,7 @@ export function Tooltip({
             )}
           >
             {content}
-            <RT.Arrow className="fill-[#28313d]" />
+            <RT.Arrow className="fill-line" />
           </RT.Content>
         </RT.Portal>
       </RT.Root>

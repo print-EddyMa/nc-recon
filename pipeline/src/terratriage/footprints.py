@@ -1,9 +1,15 @@
 """Authoritative building footprints for an AOI, as polygons in the raster CRS.
 
-Primary source: OpenStreetMap via the Overpass API (live, ODbL). Optional
-augmentation: Microsoft's GlobalMLBuildingFootprints (per-quadkey, only the tiles
-covering the AOI are fetched). Footprints replace a learned localisation model:
-they are exact, current, and free of framework baggage.
+Sources:
+  osm        OpenStreetMap via the Overpass API (live, ODbL). Default, works
+             anywhere.
+  nc_onemap  A statewide NC building-footprint ArcGIS FeatureServer, set via
+             TERRATRIAGE_NC_FOOTPRINTS_URL (e.g. an NC OneMap / NCDOT layer).
+             Falls back to OSM if unset or unreachable.
+  auto       nc_onemap when the AOI centre is in North Carolina, else osm.
+
+Footprints replace a learned localisation model: they are exact, current, and
+free of framework baggage.
 """
 from __future__ import annotations
 
@@ -22,6 +28,73 @@ OVERPASS_ENDPOINTS = [
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
 ]
+
+# NC bbox [w, s, e, n], keep in sync with lib/nc.ts and server.ALLOWED_BBOX
+NC_BBOX = (-84.55, 33.75, -75.4, 36.7)
+NC_FOOTPRINTS_URL = os.environ.get("TERRATRIAGE_NC_FOOTPRINTS_URL", "").strip()
+
+# a polygon under this many m^2 is classified off a handful of pixels; one over
+# the max, in the small-town AOIs this tool assesses, is almost always bad OSM
+# data (a rail yard, a whole block, a parking lot tagged `building`)
+MIN_BUILDING_AREA = float(os.environ.get("TERRATRIAGE_MIN_BUILDING_AREA", "8"))
+MAX_BUILDING_AREA = float(os.environ.get("TERRATRIAGE_MAX_BUILDING_AREA", "15000"))
+
+
+def _in_nc(lon: float, lat: float) -> bool:
+    w, s, e, n = NC_BBOX
+    return w <= lon <= e and s <= lat <= n
+
+
+def fetch_arcgis_buildings(bounds_lonlat, service_url: str, page: int = 2000):
+    """Building polygons (lon/lat) from an ArcGIS FeatureServer/MapServer layer.
+
+    `service_url` points at a layer, e.g.
+      https://host/arcgis/rest/services/<name>/FeatureServer/0
+    """
+    w, s, e, n = bounds_lonlat
+    polys: list[Polygon] = []
+    offset = 0
+    while True:
+        params = {
+            "where": "1=1",
+            "geometry": f"{w},{s},{e},{n}",
+            "geometryType": "esriGeometryEnvelope",
+            "inSR": "4326",
+            "outSR": "4326",
+            "spatialRel": "esriSpatialRelIntersects",
+            "returnGeometry": "true",
+            "f": "geojson",
+            "resultOffset": str(offset),
+            "resultRecordCount": str(page),
+        }
+        url = service_url.rstrip("/") + "/query?" + urllib.parse.urlencode(params)
+        req = urllib.request.Request(url, headers={"User-Agent": "TerraTriage/1.2"})
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            fc = json.loads(resp.read())
+        feats = fc.get("features", [])
+        for f in feats:
+            geom = f.get("geometry")
+            if not geom:
+                continue
+            try:
+                g = shape(geom)
+            except Exception:  # noqa: BLE001
+                continue
+            if g.geom_type == "Polygon" and g.is_valid and g.area > 0:
+                polys.append(g)
+            elif g.geom_type == "MultiPolygon":
+                polys.extend(p for p in g.geoms if p.is_valid and p.area > 0)
+        # advance by what we actually got — servers often cap the page below the
+        # requested size. Stop on an empty page, or when the server says there is
+        # no more, or at the safety valve.
+        if not feats:
+            break
+        offset += len(feats)
+        if not fc.get("exceededTransferLimit", False) and len(feats) < page:
+            break
+        if offset > 300_000:
+            break
+    return polys
 
 
 def aoi_bounds_lonlat(raster_path: str) -> tuple[float, float, float, float]:
@@ -94,25 +167,59 @@ def to_raster_crs(polys_lonlat, dst_crs):
     return [shapely_transform(fwd, p) for p in polys_lonlat]
 
 
-def load_for_area(pre_path: str, cache_dir: str, area: str):
-    """Convenience: OSM footprints clipped to the raster footprint, in raster CRS."""
+def load_for_area(pre_path: str, cache_dir: str, area: str, source: str = "osm"):
+    """Footprints for an AOI, clipped to the raster footprint, in raster CRS.
+
+    Returns (polys, dst_crs, source_used). `source_used` is what actually
+    produced the polygons ("osm" or "nc_onemap") so the contract can record it.
+    """
     with rasterio.open(pre_path) as ds:
         dst_crs = ds.crs
         rb = box(*ds.bounds)
     bounds = aoi_bounds_lonlat(pre_path)
-    cache = os.path.join(cache_dir, f"{area}_osm.json")
-    polys_ll = fetch_osm_buildings(bounds, cache_path=cache)
+    cx, cy = (bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2
+
+    resolved = source
+    if source == "auto":
+        resolved = "nc_onemap" if _in_nc(cx, cy) else "osm"
+
+    polys_ll: list[Polygon] = []
+    source_used = "osm"
+    if resolved == "nc_onemap" and NC_FOOTPRINTS_URL:
+        try:
+            polys_ll = fetch_arcgis_buildings(bounds, NC_FOOTPRINTS_URL)
+            source_used = "nc_onemap"
+            print(f"[footprints] {area}: {len(polys_ll)} NC OneMap polygons")
+        except Exception as ex:  # noqa: BLE001
+            print(f"[footprints] NC OneMap fetch failed ({ex}); falling back to OSM")
+            polys_ll = []
+    elif resolved == "nc_onemap":
+        print("[footprints] source=nc_onemap but TERRATRIAGE_NC_FOOTPRINTS_URL "
+              "is unset — using OSM")
+
+    if not polys_ll:
+        cache = os.path.join(cache_dir, f"{area}_osm.json")
+        polys_ll = fetch_osm_buildings(bounds, cache_path=cache)
+        source_used = "osm"
+
     polys = [p for p in to_raster_crs(polys_ll, dst_crs) if p.intersects(rb)]
     polys = [p.intersection(rb) for p in polys]
-    polys = [p for p in polys if p.geom_type == "Polygon" and p.area >= 8.0]
-    print(f"[footprints] {area}: {len(polys)} OSM building polygons in AOI")
-    return polys, dst_crs
+    polys = [p for p in polys if p.geom_type == "Polygon"]
+    kept = [p for p in polys if MIN_BUILDING_AREA <= p.area <= MAX_BUILDING_AREA]
+    dropped = len(polys) - len(kept)
+    if dropped:
+        print(
+            f"[footprints] {area}: dropped {dropped} polygon(s) outside "
+            f"{MIN_BUILDING_AREA:.0f}-{MAX_BUILDING_AREA:.0f} m^2 (likely not single buildings)"
+        )
+    print(f"[footprints] {area}: {len(kept)} building polygons in AOI ({source_used})")
+    return kept, dst_crs, source_used
 
 
 def load_osm_polys(pre_path: str, cache_dir: str, area: str):
     """Just the OSM footprints for an AOI, in the raster CRS — for use as a
     filter over a *separate* set of model-predicted polygons (Phase D1)."""
-    polys, dst_crs = load_for_area(pre_path, cache_dir, area)
+    polys, dst_crs, _src = load_for_area(pre_path, cache_dir, area, source="osm")
     return polys, dst_crs
 
 

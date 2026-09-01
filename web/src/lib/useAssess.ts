@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   loadCatalog,
@@ -6,13 +6,15 @@ import {
   startAssess,
   pollAssess,
   assessCommands,
+  inNC,
   type CatalogEvent,
 } from "./catalog";
 
 /**
- * Shared "ingest a Maxar catalogue event" flow, used by the top-bar event
- * picker, the Live Monitor's Assess panel and the ⌘K menu so there is one code
- * path and one source of truth for job state. Progress is surfaced as a toast.
+ * Shared "assess an NC area" flow, used by the Assess screen and the ⌘K menu so
+ * there is one code path and one source of truth for job state. Progress is
+ * surfaced as a toast. `onIngested` receives the pipeline **area slug** of the
+ * finished assessment.
  */
 export type IngestPhase = "idle" | "running" | "done" | "error";
 
@@ -20,6 +22,16 @@ export interface IngestState {
   phase: IngestPhase;
   step?: string;
   error?: string;
+}
+
+/** An AOI to assess: a Maxar catalogue event, plus the exact point to center on
+ * (defaults to the event centre when no explicit point is given). */
+export interface AssessTarget {
+  id: string;
+  name: string;
+  center: [number, number] | null;
+  point?: [number, number] | null; // [lon, lat], an explicit AOI location
+  subtitle?: string;
 }
 
 const STEP_PCT: Record<string, number> = {
@@ -30,11 +42,16 @@ const STEP_PCT: Record<string, number> = {
   done: 100,
 };
 
-export function useAssess(onIngested: (eventId: string) => void) {
+export function useAssess(onIngested: (areaSlug: string) => void) {
   const [catalog, setCatalog] = useState<CatalogEvent[]>([]);
   const [online, setOnline] = useState<boolean | null>(null);
   const [jobs, setJobs] = useState<Record<string, IngestState>>({});
   const timers = useRef<Record<string, number>>({});
+  const inFlight = useRef<Set<string>>(new Set());
+  const onIngestedRef = useRef(onIngested);
+  useLayoutEffect(() => {
+    onIngestedRef.current = onIngested;
+  });
 
   useEffect(() => {
     loadCatalog().then(setCatalog);
@@ -45,74 +62,102 @@ export function useAssess(onIngested: (eventId: string) => void) {
     };
   }, []);
 
-  const ingest = useCallback(
-    async (ev: { id: string; name: string; center: [number, number] | null }) => {
-      const tId = `ingest-${ev.id}`;
-      if (!ev.center) {
-        setJobs((j) => ({ ...j, [ev.id]: { phase: "error", error: "no coordinates for this event" } }));
-        toast.error(`${ev.name}: no coordinates in the catalogue`);
-        return;
+  const ingest = useCallback(async (ev: AssessTarget) => {
+    const tId = `ingest-${ev.id}`;
+    // one assessment per target at a time, blocks a double-click and a
+    // re-submit while an earlier poll loop is still running
+    if (inFlight.current.has(ev.id)) return;
+    inFlight.current.add(ev.id);
+    const release = () => {
+      inFlight.current.delete(ev.id);
+      const t = timers.current[ev.id];
+      if (t) {
+        window.clearInterval(t);
+        delete timers.current[ev.id];
       }
-      setJobs((j) => ({ ...j, [ev.id]: { phase: "running", step: "starting" } }));
-      toast.loading(`Ingesting ${ev.name}…`, { id: tId, description: "contacting pipeline" });
+    };
 
-      const res = await startAssess({
-        event: ev.id,
-        lat: ev.center[1],
-        lon: ev.center[0],
-        name: ev.name,
+    const pt = ev.point ?? ev.center;
+    if (!pt) {
+      setJobs((j) => ({ ...j, [ev.id]: { phase: "error", error: "no coordinates for this AOI" } }));
+      toast.error(`${ev.name}: no coordinates`);
+      return release();
+    }
+    const [lon, lat] = pt;
+    if (!inNC(lon, lat)) {
+      setJobs((j) => ({ ...j, [ev.id]: { phase: "error", error: "AOI is outside North Carolina" } }));
+      toast.error("Outside North Carolina", {
+        description: "TerraTriage only assesses areas within NC.",
       });
-      if (!res) {
-        setJobs((j) => ({ ...j, [ev.id]: { phase: "error", error: "pipeline server not reachable" } }));
-        toast.error(`${ev.name}: pipeline server not reachable`, {
-          id: tId,
-          description: "Start it with `python server.py`, or run the commands manually.",
-        });
-        return;
-      }
-      if (res.status === "done" || !res.job_id) {
+      return release();
+    }
+    setJobs((j) => ({ ...j, [ev.id]: { phase: "running", step: "starting" } }));
+    toast.loading(`Assessing ${ev.name}…`, { id: tId, description: "contacting the service" });
+
+    const res = await startAssess({ event: ev.id, lat, lon, name: ev.name, subtitle: ev.subtitle });
+    if (!res) {
+      setJobs((j) => ({
+        ...j,
+        [ev.id]: { phase: "error", error: "assessment service not reachable" },
+      }));
+      toast.error(`${ev.name}: assessment service not reachable`, {
+        id: tId,
+        description: "Run the commands shown on the Assess screen, or point VITE_API_URL at a service.",
+      });
+      return release();
+    }
+    if (res.status === "error") {
+      setJobs((j) => ({ ...j, [ev.id]: { phase: "error", error: res.error } }));
+      toast.error(`${ev.name}: ${res.error ?? "rejected"}`, { id: tId });
+      return release();
+    }
+    if (res.status === "done" || !res.job_id) {
+      setJobs((j) => ({ ...j, [ev.id]: { phase: "done" } }));
+      toast.success(`${ev.name} is already assessed`, { id: tId });
+      const area = res.area;
+      release();
+      if (area) onIngestedRef.current(area);
+      return;
+    }
+
+    const jobId = res.job_id;
+    const started = Date.now();
+    timers.current[ev.id] = window.setInterval(async () => {
+      // a later callback can still be queued after we clear the interval
+      if (!timers.current[ev.id]) return;
+      const st = await pollAssess(jobId);
+      if (!st || !timers.current[ev.id]) return;
+      if (st.status === "done") {
+        const area = st.area;
+        release();
         setJobs((j) => ({ ...j, [ev.id]: { phase: "done" } }));
-        toast.success(`${ev.name} is already assessed`, { id: tId });
-        onIngested(ev.id);
-        return;
+        toast.success(`${ev.name} assessed`, {
+          id: tId,
+          description: `${Math.round((Date.now() - started) / 1000)}s · opening the damage map`,
+        });
+        if (area) onIngestedRef.current(area);
+      } else if (st.status === "error") {
+        release();
+        setJobs((j) => ({ ...j, [ev.id]: { phase: "error", error: st.error || "pipeline failed" } }));
+        toast.error(`${ev.name}: ${st.error || "pipeline failed"}`, {
+          id: tId,
+          description: "This event may have no clean pre/post imagery pair over the AOI.",
+        });
+      } else {
+        const step = st.step || st.status;
+        setJobs((j) => ({ ...j, [ev.id]: { phase: "running", step } }));
+        toast.loading(`Assessing ${ev.name}…`, {
+          id: tId,
+          description: `${step} · ~${STEP_PCT[step] ?? 30}%`,
+        });
       }
+    }, 2000);
+  }, []);
 
-      const jobId = res.job_id;
-      const started = Date.now();
-      timers.current[ev.id] = window.setInterval(async () => {
-        const st = await pollAssess(jobId);
-        if (!st) return;
-        if (st.status === "done") {
-          window.clearInterval(timers.current[ev.id]);
-          setJobs((j) => ({ ...j, [ev.id]: { phase: "done" } }));
-          toast.success(`${ev.name} assessed`, {
-            id: tId,
-            description: `${Math.round((Date.now() - started) / 1000)}s · opening the damage map`,
-          });
-          onIngested(ev.id);
-        } else if (st.status === "error") {
-          window.clearInterval(timers.current[ev.id]);
-          setJobs((j) => ({ ...j, [ev.id]: { phase: "error", error: st.error || "pipeline failed" } }));
-          toast.error(`${ev.name}: ${st.error || "pipeline failed"}`, {
-            id: tId,
-            description: "This event may have no clean pre/post imagery pair.",
-          });
-        } else {
-          const step = st.step || st.status;
-          setJobs((j) => ({ ...j, [ev.id]: { phase: "running", step } }));
-          toast.loading(`Ingesting ${ev.name}…`, {
-            id: tId,
-            description: `${step} · ~${STEP_PCT[step] ?? 30}%`,
-          });
-        }
-      }, 2000);
-    },
-    [onIngested],
-  );
-
-  /** For the "no server" case — copyable commands. */
+  /** For the "no service" case, copyable commands. */
   const commandsFor = useCallback(
-    (ev: { id: string; name: string; center: [number, number] | null }) => assessCommands(ev),
+    (ev: { id: string; name: string; center: [number, number] | null; point?: [number, number] | null }) =>
+      assessCommands({ id: ev.id, name: ev.name, center: ev.point ?? ev.center }),
     [],
   );
 

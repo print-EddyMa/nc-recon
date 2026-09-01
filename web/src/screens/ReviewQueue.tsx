@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { heroTileUrl, tileForLonLat, summarize } from "../lib/data";
 import { DAMAGE } from "../lib/damage";
 import { useReviewDecisions, overrideClasses } from "../lib/review";
@@ -34,7 +34,11 @@ function Crop({
   lat: number;
   label: string;
 }) {
-  const { z, x, y, fx, fy } = tileForLonLat(lon, lat, CROP_Z);
+  // start tight (CROP_Z); on a 404 (edge buildings can fall outside the cut
+  // tiles) step out one zoom, which covers 4× the area
+  const [zoomOut, setZoomOut] = useState(0);
+  const z0 = CROP_Z - zoomOut;
+  const { z, x, y, fx, fy } = tileForLonLat(lon, lat, z0);
   const size = 256 * SCALE;
   const tx = Math.max(Math.min(fx * size - CROP_PX / 2, size - CROP_PX), 0);
   const ty = Math.max(Math.min(fy * size - CROP_PX / 2, size - CROP_PX), 0);
@@ -44,11 +48,22 @@ function Crop({
       style={{ width: CROP_PX, height: CROP_PX }}
     >
       <img
-        src={heroTileUrl(areaId, kind, [z, x, y])}
+        key={z0}
+        // ?empty=1 → the server hands back a 1x1 blank instead of a 404 for an
+        // edge building outside the cut tiles; we detect that on load and step
+        // out a zoom, so the console stays clean
+        src={`${heroTileUrl(areaId, kind, [z, x, y])}?empty=1`}
         alt={`${label} crop of the building`}
         draggable={false}
+        crossOrigin="anonymous"
         style={{ position: "absolute", width: size, height: size, left: -tx, top: -ty, maxWidth: "none" }}
-        onError={(e) => (e.currentTarget.style.visibility = "hidden")}
+        onLoad={(e) => {
+          if (e.currentTarget.naturalWidth <= 1 && zoomOut < 3) setZoomOut((n) => n + 1);
+        }}
+        onError={(e) => {
+          if (zoomOut < 3) setZoomOut((n) => n + 1);
+          else e.currentTarget.style.visibility = "hidden";
+        }}
       />
       <span className="absolute left-1 top-1 rounded-sm bg-canvas/80 px-1 py-0.5 text-[10px] uppercase tracking-wider text-ink-dim">
         {label}
@@ -74,8 +89,12 @@ export default function ReviewQueue({ area, fc, onOpenMap }: Props) {
       .sort((a, b) => b.properties.area_m2 - a.properties.area_m2);
   }, [fc]);
 
-  // reset the window when the area or filter changes
-  useEffect(() => setLimit(PAGE), [area.id, showResolved]);
+  // the area is remounted via key= from App, so `limit` only needs a manual
+  // reset when the "show resolved" filter flips
+  const toggleResolved = () => {
+    setShowResolved((v) => !v);
+    setLimit(PAGE);
+  };
 
   const filtered = showResolved ? queue : queue.filter((f) => !decisions[f.properties.id]);
   const visible = filtered.slice(0, limit);
@@ -102,7 +121,7 @@ export default function ReviewQueue({ area, fc, onOpenMap }: Props) {
   const resolved = queue.length - queue.filter((f) => !decisions[f.properties.id]).length;
   const open = queue.length - resolved;
 
-  // buildings where the second pass actually agrees with the model — safe to
+  // buildings where the second pass actually agrees with the model, safe to
   // clear in bulk (they were flagged only for a low decision margin)
   const agreeing = queue.filter((f) => {
     const s = f.properties.sources;
@@ -142,9 +161,10 @@ export default function ReviewQueue({ area, fc, onOpenMap }: Props) {
         {open === 1 ? "" : "s"} need a second look
       </h1>
       <p className="mt-4 max-w-[64ch] text-sm leading-relaxed text-ink-dim">
-        These are predictions where the CNN classifier and an independent
-        change-detection pass disagreed, or where the model was not decisive.
-        Confirm the model's call, or override it by eye from the pre and post crop.
+        Buildings where the CNN classifier and an independent change-detection
+        pass landed two or more damage levels apart, plus a few whose footprint
+        is too small to read. Confirm the model's call, or override it by eye
+        from the pre and post crop.
       </p>
 
       <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-line py-2.5 text-xs">
@@ -167,7 +187,7 @@ export default function ReviewQueue({ area, fc, onOpenMap }: Props) {
             type="checkbox"
             className="accent-accent"
             checked={showResolved}
-            onChange={() => setShowResolved((v) => !v)}
+            onChange={toggleResolved}
           />
           show resolved
         </label>
@@ -284,9 +304,11 @@ function ReviewRow({
           {s && (
             <>
               <span className="tnum text-ink-faint">
-                2nd pass · {DAMAGE[s.heuristic as DamageClass]?.short ?? s.heuristic}
+                Change-detection · {DAMAGE[s.heuristic as DamageClass]?.label ?? s.heuristic}
               </span>
-              <span className="tnum text-ink-faint">margin {(s.margin * 100).toFixed(0)}%</span>
+              <span className={`tnum ${s.cnn === s.heuristic ? "text-ink-faint" : "text-dmg1"}`}>
+                {s.cnn === s.heuristic ? "passes agree" : "passes disagree"}
+              </span>
             </>
           )}
         </dl>
@@ -332,9 +354,9 @@ function ReviewRow({
                   className={`pressable h-6 w-6 rounded-sm text-[10px] font-semibold ring-1 ring-inset ${
                     on ? "ring-ink" : "ring-black/20"
                   }`}
-                  style={{ background: d.hex, color: "#0a1416" }}
+                  style={{ background: d.hex, color: d.index <= 1 ? "#1a1c1f" : "#fff" }}
                 >
-                  {d.short[0]}
+                  {d.index}
                 </button>
               </Tooltip>
             );

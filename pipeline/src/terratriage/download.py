@@ -86,62 +86,109 @@ def _row_centroid_lonlat(row: dict) -> tuple[float, float]:
     return lon, lat
 
 
+def _has_pre_post(rs: list[dict], event_date: dt.date, slop_days: int = 5) -> bool:
+    ds = [dt.datetime.fromisoformat(r["datetime"]).date() for r in rs if r.get("datetime")]
+    cut = event_date - dt.timedelta(days=slop_days)
+    return any(d < cut for d in ds) and any(d >= cut for d in ds)
+
+
 def choose_tile(
     rows: list[dict], area: str, lat: float, lon: float, event_date: dt.date
 ) -> TileChoice:
-    """Nearest pre (before event) + nearest post (on/after event) for the tile
-    containing (lat, lon). If no tile contains the point, fall back to the
-    quadkey nearest the point that still has a usable pre/post pair. Raises only
-    if the whole event has no pre/post pair anywhere."""
+    """Nearest pre (before the event) + nearest post (on/after the event) for a
+    Maxar tile at (lat, lon). Only ever returns a genuine before/after pair
+    straddling `event_date`; raises with a helpful message when no covered tile
+    near the point has post-event imagery."""
+    import math
     from collections import defaultdict
 
     by_qk: dict[str, list[dict]] = defaultdict(list)
     for r in rows:
         if _contains(r, lat, lon):
             by_qk[r["quadkey"]].append(r)
-    if not by_qk:
-        # nearest-quadkey fallback: group ALL rows, keep those with a pre+post,
-        # pick the group whose centroid is closest to the requested point
-        import math
 
+    # keep only quadkeys that actually straddle the event
+    by_qk = {qk: rs for qk, rs in by_qk.items() if _has_pre_post(rs, event_date)}
+
+    if not by_qk:
+        # nearest-quadkey fallback — rank ALL quadkeys that straddle the event by
+        # distance to the requested point
         allq: dict[str, list[dict]] = defaultdict(list)
         for r in rows:
             allq[r["quadkey"]].append(r)
         ranked = []
         for qk, rs in allq.items():
+            if not _has_pre_post(rs, event_date):
+                continue
             clon, clat = _row_centroid_lonlat(rs[0])
-            d = math.hypot(clon - lon, clat - lat)
-            ranked.append((d, qk, rs))
+            d = math.hypot(clon - lon, clat - lat) * 111.0  # deg -> ~km
+            ranked.append((d, qk, rs, (clat, clon)))
         ranked.sort(key=lambda t: t[0])
-        by_qk = {}
-        for _, qk, rs in ranked[:8]:
-            by_qk[qk] = rs
-        if not by_qk:
-            raise LookupError(f"{area}: event has no tiles at all")
-        print(f"[download] ({lat},{lon}) not inside any tile; using nearest quadkey(s)")
+        if not ranked:
+            raise LookupError(
+                f"{area}: this Maxar event has no before/after imagery pair anywhere"
+            )
+        nearest_km, _, _, (nclat, nclon) = ranked[0]
+        if nearest_km > 35:  # the point is well outside the event's before/after coverage
+            raise LookupError(
+                f"{area}: no post-event Maxar imagery near ({lat:.3f}, {lon:.3f}). "
+                f"Nearest assessable coverage is ~{nearest_km:.0f} km away "
+                f"at ({nclat:.3f}, {nclon:.3f})."
+            )
+        by_qk = {qk: rs for _, qk, rs, _ in ranked[:8]}
+        print(
+            f"[download] ({lat},{lon}) not inside a covered tile; using the nearest "
+            f"assessable quadkey(s), ~{nearest_km:.0f} km away"
+        )
 
-    best: TileChoice | None = None
-    best_gap = None
-    for qk, rs in by_qk.items():
+    for rs in by_qk.values():
         for r in rs:
             r["_d"] = dt.datetime.fromisoformat(r["datetime"]).date()
-        pre = sorted([r for r in rs if r["_d"] < event_date], key=lambda r: -(r["_d"].toordinal()))
-        post = sorted([r for r in rs if r["_d"] >= event_date], key=lambda r: r["_d"].toordinal())
-        if not pre or not post:
-            continue
-        gap = (post[0]["_d"] - pre[0]["_d"]).days
-        if best_gap is None or gap < best_gap:
-            best_gap = gap
-            p, q = pre[0], post[0]
-            best = TileChoice(
-                area=area, quadkey=qk, epsg=row_epsg(p), grid=p.get("grid:code", ""),
-                pre_date=p["_d"].isoformat(), pre_url=p["visual"],
-                pre_catalog_id=p["catalog_id"], pre_gsd=float(p["gsd"]),
-                post_date=q["_d"].isoformat(), post_url=q["visual"],
-                post_catalog_id=q["catalog_id"], post_gsd=float(q["gsd"]),
-            )
+
+    def _pick(split_fn) -> "TileChoice | None":
+        """Best pre/post pair across candidate quadkeys, using split_fn(dates)->
+        (pre_date, post_date) to decide the boundary per quadkey."""
+        chosen: TileChoice | None = None
+        chosen_gap = None
+        for qk, rs in by_qk.items():
+            ds = sorted({r["_d"] for r in rs})
+            if len(ds) < 2:
+                continue
+            split = split_fn(ds)
+            if split is None:
+                continue
+            pre_d, post_d = split
+            pre = max((r for r in rs if r["_d"] == pre_d), key=lambda r: float(r.get("gsd") or 9), default=None)
+            post = max((r for r in rs if r["_d"] == post_d), key=lambda r: float(r.get("gsd") or 9), default=None)
+            if not pre or not post:
+                continue
+            gap = (post_d - pre_d).days
+            if chosen_gap is None or gap < chosen_gap:
+                chosen_gap = gap
+                chosen = TileChoice(
+                    area=area, quadkey=qk, epsg=row_epsg(pre), grid=pre.get("grid:code", ""),
+                    pre_date=pre_d.isoformat(), pre_url=pre["visual"],
+                    pre_catalog_id=pre["catalog_id"], pre_gsd=float(pre["gsd"]),
+                    post_date=post_d.isoformat(), post_url=post["visual"],
+                    post_catalog_id=post["catalog_id"], post_gsd=float(post["gsd"]),
+                )
+        return chosen
+
+    # latest capture before the event + earliest capture on/after it (5-day slop
+    # so a capture the same week as landfall still counts as "after")
+    cut = event_date - dt.timedelta(days=5)
+
+    def _by_event_date(ds: list[dt.date]):
+        pre = [d for d in ds if d < cut]
+        post = [d for d in ds if d >= cut]
+        return (max(pre), min(post)) if pre and post else None
+
+    best = _pick(_by_event_date)
     if best is None:
-        raise LookupError(f"{area}: tile(s) found but none have both a pre- and post-event capture")
+        raise LookupError(
+            f"{area}: no Maxar tile near ({lat:.3f},{lon:.3f}) has both a pre- and "
+            f"post-event capture for this event"
+        )
     return best
 
 

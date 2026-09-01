@@ -31,7 +31,7 @@ export default function HotspotList({ items, activeKey, onPick }: Props) {
                 <span className="tnum block text-2xs text-ink-dim">
                   {h.count} buildings · {h.severe} severe
                 </span>
-                {/* score bar is a neutral meter — red is reserved for the damage ramp */}
+                {/* score bar is a neutral meter, red is reserved for the damage ramp */}
                 <span className="mt-1.5 block h-[3px] w-full overflow-hidden rounded-full bg-line">
                   <span
                     className="block h-full bg-meter transition-[width] duration-500 ease-out"

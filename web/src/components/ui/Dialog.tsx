@@ -2,7 +2,7 @@ import * as RD from "@radix-ui/react-dialog";
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
 
-/** shadcn-style dialog on Radix — focus trap + scroll lock + a11y for free. */
+/** shadcn-style dialog on Radix, focus trap + scroll lock + a11y for free. */
 export function Dialog({
   open,
   onOpenChange,

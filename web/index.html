@@ -1,23 +1,30 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#10151c" />
+    <meta name="color-scheme" content="light dark" />
 
-    <title>TerraTriage — satellite disaster damage assessment</title>
+    <script>
+      // apply the saved theme before first paint (no flash)
+      try {
+        var t = localStorage.getItem("terratriage:theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    </script>
+
+    <title>TerraTriage, North Carolina disaster monitor</title>
     <meta
       name="description"
-      content="Building-by-building damage assessment for any disaster with Maxar Open Data coverage, from paired pre- and post-event satellite imagery, with a live global hazard monitor."
+      content="A North Carolina disaster monitor: live river-flood forecasts, streamflow, official warnings, storm tracking and DOT ground-truth, plus on-demand building-by-building damage assessment from satellite imagery."
     />
 
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="TerraTriage — satellite disaster damage assessment" />
+    <meta property="og:title" content="TerraTriage, North Carolina disaster monitor" />
     <meta
       property="og:description"
-      content="Every building, triaged from orbit. Pre/post satellite imagery, classified on the four-level xView2 damage scale, on an interactive 3-D map."
+      content="Live North Carolina risk monitoring, flood forecasts, warnings, storm tracks, and on-demand satellite damage assessment."
     />
     <meta property="og:image" content="/og-image.png" />
     <meta name="twitter:card" content="summary_large_image" />

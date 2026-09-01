@@ -2,17 +2,26 @@ import { useEffect, useState } from "react";
 import { Dialog } from "./ui/Dialog";
 
 const KEYS: [string, string][] = [
-  ["⌘K / Ctrl K", "Command menu — jump to a screen or any of 55 disasters"],
+  ["⌘K / Ctrl K", "Command menu, jump to a screen or assess an NC area"],
   ["?", "This shortcut list"],
-  ["G then L", "Go to the live monitor"],
-  ["G then M", "Go to the damage map (when a disaster is open)"],
+  ["G then H", "Go to the home dashboard"],
+  ["G then L", "Go to the live NC map"],
+  ["G then T", "Go to the disaster-history timeline"],
+  ["G then A", "Go to on-demand assessment"],
+  ["G then M", "Go to the damage map (when an area is open)"],
   ["G then R", "Go to the review queue"],
   ["G then S", "Go to the summary"],
   ["Esc", "Close a menu or dialog"],
 ];
 
+type NavTarget = "home" | "nc" | "history" | "assess" | "map" | "review" | "stats" | "about";
+
 /** `?` opens a shortcut reference. `g` then a letter jumps between screens. */
-export default function ShortcutsDialog({ onNav }: { onNav: (s: "live" | "map" | "review" | "stats") => void }) {
+export default function ShortcutsDialog({
+  onNav,
+}: {
+  onNav: (s: NavTarget) => void;
+}) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -30,8 +39,11 @@ export default function ShortcutsDialog({ onNav }: { onNav: (s: "live" | "map" |
         return;
       }
       if (Date.now() - gPending < 900) {
-        const map: Record<string, "live" | "map" | "review" | "stats"> = {
-          l: "live",
+        const map: Record<string, NavTarget> = {
+          h: "home",
+          l: "nc",
+          t: "history",
+          a: "assess",
           m: "map",
           r: "review",
           s: "stats",

@@ -1,10 +1,20 @@
 import type { BuildingFeature, DamageClass, DamageCollection } from "./types";
 import { isSevere } from "./damage";
+import { API_URL } from "./catalog";
+
+/**
+ * Where per-area assessment output lives. With no `VITE_API_URL` the app is a
+ * static site and reads tiles + GeoJSON from `public/`; with one set, a fresh
+ * assessment is served by the pipeline service, which the container writes to
+ * its own volume, so read it from there.
+ */
+export const tilesBase = () =>
+  API_URL ? `${API_URL}/tiles/` : `${import.meta.env.BASE_URL}tiles/`;
 
 export const heroTileUrl = (id: string, kind: "pre" | "post", [z, x, y]: [number, number, number]) =>
-  `${import.meta.env.BASE_URL}tiles/${id}/${kind}/${z}/${x}/${y}.jpg`;
+  `${tilesBase()}${id}/${kind}/${z}/${x}/${y}.jpg`;
 
-/** XYZ tile + within-tile fractional offset for a lon/lat — used by the review
+/** XYZ tile + within-tile fractional offset for a lon/lat, used by the review
  * queue to show a tight pre/post crop of one building from the committed tiles. */
 export function tileForLonLat(lon: number, lat: number, z: number) {
   const n = 2 ** z;
@@ -17,7 +27,10 @@ export function tileForLonLat(lon: number, lat: number, z: number) {
 }
 
 export async function loadArea(id: string): Promise<DamageCollection> {
-  const res = await fetch(`${import.meta.env.BASE_URL}data/${id}.geojson`);
+  const url = API_URL
+    ? `${API_URL}/areas/${encodeURIComponent(id)}`
+    : `${import.meta.env.BASE_URL}data/${id}.geojson`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`failed to load ${id}: ${res.status}`);
   const fc = (await res.json()) as DamageCollection;
   if (fc?.type !== "FeatureCollection" || !Array.isArray(fc.features)) {

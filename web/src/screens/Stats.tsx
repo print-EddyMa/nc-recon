@@ -160,10 +160,10 @@ export default function Stats({ event, area, fc, onOpenMap }: Props) {
           </div>
           <p className="mt-3 max-w-[64ch] text-xs leading-relaxed text-ink-faint">
             {p.review.model_agreement_pct != null
-              ? `The CNN classifier and the change-detection pass agree on ${p.review.model_agreement_pct}% of buildings. `
+              ? `The CNN classifier and the change-detection pass agree exactly on ${p.review.model_agreement_pct}% of buildings, and land within one damage level on most of the rest. `
               : ""}
-            Where they disagree or the model is not decisive, the building is routed to
-            the review queue rather than reported as certain.
+            The {p.review.total_review.toLocaleString()} where they differ by two or more
+            levels are routed to the review queue rather than reported as certain.
           </p>
         </section>
       )}

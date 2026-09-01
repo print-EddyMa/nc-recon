@@ -4,6 +4,7 @@ import { GeoJsonLayer } from "@deck.gl/layers";
 import type { PickingInfo } from "@deck.gl/core";
 import { useMapLibre, type IControl, type RasterTileSource } from "../lib/useMapLibre";
 import { DAMAGE } from "../lib/damage";
+import { tilesBase } from "../lib/data";
 import { prefersReducedMotion } from "../lib/motion";
 import type { AreaConfig, BuildingFeature, DamageCollection } from "../lib/types";
 
@@ -22,6 +23,8 @@ interface Props {
 }
 
 const EMPTY_RGBA: [number, number, number, number] = [0, 0, 0, 0];
+// the app accent (blue), bright enough to read on both the light and dark basemap
+const ACCENT: [number, number, number] = [74, 128, 246];
 type Hover = { x: number; y: number; f: BuildingFeature } | null;
 
 export default function DeckMap({
@@ -37,7 +40,7 @@ export default function DeckMap({
 }: Props) {
   const effClass = (f: { properties: BuildingFeature["properties"] }): number =>
     overrides?.[f.properties.id] ?? f.properties.damage_class;
-  const { containerRef, mapRef, ready } = useMapLibre({
+  const { containerRef, mapRef, ready, styleEpoch } = useMapLibre({
     center: area.center,
     zoom: area.zoom,
     pitch: 0,
@@ -52,7 +55,8 @@ export default function DeckMap({
     if (!ready || !map) return;
     for (const kind of ["pre", "post"] as const) {
       const sid = `imagery-${kind}`;
-      const tiles = [`${import.meta.env.BASE_URL}tiles/${area.id}/${kind}/{z}/{x}/{y}.jpg`];
+      // ?empty=1 → the server returns a blank tile (not a 404) past the AOI edge
+      const tiles = [`${tilesBase()}${area.id}/${kind}/{z}/{x}/{y}.jpg?empty=1`];
       const src = map.getSource(sid) as RasterTileSource | undefined;
       if (!src) {
         map.addSource(sid, {
@@ -68,7 +72,7 @@ export default function DeckMap({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, area.id]);
+  }, [ready, area.id, styleEpoch]);
 
   // --- imagery opacity follows the slider ------------------------------------
   useEffect(() => {
@@ -134,7 +138,7 @@ export default function DeckMap({
         data: fc.features as BuildingFeature[],
         pickable: true,
         autoHighlight: true,
-        highlightColor: [63, 182, 196, 90],
+        highlightColor: [...ACCENT, 90],
         stroked: true,
         filled: true,
         extruded: true,
@@ -152,7 +156,7 @@ export default function DeckMap({
           return [r, g, b, a];
         },
         getLineColor: (f) =>
-          f.properties.id === selectedId ? [63, 182, 196, 255] : [12, 16, 22, 140],
+          f.properties.id === selectedId ? [...ACCENT, 255] : [12, 16, 22, 140],
         material: { ambient: 0.55, diffuse: 0.6, shininess: 24, specularColor: [40, 55, 70] },
         transitions: reduced
           ? {}

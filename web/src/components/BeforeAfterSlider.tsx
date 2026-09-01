@@ -33,8 +33,8 @@ export default function BeforeAfterSlider({
             key={k}
             onClick={() => onImageryChange(k)}
             aria-pressed={imagery === k}
-            className={`tnum rounded-md px-2.5 py-1 text-2xs uppercase tracking-wider transition-colors duration-200 ease-out active:opacity-70 ${
-              imagery === k ? "bg-accent text-[#05171a]" : "border border-line text-ink-dim hover:text-ink"
+            className={`rounded-md px-2.5 py-1 text-2xs transition-colors duration-200 ease-out active:opacity-70 ${
+              imagery === k ? "bg-accent text-accent-ink" : "border border-line text-ink-dim hover:text-ink"
             }`}
           >
             {k === "pre" ? `Before${preDate ? " · " + preDate : ""}` : `After${postDate ? " · " + postDate : ""}`}
@@ -55,9 +55,9 @@ export default function BeforeAfterSlider({
       />
 
       <div className="mt-1.5 flex items-baseline justify-between text-2xs text-ink-faint">
-        <span>Satellite</span>
-        <span className="tnum text-ink-dim">{pct}%</span>
-        <span>3-D damage model</span>
+        <span className={pct <= 50 ? "text-ink-dim" : ""}>Satellite</span>
+        <span>drag to blend</span>
+        <span className={pct > 50 ? "text-ink-dim" : ""}>3-D damage model</span>
       </div>
     </div>
   );

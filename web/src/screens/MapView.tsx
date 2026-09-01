@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import DeckMap from "../components/DeckMap";
 import BeforeAfterSlider from "../components/BeforeAfterSlider";
 import ClassBar from "../components/ClassBar";
@@ -29,13 +29,7 @@ export default function MapView({ area, fc }: Props) {
   const reviewedCount = useMemo(() => Object.keys(decisions).length, [decisions]);
   // side panels are collapsible below lg so the map is usable on a small screen
   const [panelsOpen, setPanelsOpen] = useState(true);
-
-  // reset per-area
-  useEffect(() => {
-    setSelectedId(null);
-    setActiveHotspot(null);
-    setFilter(new Set([0, 1, 2, 3]));
-  }, [area.id]);
+  // per-area reset is handled by a `key={area.id}` remount from App.tsx
 
   const spots = useMemo(() => (fc ? hotspots(fc) : []), [fc]);
   const stats = useMemo(() => (fc ? summarize(fc) : null), [fc]);
@@ -47,7 +41,8 @@ export default function MapView({ area, fc }: Props) {
   const toggleClass = (c: number) =>
     setFilter((prev) => {
       const next = new Set(prev);
-      next.has(c) ? next.delete(c) : next.add(c);
+      if (next.has(c)) next.delete(c);
+      else next.add(c);
       return next.size ? next : new Set([0, 1, 2, 3]);
     });
 
@@ -68,7 +63,7 @@ export default function MapView({ area, fc }: Props) {
         flyTarget={flyTarget}
       />
 
-      {/* collapse toggle — only matters below lg */}
+      {/* collapse toggle, only matters below lg */}
       <button
         onClick={() => setPanelsOpen((v) => !v)}
         className="pressable panel absolute left-3 top-3 z-30 flex items-center gap-1.5 px-2.5 py-1.5 text-2xs text-ink-dim hover:text-ink lg:hidden"

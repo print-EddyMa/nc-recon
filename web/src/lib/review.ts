@@ -2,13 +2,13 @@ import { useCallback, useSyncExternalStore } from "react";
 import type { DamageClass } from "./types";
 
 /**
- * Phase D3 — the human-in-the-loop review queue's memory. A team member's
+ * Phase D3, the human-in-the-loop review queue's memory. A team member's
  * approve / reject / override on a "needs review" building is kept per-viewer in
  * localStorage (it never leaves the browser). Consumers read it back to redraw
  * the map and re-tally the summary with human calls applied.
  *
- * Backed by a tiny module-level store so every `useReviewDecisions` call — the
- * queue, the map, the summary, the nav badge — stays in sync within a session.
+ * Backed by a tiny module-level store so every `useReviewDecisions` call, the
+ * queue, the map, the summary, the nav badge, stays in sync within a session.
  */
 export type ReviewAction = "approve" | "reject" | "override";
 

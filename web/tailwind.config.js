@@ -1,25 +1,32 @@
 /** @type {import('tailwindcss').Config} */
+
+// Colours are CSS custom properties (space-separated R G B) defined in index.css
+// for the light theme, overridden for dark. `<alpha-value>` keeps `bg-x/60` etc.
+const v = (name) => `rgb(var(--${name}) / <alpha-value>)`;
+
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        canvas: "#0f141b",
-        surface: "#161d26",
-        "surface-2": "#1c2530",
-        line: "#28313d",
-        "line-strong": "#3a4655",
-        ink: "#ccd5df",
-        "ink-dim": "#8894a3",
-        "ink-faint": "#5a6673",
-        accent: "#4cb5c2",
-        "accent-dim": "#2b7f8a",
-        // neutral emphasis bar (scores, meters) — never the damage ramp
-        meter: "#5a7c86",
-        dmg0: "#f5d76e",
-        dmg1: "#e8894a",
-        dmg2: "#d1495b",
-        dmg3: "#8b1e3f",
+        canvas: v("canvas"),
+        surface: v("surface"),
+        "surface-2": v("surface-2"),
+        line: v("line"),
+        "line-strong": v("line-strong"),
+        ink: v("ink"),
+        "ink-dim": v("ink-dim"),
+        "ink-faint": v("ink-faint"),
+        accent: v("accent"),
+        "accent-soft": v("accent-soft"),
+        "accent-ink": v("accent-ink"),
+        meter: v("meter"),
+        // xView2 four-level damage ramp (semantic, theme-independent).
+        // Keep in sync with DAMAGE[] in src/lib/damage.ts.
+        dmg0: "#3fa06d",
+        dmg1: "#efb036",
+        dmg2: "#e56a2b",
+        dmg3: "#a81b38",
       },
       fontFamily: {
         display: ['"Archivo"', "ui-sans-serif", "system-ui", "sans-serif"],
@@ -27,8 +34,8 @@ export default {
         mono: ['"Geist Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
       },
       boxShadow: {
-        1: "0 1px 2px rgba(4,8,14,0.4), 0 2px 8px rgba(4,8,14,0.3)",
-        2: "0 4px 12px rgba(4,8,14,0.45), 0 12px 32px rgba(4,8,14,0.4)",
+        1: "0 1px 2px rgb(var(--shadow) / 0.10), 0 1px 3px rgb(var(--shadow) / 0.08)",
+        2: "0 4px 12px rgb(var(--shadow) / 0.14), 0 12px 32px rgb(var(--shadow) / 0.12)",
       },
       transitionTimingFunction: {
         out: "cubic-bezier(0.23, 1, 0.32, 1)",
@@ -36,15 +43,14 @@ export default {
         drawer: "cubic-bezier(0.32, 0.72, 0, 1)",
       },
       fontSize: {
-        "2xs": ["0.6875rem", { lineHeight: "1rem", letterSpacing: "0.04em" }],
+        "2xs": ["0.6875rem", { lineHeight: "1rem", letterSpacing: "0.005em" }],
       },
-      // sharper corners than the Tailwind defaults — a technical, signage feel
       borderRadius: {
-        sm: "3px",
-        DEFAULT: "4px",
-        md: "5px",
-        lg: "6px",
-        xl: "8px",
+        sm: "4px",
+        DEFAULT: "6px",
+        md: "8px",
+        lg: "10px",
+        xl: "14px",
       },
     },
   },

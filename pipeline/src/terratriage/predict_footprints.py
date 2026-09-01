@@ -13,6 +13,7 @@ from shapely.ops import transform as shapely_transform
 from . import contract
 from .footprints import load_for_area
 from .classify import score_buildings
+from .fusion import retier_with_priors
 
 
 def run(
@@ -28,9 +29,13 @@ def run(
     pre_meta: dict | None = None,
     post_meta: dict | None = None,
     limit: int | None = None,
+    footprint_source: str = "osm",
+    nc_context: bool = False,
 ) -> dict:
     t0 = time.time()
-    polys, dst_crs = load_for_area(pre_path, cache_dir, area)
+    polys, dst_crs, source_used = load_for_area(
+        pre_path, cache_dir, area, source=footprint_source
+    )
     if limit:
         polys = polys[:limit]
     if not polys:
@@ -42,10 +47,27 @@ def run(
     fused = bool(scores) and len(scores[0]) == 4
 
     to_wgs = Transformer.from_crs(dst_crs, 4326, always_xy=True).transform
+
+    # NC context priors, computed once at the AOI centroid
+    priors = None
+    if nc_context and fused:
+        try:
+            from .context import nc_priors
+            from .footprints import aoi_bounds_lonlat
+
+            w, s, e, n = aoi_bounds_lonlat(pre_path)
+            priors = nc_priors((w + e) / 2, (s + n) / 2)
+        except Exception as ex:  # noqa: BLE001
+            print(f"[predict_fp] nc-context priors unavailable ({ex})")
+
     features = []
     for i, (poly, score) in enumerate(zip(polys, scores)):
         if fused:
             cls, conf, tier, srcs = score
+            if priors:
+                tier, srcs = retier_with_priors(
+                    cls, float(srcs.get("margin", 0.0)), tier, srcs, priors
+                )
         else:
             cls, conf = score
             tier, srcs = None, None
@@ -56,23 +78,25 @@ def run(
         features.append(
             contract.feature(
                 f"{area}-{i:06d}", [ring], cls, conf, poly.area, (cen.x, cen.y),
-                tier=tier, sources=srcs, footprint_source="osm",
+                tier=tier, sources=srcs, footprint_source=source_used,
             )
         )
 
+    fp_label = "NC OneMap footprints" if source_used == "nc_onemap" else "OSM footprints"
     if fused:
-        model_name = "fusion:cmu-classifier + change-detection (OSM footprints)"
+        model_name = f"fusion:cmu-classifier + change-detection ({fp_label})"
     elif backend == "keras":
-        model_name = "xview2_baseline:cmu-classifier (ResNet50+CNN, OSM footprints)"
+        model_name = f"xview2_baseline:cmu-classifier (ResNet50+CNN, {fp_label})"
     else:
-        model_name = "heuristic:change-detection (OSM footprints)"
+        model_name = f"heuristic:change-detection ({fp_label})"
     if fused:
         notes = (
             "Damage class from the xView2 CMU baseline classifier (ResNet50-v1 + CNN "
-            "head, trained on xBD); a per-building confidence tier is fused from that "
-            "model's softmax margin and agreement with an independent change-detection "
-            "pass. 'review'-tier buildings are routed to the human review queue. "
-            "Footprints are OpenStreetMap."
+            "head, trained on xBD). A per-building confidence tier is fused from "
+            "agreement with an independent change-detection pass: buildings where the "
+            "two disagree by two or more damage levels (or whose footprint is too "
+            "small to classify) are routed to the human review queue. Footprints are "
+            "OpenStreetMap."
         )
     elif backend == "keras":
         notes = (
@@ -82,6 +106,16 @@ def run(
         )
     else:
         notes = "Damage from a change-detection heuristic, not a trained CNN. Footprints are OSM."
+    if source_used == "nc_onemap":
+        notes = notes.replace("Footprints are OpenStreetMap.", "Footprints are NC OneMap.") \
+                     .replace("Footprints are OSM.", "Footprints are NC OneMap.")
+    if priors:
+        notes += (
+            f" NC context priors applied (flood_stage={priors.get('flood_stage')}, "
+            f"fema_declaration={priors.get('in_fema_decl')}, "
+            f"slope_deg={priors.get('slope_deg')}) — they only move borderline "
+            "confidence tiers, never the damage class."
+        )
     meta = contract.RunMeta(
         event=event, area=area, model=model_name,
         pre_image=contract.ImageMeta(**(pre_meta or {"date": "unknown"})),

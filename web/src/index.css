@@ -1,27 +1,71 @@
-@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Geist:wght@400;450;500;600&family=Geist+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Geist:wght@400;450;500;600&family=Geist+Mono:wght@400;500&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  /* -------- light theme (default) -------- */
   :root {
-    color-scheme: dark;
+    color-scheme: light;
 
-    /* strong, intentional easing — the built-in CSS curves are too weak */
+    --canvas: 250 249 246;
+    --surface: 255 255 255;
+    --surface-2: 244 243 239;
+    --line: 227 224 217;
+    --line-strong: 200 197 188;
+    --ink: 28 29 33;
+    --ink-dim: 92 96 104;
+    --ink-faint: 138 142 150;
+    --accent: 37 99 235;
+    --accent-soft: 224 234 254;
+    --accent-ink: 255 255 255;
+    --meter: 71 85 105;
+    --shadow: 30 34 44;
+
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
     --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  }
 
-    /* shadows carry the canvas hue, never flat black */
-    --shadow-1: 0 1px 2px rgba(4, 8, 14, 0.4), 0 2px 8px rgba(4, 8, 14, 0.3);
-    --shadow-2: 0 4px 12px rgba(4, 8, 14, 0.45), 0 12px 32px rgba(4, 8, 14, 0.4);
+  /* -------- dark theme -------- */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --canvas: 15 17 21;
+      --surface: 23 25 30;
+      --surface-2: 32 35 41;
+      --line: 42 46 54;
+      --line-strong: 62 67 78;
+      --ink: 233 234 232;
+      --ink-dim: 158 161 168;
+      --ink-faint: 108 112 121;
+      --accent: 74 128 246;
+      --accent-soft: 28 42 74;
+      --accent-ink: 255 255 255;
+      --meter: 132 148 168;
+      --shadow: 0 0 0;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --canvas: 15 17 21;
+    --surface: 23 25 30;
+    --surface-2: 32 35 41;
+    --line: 42 46 54;
+    --line-strong: 62 67 78;
+    --ink: 233 234 232;
+    --ink-dim: 158 161 168;
+    --ink-faint: 108 112 121;
+    --accent: 74 128 246;
+    --accent-soft: 28 42 74;
+    --accent-ink: 255 255 255;
+    --meter: 132 148 168;
+    --shadow: 0 0 0;
   }
 
   html {
     scroll-behavior: smooth;
   }
-
   html,
   body,
   #root {
@@ -30,35 +74,23 @@
 
   body {
     margin: 0;
-    background: theme("colors.canvas");
-    color: theme("colors.ink");
+    background: rgb(var(--canvas));
+    color: rgb(var(--ink));
     font-family: theme("fontFamily.sans");
-    font-feature-settings: "cv11", "ss01"; /* Geist: single-story a, rounded quotes */
+    font-feature-settings: "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
 
-  /* faint film grain so surfaces read as physical, not vector-flat */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-    opacity: 0.025;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  }
-
   ::selection {
-    background: theme("colors.accent");
-    color: #05171a;
+    background: rgb(var(--accent));
+    color: rgb(var(--accent-ink));
   }
 
-  /* one honest focus ring everywhere */
   :focus-visible {
-    outline: 2px solid theme("colors.accent");
+    outline: 2px solid rgb(var(--accent));
     outline-offset: 2px;
-    border-radius: 2px;
+    border-radius: 3px;
   }
 
   h1,
@@ -66,26 +98,24 @@
   h3 {
     font-family: theme("fontFamily.display");
     font-weight: 600;
-    letter-spacing: -0.011em; /* Archivo sits tighter than Space Grotesk; ease off */
+    letter-spacing: -0.014em;
     text-wrap: balance;
   }
-
   p {
-    text-wrap: pretty; /* no orphans */
+    text-wrap: pretty;
   }
 
-  /* skip link for keyboard users */
   .skip-link {
     position: fixed;
     top: 0.5rem;
     left: 0.5rem;
     z-index: 60;
     padding: 0.5rem 0.75rem;
-    background: theme("colors.accent");
-    color: #05171a;
+    background: rgb(var(--accent));
+    color: rgb(var(--accent-ink));
     font-size: 0.8125rem;
     font-weight: 600;
-    border-radius: 4px;
+    border-radius: 6px;
     transform: translateY(-150%);
     transition: transform 160ms var(--ease-out);
   }
@@ -95,60 +125,54 @@
 }
 
 @layer components {
-  /* floating panel — near-opaque, sharp corner, hairline border. A control-room
-     surface, not frosted glass. A faint blur only so map labels don't bleed. */
+  /* a solid, considered panel: opaque, hairline border, one soft shadow */
   .panel {
-    background: color-mix(in srgb, theme("colors.surface") 97%, transparent);
-    border: 1px solid theme("colors.line");
-    border-radius: 5px;
-    box-shadow: var(--shadow-1);
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
+    background: rgb(var(--surface));
+    border: 1px solid rgb(var(--line));
+    border-radius: 10px;
+    box-shadow:
+      0 1px 2px rgb(var(--shadow) / 0.08),
+      0 6px 20px rgb(var(--shadow) / 0.1);
   }
 
-  /* pressable elements: instant, physical feedback on the press */
   .pressable {
     transition:
-      transform 140ms var(--ease-out),
-      background-color 160ms var(--ease-out),
-      color 160ms var(--ease-out),
-      border-color 160ms var(--ease-out);
+      transform 130ms var(--ease-out),
+      background-color 150ms var(--ease-out),
+      color 150ms var(--ease-out),
+      border-color 150ms var(--ease-out);
   }
   .pressable:active {
-    transform: scale(0.97);
+    transform: scale(0.975);
   }
 
+  /* tabular figures, only where numbers need to line up in a column */
   .tnum {
-    font-family: theme("fontFamily.mono");
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
-    letter-spacing: -0.01em;
   }
 
-  /* small cartographic caption — legend keys, units, eyebrows. Not section titles. */
+  /* quiet small label. sentence case. */
   .cap {
-    font-family: theme("fontFamily.mono");
     font-size: 0.6875rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: theme("colors.ink-faint");
+    font-weight: 500;
+    letter-spacing: 0.005em;
+    color: rgb(var(--ink-faint));
   }
 
-  /* section title — quiet, sentence case, in the display face */
   .section-title {
     font-family: theme("fontFamily.display");
     font-size: 0.8125rem;
     font-weight: 600;
-    letter-spacing: 0.005em;
-    color: theme("colors.ink");
+    letter-spacing: 0;
+    color: rgb(var(--ink));
   }
 
-  /* skeleton block — matches layout shape while data loads */
   .skel {
     position: relative;
     overflow: hidden;
-    background: theme("colors.surface-2");
-    border-radius: 4px;
+    background: rgb(var(--surface-2));
+    border-radius: 6px;
   }
   .skel::after {
     content: "";
@@ -158,7 +182,7 @@
     background: linear-gradient(
       90deg,
       transparent,
-      color-mix(in srgb, theme("colors.line-strong") 55%, transparent),
+      rgb(var(--line-strong) / 0.5),
       transparent
     );
     animation: skel 1.4s ease-in-out infinite;
@@ -168,62 +192,41 @@
       transform: translateX(100%);
     }
   }
-
-  /* staggered list/tile entrance */
-  .stagger > * {
-    opacity: 0;
-    transform: translateY(6px);
-    animation: rise 420ms var(--ease-out) forwards;
-  }
-  .stagger > *:nth-child(1) { animation-delay: 20ms; }
-  .stagger > *:nth-child(2) { animation-delay: 60ms; }
-  .stagger > *:nth-child(3) { animation-delay: 100ms; }
-  .stagger > *:nth-child(4) { animation-delay: 140ms; }
-  .stagger > *:nth-child(5) { animation-delay: 180ms; }
-  .stagger > *:nth-child(6) { animation-delay: 220ms; }
-
-  @keyframes rise {
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  /* panel that appears in response to a selection — never pops in from nothing */
-  .enter-pop {
-    animation: enter-pop 240ms var(--ease-out);
-  }
-  @keyframes enter-pop {
-    from {
-      opacity: 0;
-      transform: translateY(6px) scale(0.985);
-    }
-  }
 }
 
-/* maplibre control chrome, retinted to the palette */
+/* maplibre chrome, retinted */
 .maplibregl-ctrl-group {
-  background: color-mix(in srgb, theme("colors.surface") 92%, transparent) !important;
-  border: 1px solid theme("colors.line") !important;
+  background: rgb(var(--surface)) !important;
+  border: 1px solid rgb(var(--line)) !important;
   border-radius: 8px !important;
-  box-shadow: var(--shadow-1) !important;
-  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgb(var(--shadow) / 0.12) !important;
 }
 .maplibregl-ctrl-group button + button {
-  border-top: 1px solid theme("colors.line") !important;
+  border-top: 1px solid rgb(var(--line)) !important;
 }
 .maplibregl-ctrl button .maplibregl-ctrl-icon {
-  filter: invert(0.85) hue-rotate(150deg);
+  filter: var(--ml-icon-filter, none);
+}
+:root:not([data-theme="light"]) .maplibregl-ctrl button .maplibregl-ctrl-icon {
+  filter: invert(0.9);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .maplibregl-ctrl button .maplibregl-ctrl-icon {
+    filter: invert(0.9);
+  }
+}
+:root[data-theme="dark"] .maplibregl-ctrl button .maplibregl-ctrl-icon {
+  filter: invert(0.9);
 }
 .maplibregl-ctrl-attrib {
-  background: rgba(16, 21, 28, 0.8) !important;
+  background: rgb(var(--surface) / 0.85) !important;
   border-radius: 6px 0 0 0 !important;
 }
 .maplibregl-ctrl-attrib a {
-  color: theme("colors.ink-dim") !important;
+  color: rgb(var(--ink-dim)) !important;
 }
 
-/* the signature slider: satellite ⟷ 3-D assessment */
+/* the before / after slider */
 .ba-range {
   -webkit-appearance: none;
   appearance: none;
@@ -231,10 +234,10 @@
   border-radius: 999px;
   background: linear-gradient(
     to right,
-    theme("colors.accent") 0%,
-    theme("colors.accent") var(--pct, 100%),
-    theme("colors.line-strong") var(--pct, 100%),
-    theme("colors.line-strong") 100%
+    rgb(var(--accent)) 0%,
+    rgb(var(--accent)) var(--pct, 100%),
+    rgb(var(--line-strong)) var(--pct, 100%),
+    rgb(var(--line-strong)) 100%
   );
   outline-offset: 4px;
 }
@@ -244,10 +247,10 @@
   width: 18px;
   height: 18px;
   border-radius: 999px;
-  background: theme("colors.ink");
-  border: 3px solid theme("colors.accent");
+  background: rgb(var(--surface));
+  border: 3px solid rgb(var(--accent));
   cursor: ew-resize;
-  box-shadow: var(--shadow-1);
+  box-shadow: 0 1px 4px rgb(var(--shadow) / 0.2);
   transition: transform 140ms var(--ease-out);
 }
 .ba-range:active::-webkit-slider-thumb {
@@ -257,8 +260,8 @@
   width: 16px;
   height: 16px;
   border-radius: 999px;
-  background: theme("colors.ink");
-  border: 3px solid theme("colors.accent");
+  background: rgb(var(--surface));
+  border: 3px solid rgb(var(--accent));
   cursor: ew-resize;
 }
 
@@ -272,9 +275,5 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }
-  .stagger > * {
-    opacity: 1;
-    transform: none;
   }
 }

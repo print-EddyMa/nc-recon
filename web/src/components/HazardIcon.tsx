@@ -1,7 +1,7 @@
 import type { HazardType } from "../lib/types";
 
 /**
- * One consistent line-icon per hazard family — replaces the emoji glyphs.
+ * One consistent line-icon per hazard family, replaces the emoji glyphs.
  * All 16×16, 1.5px stroke, no fill, currentColor. Deliberately schematic
  * (map-legend register) rather than illustrative.
  */

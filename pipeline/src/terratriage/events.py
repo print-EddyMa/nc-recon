@@ -81,6 +81,45 @@ def _row_bbox_lonlat(row: dict) -> tuple[float, float, float, float]:
     return min(xs), min(ys), max(xs), max(ys)
 
 
+# Hand-verified event dates for the events we actually assess. The
+# "widest gap" heuristic below is unreliable when an event has sparse
+# historical imagery (Helene has captures from 2019/2020/2022 before 2024, so
+# the widest gap lands in 2021, nowhere near the storm).
+KNOWN_EVENT_DATES = {
+    "HurricaneHelene-Oct24": "2024-09-27",
+    "WildFires-LosAngeles-Jan-2025": "2025-01-07",
+    "Hurricane-Ian-9-26-2022": "2022-09-28",
+    "Hurricane-Milton-Oct-2024": "2024-10-09",
+    "Hurricane-Debby-Aug-2024": "2024-08-05",
+    "Floods-Spain-Oct24": "2024-10-29",
+}
+
+
+def _infer_event_date(dates: list[str]) -> str | None:
+    """Best guess for when the event happened, from the sorted distinct capture
+    dates. Post-disaster tasking produces a burst of captures within ~30 days, so
+    the event date is the start of the gap that is immediately followed by the
+    most captures in the next 30 days (ties broken toward the widest gap)."""
+    if not dates:
+        return None
+    if len(dates) == 1:
+        return dates[0]
+    ds = [dt.date.fromisoformat(d) for d in dates]
+    best_i, best_score = 0, (-1, -1)
+    for i in range(len(ds) - 1):
+        gap = (ds[i + 1] - ds[i]).days
+        if gap < 14:  # not an event boundary
+            continue
+        after = sum(1 for d in ds[i + 1 :] if (d - ds[i + 1]).days <= 30)
+        score = (after, gap)
+        if score > best_score:
+            best_score, best_i = score, i
+    if best_score == (-1, -1):  # no gap >= 14 days — fall back to the widest
+        best_i = max(range(len(ds) - 1), key=lambda i: (ds[i + 1] - ds[i]).days)
+    # the event sits just after the last pre-event capture
+    return (ds[best_i] + dt.timedelta(days=1)).isoformat()
+
+
 def event_summary(
     event: str, cache_dir: str, event_date: str | dt.date | None = None
 ) -> dict[str, Any]:
@@ -103,15 +142,9 @@ def event_summary(
         e = be if e is None else max(e, be)
         n = bn if n is None else max(n, bn)
 
-    # infer when the event happened: the midpoint of the widest gap between
-    # consecutive distinct capture dates (imagery clusters before and after).
-    suggested = None
-    if len(dates) >= 2:
-        ds = [dt.date.fromisoformat(d) for d in dates]
-        widest = max(range(len(ds) - 1), key=lambda i: (ds[i + 1] - ds[i]).days)
-        suggested = (ds[widest] + (ds[widest + 1] - ds[widest]) / 2).isoformat()
-    elif dates:
-        suggested = dates[0]
+    # when did the event happen: a hand-verified date if we have one, else infer
+    # it from the capture-date pattern (see _infer_event_date)
+    suggested = KNOWN_EVENT_DATES.get(event) or _infer_event_date(dates)
 
     ed = None
     if event_date is not None:
@@ -138,6 +171,48 @@ def event_summary(
         "suggested_event_date": suggested,
         "has_pre": has_pre,
         "has_post": has_post,
+    }
+
+
+def coverage(event: str, cache_dir: str, event_date: str | None = None) -> dict[str, Any]:
+    """The footprint of a Maxar event's *assessable* area — the quadkeys that
+    have both a pre-event and a post-event capture. Returns lon/lat cell boxes
+    the Assess screen draws so the user clicks where there is real before/after
+    imagery."""
+    from .download import _has_pre_post
+
+    _bbox = _row_bbox_lonlat  # defined in this module
+    rows = download.fetch_catalog(event, cache_dir)
+    ed_str = event_date or KNOWN_EVENT_DATES.get(event)
+    if not ed_str:
+        dates = sorted({r["datetime"][:10] for r in rows if r.get("datetime")})
+        ed_str = _infer_event_date(dates)
+    ed = dt.date.fromisoformat(ed_str) if ed_str else dt.date(2000, 1, 1)
+
+    by_qk: dict[str, list[dict]] = {}
+    for r in rows:
+        by_qk.setdefault(r.get("quadkey", ""), []).append(r)
+
+    cells: list[list[float]] = []
+    w = s = e = n = None
+    for qk, rs in by_qk.items():
+        if not qk or not _has_pre_post(rs, ed):
+            continue
+        try:
+            bw, bs, be, bn = _bbox(rs[0])
+        except Exception:  # noqa: BLE001
+            continue
+        cells.append([round(bw, 5), round(bs, 5), round(be, 5), round(bn, 5)])
+        w = bw if w is None else min(w, bw)
+        s = bs if s is None else min(s, bs)
+        e = be if e is None else max(e, be)
+        n = bn if n is None else max(n, bn)
+    return {
+        "event": event,
+        "event_date": ed_str,
+        "n_cells": len(cells),
+        "bbox": None if w is None else [round(w, 5), round(s, 5), round(e, 5), round(n, 5)],
+        "cells": cells,
     }
 
 
@@ -180,6 +255,9 @@ def build_registry(area_metas: list[dict], cache_dir: str) -> list[dict[str, Any
             "model": m.get("model"),
             "notes": m.get("notes"),
             "n_buildings": m.get("n_buildings"),
+            "counts": m.get("counts"),
+            "review": m.get("review"),
+            "generated": m.get("generated"),
         })
     return sorted(by_event.values(), key=lambda ev: ev["name"])
 
