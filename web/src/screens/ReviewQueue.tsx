@@ -146,7 +146,7 @@ export default function ReviewQueue({ area, fc, onOpenMap }: Props) {
     });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `terratriage-review-${area.id}.json`;
+    a.download = `ncresq-review-${area.id}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
   };

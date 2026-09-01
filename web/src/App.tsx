@@ -38,7 +38,7 @@ const AREA_SCREENS: Screen[] = ["map", "review", "stats"];
 const CACHE_LIMIT = 4;
 
 export default function App() {
-  // TerraTriage is a North Carolina product: it opens on the operations home.
+  // NCResQ is a North Carolina product: it opens on the operations home.
   // The damage-assessment screens light up once an NC area has been assessed.
   const [screen, setScreen] = useState<Screen>("home");
   const [registry, setRegistry] = useState<EventConfig[] | null>(null);
@@ -190,7 +190,7 @@ export default function App() {
               <path d="M2 12h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
           </span>
-          <span className="font-display text-sm">Loading TerraTriage</span>
+          <span className="font-display text-sm">Loading NCResQ</span>
         </div>
       </div>
     );
@@ -435,7 +435,7 @@ function TopBar({
               <path d="M2 12h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
           </span>
-          <span className="font-display">TerraTriage</span>
+          <span className="font-display">NCResQ</span>
           <span className="cap hidden text-ink-faint sm:inline">North Carolina</span>
         </button>
 

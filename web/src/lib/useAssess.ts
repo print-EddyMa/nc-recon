@@ -94,7 +94,7 @@ export function useAssess(onIngested: (areaSlug: string) => void) {
     if (!inNC(lon, lat)) {
       setJobs((j) => ({ ...j, [ev.id]: { phase: "error", error: "AOI is outside North Carolina" } }));
       toast.error("Outside North Carolina", {
-        description: "TerraTriage only assesses areas within NC.",
+        description: "NCResQ only assesses areas within NC.",
       });
       return release();
     }

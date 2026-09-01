@@ -1,5 +1,5 @@
 /**
- * What TerraTriage is: a North Carolina disaster application with two halves,  * live risk monitoring (before / during) and on-demand imagery-based damage
+ * What NCResQ is: a North Carolina disaster application with two halves,  * live risk monitoring (before / during) and on-demand imagery-based damage
  * assessment (after). No sample data is bundled; every number here comes from a
  * live feed or a pipeline run.
  */
@@ -15,7 +15,7 @@ export default function About({ onEnter }: Props) {
       <div className="relative mx-auto w-full max-w-5xl px-6 py-12 md:py-16">
         <p className="cap mb-7 flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-          About TerraTriage · North Carolina
+          About NCResQ · North Carolina
         </p>
 
         <h1 className="font-display text-[1.9rem] leading-[1.15] text-ink md:text-[2.4rem]">
@@ -23,7 +23,7 @@ export default function About({ onEnter }: Props) {
         </h1>
 
         <p className="mt-5 max-w-[54ch] text-sm leading-relaxed text-ink-dim">
-          TerraTriage watches North Carolina for the conditions that precede a
+          NCResQ watches North Carolina for the conditions that precede a
           disaster, river-flood forecasts, fire weather, official warnings, road
           closures, and, once post-event satellite imagery exists, assesses the
           damage building by building on a four-level scale, routing the uncertain

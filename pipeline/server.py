@@ -1,4 +1,4 @@
-"""Assessment service for TerraTriage.
+"""Assessment service for NCResQ.
 
 The web app reads GeoJSON + tiles + the event registry as static files and needs
 no backend. This service adds on-demand assessment of a North Carolina area:
@@ -93,7 +93,7 @@ _AREA_RE = re.compile(r"[a-z0-9_]{1,40}")
 _EVENT_RE = re.compile(r"[A-Za-z0-9._-]{1,80}")
 _NAME_STRIP_RE = re.compile(r"[^\w \-.,]", re.UNICODE)
 
-app = FastAPI(title="TerraTriage", version="1.2")
+app = FastAPI(title="NCResQ", version="1.2")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS or ["http://localhost:5173"],
@@ -190,7 +190,7 @@ _FEEDS: dict[str, tuple[str, int]] = {
     ),
 }
 _FEED_CACHE: dict[str, tuple[float, bytes, str]] = {}
-_FEED_UA = "TerraTriage/1.0 (Congressional App Challenge; +https://github.com/)"
+_FEED_UA = "NCResQ/1.0 (Congressional App Challenge; +https://github.com/)"
 
 
 @app.get("/feed/{name}")

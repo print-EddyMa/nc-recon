@@ -1,5 +1,5 @@
-<title>Inside TerraTriage</title>
-<meta name="description" content="A walkthrough of how TerraTriage scores every building after a disaster, using real satellite crops and real numbers from a Hurricane Helene run over Old Fort, North Carolina." />
+<title>Inside NCResQ</title>
+<meta name="description" content="A walkthrough of how NCResQ scores every building after a disaster, using real satellite crops and real numbers from a Hurricane Helene run over Old Fort, North Carolina." />
 <style>
   @import url("https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Geist:wght@400;450;500;600&family=Geist+Mono:wght@400;500&display=swap");
 
@@ -303,11 +303,11 @@
 <header class="hero">
   <canvas class="bg" id="bg" aria-hidden="true"></canvas>
   <div class="hero-inner">
-    <div class="cap eyebrow">TerraTriage &middot; how it works</div>
+    <div class="cap eyebrow">NCResQ &middot; how it works</div>
     <h1>Scoring every building after the storm</h1>
     <p class="lede">
       When a hurricane clears North Carolina, the question is which buildings to reach first.
-      TerraTriage answers it one structure at a time, from satellite imagery, and is honest about
+      NCResQ answers it one structure at a time, from satellite imagery, and is honest about
       the calls it is not sure of. Here is the whole method, with the numbers from a real run over
       Old Fort after Hurricane Helene.
     </p>
@@ -398,7 +398,7 @@
       <p>
         Nothing is trained from scratch. The classifier learned on <strong>xBD</strong>, the
         xView2 dataset: about <strong>850,000</strong> hand-labeled building polygons across
-        <strong>19</strong> disasters, on this same four-level scale. TerraTriage runs the
+        <strong>19</strong> disasters, on this same four-level scale. NCResQ runs the
         pretrained <strong>xView2 CMU baseline</strong> (a ResNet50 classifier) at inference time.
       </p>
       <div class="tilegrid reveal">
@@ -454,7 +454,7 @@
     <section class="act" id="unknowns">
       <div class="act-head"><span class="act-n">03</span><h2>Knowing the unknowns</h2></div>
       <p class="act-sub">
-        There is no ground truth on the day. Instead of trusting one model, TerraTriage runs a
+        There is no ground truth on the day. Instead of trusting one model, NCResQ runs a
         second, independent read and compares them. Where they disagree, the building is not
         published as certain. It goes to a person.
       </p>
@@ -639,7 +639,7 @@
       Damage model: the xView2 CMU baseline classifier, fused with an independent
       change-detection pass and North Carolina context priors.
     </p>
-    <p>Every figure here is measured from an actual TerraTriage run. Nothing is placeholder.</p>
+    <p>Every figure here is measured from an actual NCResQ run. Nothing is placeholder.</p>
   </div>
 </footer>
 

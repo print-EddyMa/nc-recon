@@ -1,6 +1,6 @@
-# TerraTriage — web
+# NCResQ — web
 
-Control-room damage map for the TerraTriage pipeline. React + TypeScript + Vite,
+Control-room damage map for the NCResQ pipeline. React + TypeScript + Vite,
 Tailwind, MapLibre GL + deck.gl.
 
 ```bash

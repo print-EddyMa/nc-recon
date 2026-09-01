@@ -1,4 +1,4 @@
-# TerraTriage
+# NCResQ
 
 A **North Carolina disaster application** with two halves:
 

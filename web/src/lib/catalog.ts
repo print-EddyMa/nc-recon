@@ -1,6 +1,6 @@
 /**
  * The Maxar Open Data catalogue (~55 events) + the on-demand assessment bridge.
- * TerraTriage is North Carolina-only: the catalogue is filtered to events whose
+ * NCResQ is North Carolina-only: the catalogue is filtered to events whose
  * coverage touches NC (`intersectsNC`), and an AOI can be assessed on the spot
  * when the pipeline service is reachable.
  *

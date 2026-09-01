@@ -227,7 +227,7 @@ export default function Assess({
 
           {point && outside && (
             <p className="rounded-sm bg-dmg2/15 px-2 py-1.5 text-2xs text-dmg1">
-              That point is outside North Carolina. TerraTriage only assesses NC areas.
+              That point is outside North Carolina. NCResQ only assesses NC areas.
             </p>
           )}
 

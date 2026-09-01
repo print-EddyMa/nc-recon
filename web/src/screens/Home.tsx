@@ -497,7 +497,7 @@ export default function Home({
           Open Data, building footprints from OpenStreetMap. Damage model: the xView2 CMU
           baseline classifier fused with a change-detection pass.{" "}
           <button onClick={onOpenAbout} className="pressable text-accent hover:underline">
-            About TerraTriage
+            About NCResQ
           </button>
         </div>
       </div>

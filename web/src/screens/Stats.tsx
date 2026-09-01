@@ -51,7 +51,7 @@ export default function Stats({ event, area, fc, onOpenMap }: Props) {
     const blob = new Blob([JSON.stringify(fc)], { type: "application/geo+json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `terratriage-${area.id}.geojson`;
+    a.download = `ncresq-${area.id}.geojson`;
     a.click();
     URL.revokeObjectURL(a.href);
   };
