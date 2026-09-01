@@ -28,6 +28,10 @@ const routes = [
   ["damage-map", "#/a/old_fort/map"],
   ["review", "#/a/old_fort/review"],
   ["summary", "#/a/old_fort/stats"],
+  // second assessed area — different geojson, tiles, dates, review set
+  ["damage-map-sp", "#/a/spruce_pine/map"],
+  ["review-sp", "#/a/spruce_pine/review"],
+  ["summary-sp", "#/a/spruce_pine/stats"],
 ];
 
 const ONLY = process.argv[4]; // optional: "light" or "dark"

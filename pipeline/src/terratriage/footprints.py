@@ -13,6 +13,7 @@ free of framework baggage.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import time
@@ -198,7 +199,13 @@ def load_for_area(pre_path: str, cache_dir: str, area: str, source: str = "osm")
               "is unset — using OSM")
 
     if not polys_ll:
-        cache = os.path.join(cache_dir, f"{area}_osm.json")
+        # Key the OSM cache by the AOI bounds, not just the area name: reusing an
+        # area name for a different footprint (a re-run of /assess at a nearby
+        # point) must not silently pick up the previous run's polygons.
+        bkey = hashlib.md5(
+            ",".join(f"{v:.4f}" for v in bounds).encode()
+        ).hexdigest()[:8]
+        cache = os.path.join(cache_dir, f"{area}_{bkey}_osm.json")
         polys_ll = fetch_osm_buildings(bounds, cache_path=cache)
         source_used = "osm"
 

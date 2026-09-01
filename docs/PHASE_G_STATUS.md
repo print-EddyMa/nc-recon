@@ -19,12 +19,23 @@ All green:
   stat subtitles).
 - **`/assess` re-verified end-to-end**: assessed a fresh Spruce Pine point
   (35.912, -82.075) via `HurricaneHelene-Oct24` → fusion backend (real xView2
-  CMU classifier + change-detection), 62 buildings {0:33, 1:22, 2:2, 3:5}, NC
-  priors applied (`in_fema_decl: true`), 532 + 532 tiles cut, registry updated.
+  CMU classifier + change-detection), **147 buildings** {0:84, 1:42, 2:11, 3:10},
+  NC priors applied (`in_fema_decl: true`), 532 + 532 tiles cut, 35 review /
+  112 high, registry updated.
 - **`spruce_pine_test` slug retired**: the old test area (name still carried
   "Test" in the URL slug `#/a/spruce_pine_test/...`) was replaced by the clean
   `spruce_pine` assessment above; its artifacts and registry entry were removed.
   Registry is now **Old Fort + Spruce Pine**, both with clean slugs.
+- **Bug found and fixed while verifying that run — stale OSM footprint cache.**
+  The first `/assess` for `spruce_pine` returned only 62 buildings. Root cause:
+  `footprints.load_for_area` keyed the Overpass cache purely by area name
+  (`{area}_osm.json`), so reusing an area name (an earlier `spruce_pine` run
+  existed from Aug 29 with different AOI bounds) silently loaded the previous
+  run's polygons with no error — `/assess` completing successfully is exactly
+  the check that can't catch it. Fix: the cache key now includes an 8-char hash
+  of the AOI bounds (`{area}_{bboxhash}_osm.json`). A fresh fetch for the same
+  point then reproducibly returns 147, matching the earlier Spruce Pine
+  assessment. `pipeline/src/terratriage/footprints.py`.
 - No-key demo state checked: FIRMS and CLOUDS panels degrade to a legible
   "add a free key" prompt, not empty boxes.
 
@@ -96,10 +107,13 @@ them and add input lag. Scroll stays native.
 ## G4. Craft added
 
 - **`web/src/lib/useCountUp.ts`** + **`web/src/components/StatNumber.tsx`** — a
-  ~30-line hook (no library), cubic ease-out, ~600 ms, animates 0 → value on
-  first paint. Wired into the Home status tiles, the Summary headline figure and
-  its lead percentage, and the Review backlog count. Non-numeric values ("off",
-  "…") pass through untouched. Snaps straight to value under reduced-motion.
+  ~30-line hook (no library), cubic ease-out, ~600 ms. It animates the **first**
+  transition to a real value, then every later change **snaps** — so rapid
+  Approve clicks on the Review headline land the true count immediately instead
+  of restarting a roll. Wired into the Home status tiles, the Summary headline
+  figure and its lead percentage, and the Review backlog count. Non-numeric
+  values ("off", "…") pass through untouched. Reduced-motion returns the value
+  with no animation. A React `key` (area switch) gives a fresh count-up.
 - **One orchestrated entrance** — `.reveal` keyframe in `index.css` (`opacity` +
   4px `translateY`, 320 ms), applied with a 45 ms stagger to the Home status
   tiles and assessed-area cards. Home only; no other screen animates on mount.
@@ -108,9 +122,15 @@ them and add input lag. Scroll stays native.
 
 ## G5. Re-validation
 
-- `tsc -b` · `oxlint` · `vite build` — clean, 0 warnings, after all edits.
-- Chrome sweep, 8 routes × light + dark — **0 console / page errors**.
+- `tsc -b` · `oxlint` · `vite build` — clean, **0 warnings**, after all edits.
+- `qa_shots.mjs` extended to also render the second assessed area
+  (`#/a/spruce_pine/{map,review,stats}`) — it had only ever swept `old_fort`.
+  Full run: **11 routes × light + dark, 0 console / page errors.** The
+  `spruce_pine` deck.gl extrusion (147 features) and the Review crop
+  404 → zoom-out retry both render.
 - Count-ups and the Home stagger verified in the rendered app (light + dark).
+- `prefers-reduced-motion` block also zeroes `animation-delay` now, so the Home
+  stagger doesn't hold tiles blank through their delay under that setting.
 
 ### One-sentence identity
 

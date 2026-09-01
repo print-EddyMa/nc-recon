@@ -81,19 +81,22 @@ building: `-1` offline `#5A6673` · `0` normal `#5A7C86` · `1` watch `#F5D76E` 
 
 ## Type
 
-`@import` from Google Fonts in `index.css`. A deliberate pairing — a squared
+`@import` from Google Fonts in `index.css`; the families live in
+`tailwind.config.js` `theme.extend.fontFamily` (`display` / `sans` / `mono`) and
+are reached in CSS via `theme("fontFamily.display")`, in markup via
+`font-display` / `font-sans` / `font-mono`. A deliberate pairing — a squared
 grotesque for display against a clean humanist sans for text — chosen so
 headlines read with the flat authority of a printed field report while the body
 stays quiet at small sizes on a dense screen. Not Inter; not the current
 anti-slop trend fonts either.
 
-- `--font-display` · **Archivo** (500 / 600 / 700) — `h1`–`h3`, `.section-title`,
-  wordmark, stat figures. Always roman. `letter-spacing: -0.014em`,
-  `text-wrap: balance`. Headline weight is 600.
-- `--font-sans` · **Geist** (400 / 450 / 500 / 600) — all body and UI text.
-  `font-feature-settings: "cv11", "ss01"`.
-- `--font-mono` · **Geist Mono** (400 / 500) — only where digits must align in a
-  column (`.tnum` is preferred first) and inline CLI snippets.
+- `fontFamily.display` · **Archivo** (500 / 600 / 700) — `h1`–`h3`,
+  `.section-title`, wordmark, stat figures. Always roman.
+  `letter-spacing: -0.014em`, `text-wrap: balance`. Headline weight is 600.
+- `fontFamily.sans` · **Geist** (400 / 450 / 500 / 600) — all body and UI text,
+  and the `body` default. `font-feature-settings: "cv11", "ss01"`.
+- `fontFamily.mono` · **Geist Mono** (400 / 500) — only where digits must align
+  in a column (`.tnum` is preferred first) and inline CLI snippets.
 
 Scale is Tailwind's default plus one addition: `text-2xs` = `0.6875rem` /
 `1rem`, the caption size used across panels. `.cap` (11px / 500 / `--ink-faint`)
