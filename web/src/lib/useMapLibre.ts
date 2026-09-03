@@ -29,18 +29,27 @@ export function useMapLibre({ center, zoom, pitch = 0, bearing = 0, interactive 
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: STYLE[resolved()],
-      center,
-      zoom,
-      pitch,
-      bearing,
-      interactive,
-      attributionControl: { compact: true },
-      dragRotate: interactive,
-      maxPitch: 75,
-    });
+    let map: maplibregl.Map;
+    try {
+      map = new maplibregl.Map({
+        container: containerRef.current,
+        style: STYLE[resolved()],
+        center,
+        zoom,
+        pitch,
+        bearing,
+        interactive,
+        attributionControl: { compact: true },
+        dragRotate: interactive,
+        maxPitch: 75,
+      });
+    } catch (err) {
+      // no WebGL2 (some VMs / remote desktops / locked-down browsers). Leave
+      // `ready` false so callers fall back to their non-map view instead of the
+      // whole screen crashing into the error boundary.
+      if (import.meta.env.DEV) console.warn("[maplibre] init failed:", err);
+      return;
+    }
     if (interactive) {
       map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "bottom-right");
     }

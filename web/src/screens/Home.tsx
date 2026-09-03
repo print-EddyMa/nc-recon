@@ -116,9 +116,11 @@ export default function Home({
   const anyStale = [flood, alerts, flow].some((r) => r && !r.disabled && r.stale);
 
   // ---- hero map ---------------------------------------------------------- //
+  // framed so North Carolina — and its gauge field — fills the band rather than
+  // sitting in a wash of pale neighbouring states.
   const { containerRef, mapRef, ready, styleEpoch } = useMapLibre({
-    center: [-79.35, 35.45],
-    zoom: 5.85,
+    center: [-79.1, 35.3],
+    zoom: 6.05,
     interactive: false,
   });
 
@@ -133,11 +135,11 @@ export default function Home({
       feats.push({
         type: "Feature",
         geometry: f.geometry,
-        properties: sev >= 1 ? { sev, r: 4, hot: 1 } : { sev: 0, r: 1.8, hot: 0 },
+        properties: sev >= 1 ? { sev, r: 4.5, hot: 1 } : { sev: 0, r: 2.4, hot: 0 },
       });
     }
     for (const f of flow?.data.features ?? [])
-      feats.push({ type: "Feature", geometry: f.geometry, properties: { sev: 0, r: 1.4, hot: 0 } });
+      feats.push({ type: "Feature", geometry: f.geometry, properties: { sev: 0, r: 2, hot: 0 } });
     for (const f of fire && !fire.disabled ? fire.data.features : [])
       feats.push({ type: "Feature", geometry: f.geometry, properties: { sev: 3, r: 4, hot: 1 } });
     for (const f of alerts?.data.features ?? []) {
@@ -187,7 +189,7 @@ export default function Home({
       source: SRC,
       paint: {
         "circle-radius": ["get", "r"],
-        "circle-opacity": ["case", ["==", ["get", "hot"], 1], 0.95, 0.32],
+        "circle-opacity": ["case", ["==", ["get", "hot"], 1], 0.95, 0.55],
         "circle-color": [
           "match",
           ["get", "sev"],
@@ -319,30 +321,30 @@ export default function Home({
             ready ? "opacity-100" : "opacity-0"
           }`}
         />
-        {/* scrim so overlaid text stays legible on either basemap */}
+        {/* scrim — only the lower half, so the live map stays readable up top */}
         <div
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              "linear-gradient(to top, rgb(var(--canvas)) 6%, rgb(var(--canvas) / 0.95) 30%, rgb(var(--canvas) / 0.62) 58%, rgb(var(--canvas) / 0.2) 88%, rgb(var(--canvas) / 0.08) 100%)",
+              "linear-gradient(to top, rgb(var(--canvas)) 4%, rgb(var(--canvas) / 0.92) 26%, rgb(var(--canvas) / 0.45) 52%, rgb(var(--canvas) / 0.05) 78%, transparent 100%)",
           }}
         />
-        <div className="relative flex h-full flex-col justify-end px-5 pb-6 md:px-10 md:pb-9">
+        <div className="relative flex h-full flex-col justify-end px-5 pb-6 md:px-10 md:pb-8">
           <p className="flex items-center gap-2 text-xs font-medium text-ink-dim">
             <span className="h-3 w-0.5 rounded-full bg-accent" />
-            North Carolina
+            North Carolina · live
           </p>
-          <h1 className="mt-2 max-w-2xl font-display text-3xl font-semibold leading-[1.08] text-ink md:text-[2.6rem]">
-            Track the disaster from the first flood warning to the last damaged roof.
+          <h1 className="mt-2 max-w-[30ch] font-display text-display font-semibold text-ink">
+            From the first flood warning to the last damaged roof.
           </h1>
-          <p className="mt-3 flex items-center gap-2 text-sm text-ink-dim">
+          <p className="mt-3 flex items-start gap-2 text-sm text-ink-dim">
             <span
-              className="h-2 w-2 shrink-0 rounded-full"
+              className="mt-1 h-2 w-2 shrink-0 rounded-full"
               style={{ background: rgb(worst), boxShadow: `0 0 0 4px ${rgb(worst)}22` }}
             />
-            {priority}
+            <span className="max-w-[60ch]">{priority}</span>
           </p>
-          <div className="mt-5 flex flex-wrap gap-2.5">
+          <div className="mt-5 flex flex-wrap items-center gap-2.5">
             <button
               onClick={onOpenMonitor}
               className="pressable rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-ink"
@@ -355,36 +357,37 @@ export default function Home({
             >
               Assess an area
             </button>
+            <span className="ml-1 flex items-center gap-1.5 text-2xs text-ink-faint">
+              <span className={`h-1.5 w-1.5 rounded-full ${anyStale ? "bg-dmg1" : "bg-accent"}`} />
+              {anyStale ? "feeds cached" : "feeds live"}
+            </span>
           </div>
         </div>
-        <span className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full border border-line bg-surface/80 px-2.5 py-1 text-2xs text-ink-faint backdrop-blur">
-          <span className={`h-1.5 w-1.5 rounded-full ${anyStale ? "bg-dmg1" : "bg-accent"}`} />
-          {anyStale ? "feeds cached" : "feeds live"}
-        </span>
       </section>
 
       {/* -------- content -------- */}
       <div className="mx-auto w-full max-w-6xl px-5 pb-14 md:px-10">
-        {/* status */}
-        <div className="-mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {tiles.map((t, i) => (
-            <button
-              key={t.label}
-              onClick={onOpenMonitor}
-              className="pressable panel reveal px-4 py-3.5 text-left"
-              style={{ animationDelay: `${i * 45}ms` }}
-            >
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full" style={{ background: rgb(t.sev) }} />
-                <span className="text-2xs font-medium text-ink-dim">{t.label}</span>
-              </div>
-              <StatNumber
-                value={t.value}
-                className="mt-1.5 block text-[1.6rem] font-semibold leading-none text-ink"
-              />
-              <div className="mt-1.5 text-2xs leading-snug text-ink-faint">{t.sub}</div>
-            </button>
-          ))}
+        {/* status band — one row, the whole state's posture at a glance */}
+        <div className="reveal -mt-6 card overflow-hidden">
+          <div className="grid grid-cols-2 divide-x divide-y divide-line sm:grid-cols-3 lg:grid-cols-5 lg:divide-y-0">
+            {tiles.map((t) => (
+              <button
+                key={t.label}
+                onClick={onOpenMonitor}
+                className="pressable group px-4 py-3 text-left transition-colors hover:bg-surface-2"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: rgb(t.sev) }} />
+                  <span className="text-2xs font-medium text-ink-dim">{t.label}</span>
+                </div>
+                <StatNumber
+                  value={t.value}
+                  className="tnum mt-1 block text-2xl font-semibold leading-none text-ink"
+                />
+                <div className="mt-1 text-2xs leading-snug text-ink-faint">{t.sub}</div>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* damage assessments */}
@@ -396,14 +399,20 @@ export default function Home({
               : `${areas.length} area${areas.length === 1 ? "" : "s"} assessed`}
           </span>
         </div>
-        <p className="mt-1 max-w-2xl text-sm text-ink-dim">
-          Point the pipeline at a North Carolina area with post-event Maxar imagery.
-          It locates every building, rates the damage, and flags the uncertain calls
-          for a person to check.
+        <p className="measure mt-1 text-sm text-ink-dim">
+          Point the pipeline at a North Carolina area with post-event Maxar imagery. It locates every
+          building, rates the damage, and flags the uncertain calls for a person to check.{" "}
+          <button
+            onClick={onOpenAssess}
+            className="pressable text-accent underline underline-offset-2 hover:text-ink"
+          >
+            {online === true ? "Assess a new area" : "See the steps"}
+          </button>
+          .
         </p>
 
-        <div className="mt-4 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-          {areas.map(({ event, area }, i) => {
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {areas.map(({ event, area }) => {
             const c = area.counts ?? {};
             const total = area.n_buildings ?? 0;
             const severe = (c["2"] ?? 0) + (c["3"] ?? 0);
@@ -412,57 +421,55 @@ export default function Home({
               <button
                 key={area.id}
                 onClick={() => onOpenArea(area.id)}
-                className="pressable panel reveal flex flex-col gap-2.5 px-4 py-4 text-left"
-                style={{ animationDelay: `${i * 45}ms` }}
+                className="pressable card flex flex-col gap-3 p-4 text-left transition-colors hover:border-line-strong"
               >
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="font-display text-[0.95rem] font-semibold text-ink">
+                  <span className="font-display text-[1.05rem] font-semibold leading-tight text-ink">
                     {area.name}
                   </span>
-                  <span className="text-2xs text-ink-faint">{event.name}</span>
+                  <span className="shrink-0 text-2xs text-ink-faint">{event.name}</span>
                 </div>
-                <div className="flex h-1.5 overflow-hidden rounded-full bg-surface-2">
-                  {(["0", "1", "2", "3"] as const).map((k) =>
-                    c[k] ? (
-                      <span
-                        key={k}
-                        style={{ width: `${(c[k] / total) * 100}%`, background: DAMAGE[+k].hex }}
-                      />
-                    ) : null,
-                  )}
-                </div>
-                <div className="flex flex-wrap items-baseline gap-x-3.5 gap-y-1 text-2xs text-ink-faint">
-                  <span>
-                    <span className="font-semibold text-ink">{total.toLocaleString()}</span> buildings
-                  </span>
-                  <span>
-                    <span className="font-semibold text-dmg2">{severe}</span> major or destroyed, {pct}%
-                  </span>
-                  {area.review && (
+
+                {/* damage distribution — the point of the card, so give it height + labels */}
+                <div>
+                  <div className="bar-track flex h-2.5">
+                    {(["0", "1", "2", "3"] as const).map((k) =>
+                      c[k] ? (
+                        <span
+                          key={k}
+                          className="h-full first:rounded-l-[3px] last:rounded-r-[3px]"
+                          style={{
+                            width: `${(c[k] / total) * 100}%`,
+                            background: DAMAGE[+k].hex,
+                            boxShadow: "1px 0 0 rgb(var(--surface))",
+                          }}
+                        />
+                      ) : null,
+                    )}
+                  </div>
+                  <div className="tnum mt-1.5 flex items-baseline gap-x-3 text-2xs text-ink-faint">
                     <span>
-                      <span className="font-semibold text-dmg1">{area.review.total_review}</span> in review
+                      <span className="font-semibold text-ink">{total.toLocaleString()}</span> buildings
                     </span>
-                  )}
+                    <span>
+                      <span className="font-semibold text-dmg2">{severe.toLocaleString()}</span>{" "}
+                      major/destroyed · {pct}%
+                    </span>
+                    {area.review && (
+                      <span>
+                        <span className="font-semibold text-dmg1">{area.review.total_review}</span> in
+                        review
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="text-2xs text-ink-faint">
-                  Maxar imagery {area.pre_date} to {area.post_date}
+
+                <div className="tnum mt-auto text-2xs text-ink-faint">
+                  Maxar {area.pre_date} → {area.post_date}
                 </div>
               </button>
             );
           })}
-
-          <button
-            onClick={onOpenAssess}
-            className="pressable flex flex-col items-center justify-center gap-2 rounded-[10px] border border-dashed border-line-strong px-4 py-7 text-center text-ink-dim hover:border-accent hover:text-ink"
-          >
-            <span className="grid h-9 w-9 place-items-center rounded-full border border-line text-lg">
-              +
-            </span>
-            <span className="text-xs font-medium">Assess a new area</span>
-            <span className="text-2xs text-ink-faint">
-              {online === true ? "one click with the service running" : "shows the CLI steps"}
-            </span>
-          </button>
         </div>
 
         {/* history */}
@@ -497,7 +504,7 @@ export default function Home({
           Open Data, building footprints from OpenStreetMap. Damage model: the xView2 CMU
           baseline classifier fused with a change-detection pass.{" "}
           <button onClick={onOpenAbout} className="pressable text-accent hover:underline">
-            About NCResQ
+            About NC Recon
           </button>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { DAMAGE } from "../lib/damage";
 import { useReviewDecisions, overrideClasses } from "../lib/review";
 import { Tooltip } from "../components/ui/Tooltip";
 import StatNumber from "../components/StatNumber";
+import AreaLoadError from "../components/AreaLoadError";
 import type { ReviewDecision } from "../lib/review";
 import type {
   AreaConfig,
@@ -15,6 +16,8 @@ import type {
 interface Props {
   area: AreaConfig;
   fc: DamageCollection | null;
+  loadError?: string | null;
+  onRetry?: () => void;
   onOpenMap: () => void;
 }
 
@@ -77,7 +80,7 @@ function Crop({
   );
 }
 
-export default function ReviewQueue({ area, fc, onOpenMap }: Props) {
+export default function ReviewQueue({ area, fc, loadError, onRetry, onOpenMap }: Props) {
   const { decisions, setDecision, clearAll } = useReviewDecisions(area.id);
   const [showResolved, setShowResolved] = useState(false);
   const PAGE = 60;
@@ -104,6 +107,10 @@ export default function ReviewQueue({ area, fc, onOpenMap }: Props) {
     () => (fc ? summarize(fc, overrideClasses(decisions)) : null),
     [fc, decisions],
   );
+
+  if (loadError && !fc) {
+    return <AreaLoadError areaName={area.name} detail={loadError} onRetry={onRetry ?? (() => {})} />;
+  }
 
   if (!fc) {
     return (
@@ -146,112 +153,132 @@ export default function ReviewQueue({ area, fc, onOpenMap }: Props) {
     });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `ncresq-review-${area.id}.json`;
+    a.download = `nc-recon-review-${area.id}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
   };
 
-  return (
-    <div className="mx-auto h-full max-w-4xl overflow-y-auto px-6 py-10">
-      <p className="cap mb-3">
-        Human review · {area.name}
-        {area.subtitle ? `, ${area.subtitle}` : ""}
-      </p>
-      <h1 className="max-w-2xl font-display text-[1.7rem] leading-tight text-ink">
-        <StatNumber value={open} className="tnum text-dmg1" /> building
-        {open === 1 ? "" : "s"} need a second look
-      </h1>
-      <p className="mt-4 max-w-[64ch] text-sm leading-relaxed text-ink-dim">
-        Buildings where the CNN classifier and an independent change-detection
-        pass landed two or more damage levels apart, plus a few whose footprint
-        is too small to read. Confirm the model's call, or override it by eye
-        from the pre and post crop.
-      </p>
-
-      <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-line py-2.5 text-xs">
-        <span className="tnum text-ink-dim">
-          {resolved.toLocaleString()} / {queue.length.toLocaleString()} reviewed
-        </span>
-        {rawStats && overrideStats && (
-          <span className="tnum text-ink-dim">
-            severe {rawStats.severe.toLocaleString()}
+  const pctDone = queue.length ? Math.round((resolved / queue.length) * 100) : 0;
+  const rail = (
+    <div className="card p-4">
+      <div className="cap mb-1.5">Review progress</div>
+      <div className="tnum font-display text-2xl font-semibold text-ink">
+        {resolved.toLocaleString()}
+        <span className="text-base text-ink-faint"> / {queue.length.toLocaleString()}</span>
+      </div>
+      <div className="bar-track mt-2 h-1.5">
+        <span className="bar-fill block h-full bg-accent" style={{ width: `${pctDone}%` }} />
+      </div>
+      {rawStats && overrideStats && (
+        <div className="tnum mt-3 flex items-baseline justify-between border-t border-line pt-3 text-xs">
+          <span className="text-ink-dim">Severe count</span>
+          <span className="font-medium text-ink">
+            {rawStats.severe.toLocaleString()}
             {overrideStats.severe !== rawStats.severe && (
               <>
                 {" → "}
-                <span className="text-ink">{overrideStats.severe.toLocaleString()}</span>
+                <span className="text-dmg2">{overrideStats.severe.toLocaleString()}</span>
               </>
             )}
           </span>
-        )}
-        <label className="flex items-center gap-1.5 text-ink-faint">
+        </div>
+      )}
+      <div className="mt-3 flex flex-col gap-1.5 border-t border-line pt-3 text-xs">
+        <label className="flex items-center gap-2 text-ink-faint">
           <input
             type="checkbox"
             className="accent-accent"
             checked={showResolved}
             onChange={toggleResolved}
           />
-          show resolved
+          Show resolved
         </label>
         {agreeing.length > 0 && (
           <button
             onClick={() => approveMany(agreeing)}
-            className="pressable rounded-md border border-line px-2.5 py-1 text-ink-dim hover:border-accent hover:text-ink"
+            className="pressable mt-1 rounded-md border border-line px-2.5 py-1.5 text-left text-ink-dim hover:border-line-strong hover:text-ink"
           >
-            approve {agreeing.length} where passes agree
+            Approve {agreeing.length} where both passes agree
           </button>
         )}
-        {resolved > 0 && (
-          <>
-            <button onClick={exportDecisions} className="pressable text-ink-faint hover:text-ink">
-              export
-            </button>
-            <button onClick={clearAll} className="pressable text-ink-faint hover:text-ink">
-              reset
-            </button>
-          </>
-        )}
-        <button
-          onClick={onOpenMap}
-          className="pressable ml-auto rounded-md border border-line px-2.5 py-1 text-ink-dim hover:border-accent hover:text-ink"
-        >
-          View on map →
-        </button>
-      </div>
-
-      {visible.length === 0 ? (
-        <p className="mt-12 text-center text-sm text-ink-dim">
-          {queue.length === 0
-            ? "No buildings were flagged for review in this area."
-            : "Every flagged building has been reviewed."}
-        </p>
-      ) : (
-        <>
-          <ul>
-            {visible.map((f) => (
-              <ReviewRow
-                key={f.properties.id}
-                feature={f}
-                areaId={area.id}
-                decision={decisions[f.properties.id] ?? null}
-                onDecide={(d) => setDecision(f.properties.id, d)}
-              />
-            ))}
-          </ul>
-          {filtered.length > visible.length && (
-            <div className="mt-6 flex items-center justify-center gap-3 text-xs text-ink-faint">
-              <span className="tnum">
-                showing {visible.length.toLocaleString()} of {filtered.length.toLocaleString()}
-              </span>
-              <button
-                onClick={() => setLimit((n) => n + PAGE)}
-                className="pressable rounded-md border border-line px-3 py-1.5 text-ink-dim hover:border-accent hover:text-ink"
-              >
-                Load {Math.min(PAGE, filtered.length - visible.length)} more
+        <div className="mt-1 flex gap-3 text-ink-faint">
+          {resolved > 0 && (
+            <>
+              <button onClick={exportDecisions} className="pressable hover:text-ink">
+                Export
               </button>
-            </div>
+              <button onClick={clearAll} className="pressable hover:text-ink">
+                Reset
+              </button>
+            </>
           )}
-        </>
-      )}
+          <button onClick={onOpenMap} className="pressable ml-auto text-ink-dim hover:text-ink">
+            View on map →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto grid w-full max-w-6xl gap-x-12 gap-y-6 px-6 py-10 xl:grid-cols-[minmax(0,1fr)_16rem]">
+        <div className="min-w-0">
+          <p className="eyebrow mb-3">
+            Human review · {area.name}
+            {area.subtitle ? `, ${area.subtitle}` : ""}
+          </p>
+          <h1 className="font-display text-display-s font-semibold text-ink">
+            <StatNumber value={open} className="tnum text-dmg1" /> building
+            {open === 1 ? "" : "s"} need a second look
+          </h1>
+          <p className="measure mt-4 text-sm leading-relaxed text-ink-dim">
+            Buildings where the CNN classifier and an independent change-detection pass landed two or
+            more damage levels apart, plus a few whose footprint is too small to read. Confirm the
+            model&rsquo;s call, or override it by eye from the pre and post crop.
+          </p>
+
+          {/* rail moves inline above the list below xl */}
+          <div className="mt-6 xl:hidden">{rail}</div>
+
+          {visible.length === 0 ? (
+            <p className="mt-12 text-center text-sm text-ink-dim">
+              {queue.length === 0
+                ? "No buildings were flagged for review in this area."
+                : "Every flagged building has been reviewed."}
+            </p>
+          ) : (
+            <>
+              <ul className="mt-6 border-t border-line xl:mt-8">
+                {visible.map((f) => (
+                  <ReviewRow
+                    key={f.properties.id}
+                    feature={f}
+                    areaId={area.id}
+                    decision={decisions[f.properties.id] ?? null}
+                    onDecide={(d) => setDecision(f.properties.id, d)}
+                  />
+                ))}
+              </ul>
+              {filtered.length > visible.length && (
+                <div className="mt-6 flex items-center justify-center gap-3 text-xs text-ink-faint">
+                  <span className="tnum">
+                    showing {visible.length.toLocaleString()} of {filtered.length.toLocaleString()}
+                  </span>
+                  <button
+                    onClick={() => setLimit((n) => n + PAGE)}
+                    className="pressable rounded-md border border-line px-3 py-1.5 text-ink-dim hover:border-line-strong hover:text-ink"
+                  >
+                    Load {Math.min(PAGE, filtered.length - visible.length)} more
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        <aside className="hidden xl:sticky xl:top-6 xl:block xl:self-start">{rail}</aside>
+      </div>
     </div>
   );
 }

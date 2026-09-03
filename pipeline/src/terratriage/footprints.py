@@ -69,7 +69,7 @@ def fetch_arcgis_buildings(bounds_lonlat, service_url: str, page: int = 2000):
             "resultRecordCount": str(page),
         }
         url = service_url.rstrip("/") + "/query?" + urllib.parse.urlencode(params)
-        req = urllib.request.Request(url, headers={"User-Agent": "NCResQ/1.2"})
+        req = urllib.request.Request(url, headers={"User-Agent": "NCRecon/1.2"})
         with urllib.request.urlopen(req, timeout=90) as resp:
             fc = json.loads(resp.read())
         feats = fc.get("features", [])
@@ -129,7 +129,7 @@ def fetch_osm_buildings(bounds_lonlat, cache_path: str | None = None, retries: i
             try:
                 req = urllib.request.Request(
                     ep, data=urllib.parse.urlencode({"data": q}).encode(),
-                    headers={"User-Agent": "NCResQ/1.0 (disaster damage demo)"},
+                    headers={"User-Agent": "NCRecon/1.0 (disaster damage demo)"},
                 )
                 with urllib.request.urlopen(req, timeout=150) as resp:
                     data = json.loads(resp.read())

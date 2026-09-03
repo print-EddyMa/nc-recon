@@ -1,4 +1,4 @@
-# NCResQ
+# NC Recon
 
 A **North Carolina disaster application** with two halves:
 
@@ -57,8 +57,9 @@ npm run dev                # http://localhost:5173
 The app is a static site. With no `VITE_API_URL` it runs fully — the NC risk
 dashboard is all live public feeds — and the **Assess** screen shows the CLI
 commands to run an assessment yourself. Copy `web/.env.example` to
-`web/.env.local` to set `VITE_API_URL` (a running assessment service),
-`VITE_FIRMS_KEY` (active-fire layer), or `VITE_BASE` (sub-path hosting).
+`web/.env.development.local` (dev only; never read by `vite build`) to set
+`VITE_API_URL` (a running assessment service), `VITE_FIRMS_KEY` (active-fire
+layer), or `VITE_BASE` (sub-path hosting).
 
 `refresh-nc` refreshes the committed snapshots the dashboard falls back to when
 a feed is unavailable: NWPS / USGS / NWS are also fetched live in-app

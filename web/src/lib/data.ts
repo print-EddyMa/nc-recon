@@ -30,7 +30,10 @@ export async function loadArea(id: string): Promise<DamageCollection> {
   const url = API_URL
     ? `${API_URL}/areas/${encodeURIComponent(id)}`
     : `${import.meta.env.BASE_URL}data/${id}.geojson`;
-  const res = await fetch(url);
+  // a bare fetch here hangs forever if the assessment service accepts the
+  // connection but never responds — the area screens then sit on a skeleton
+  // with no way out. Bound it, and let the caller show a retry.
+  const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
   if (!res.ok) throw new Error(`failed to load ${id}: ${res.status}`);
   const fc = (await res.json()) as DamageCollection;
   if (fc?.type !== "FeatureCollection" || !Array.isArray(fc.features)) {

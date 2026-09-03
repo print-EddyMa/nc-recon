@@ -3,12 +3,15 @@ import { summarize } from "../lib/data";
 import { DAMAGE } from "../lib/damage";
 import { useReviewDecisions, overrideClasses } from "../lib/review";
 import StatNumber from "../components/StatNumber";
+import AreaLoadError from "../components/AreaLoadError";
 import type { AreaConfig, DamageCollection, EventConfig } from "../lib/types";
 
 interface Props {
   event: EventConfig;
   area: AreaConfig;
   fc: DamageCollection | null;
+  loadError?: string | null;
+  onRetry?: () => void;
   onOpenMap: () => void;
 }
 
@@ -20,13 +23,17 @@ function modelLabel(raw: string): string {
   return raw;
 }
 
-export default function Stats({ event, area, fc, onOpenMap }: Props) {
+export default function Stats({ event, area, fc, loadError, onRetry, onOpenMap }: Props) {
   const { decisions } = useReviewDecisions(area.id);
   const stats = useMemo(() => (fc ? summarize(fc) : null), [fc]);
   const reviewed = useMemo(
     () => (fc ? summarize(fc, overrideClasses(decisions)) : null),
     [fc, decisions],
   );
+
+  if (loadError && !fc) {
+    return <AreaLoadError areaName={area.name} detail={loadError} onRetry={onRetry ?? (() => {})} />;
+  }
 
   if (!fc || !stats) {
     return (
@@ -51,156 +58,168 @@ export default function Stats({ event, area, fc, onOpenMap }: Props) {
     const blob = new Blob([JSON.stringify(fc)], { type: "application/geo+json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `ncresq-${area.id}.geojson`;
+    a.download = `nc-recon-${area.id}.geojson`;
     a.click();
     URL.revokeObjectURL(a.href);
   };
 
+  const highTotal = p.review ? p.review.total_high + p.review.total_review || 1 : 1;
+
   return (
-    <div className="mx-auto h-full max-w-4xl overflow-y-auto px-6 py-10">
-      <p className="cap mb-3">
-        Summary · {event.name} · {area.name}
-        {area.subtitle ? `, ${area.subtitle}` : ""}
-      </p>
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto grid w-full max-w-6xl gap-x-14 gap-y-10 px-6 py-10 lg:grid-cols-[minmax(0,1fr)_17rem]">
+        {/* -------- main column: the report -------- */}
+        <div className="min-w-0">
+          <p className="eyebrow mb-3">
+            Summary · {event.name} · {area.name}
+            {area.subtitle ? `, ${area.subtitle}` : ""}
+          </p>
 
-      <h1 className="max-w-3xl font-display text-[2rem] leading-[1.12] text-ink">
-        <StatNumber value={stats.severe} className="tnum text-dmg2" /> of{" "}
-        <StatNumber value={stats.total} className="tnum" /> buildings sustained
-        major damage or were destroyed.
-      </h1>
+          <h1 className="font-display text-display font-semibold text-ink">
+            <StatNumber value={stats.severe} className="tnum text-dmg2" /> of{" "}
+            <StatNumber value={stats.total} className="tnum" /> buildings sustained major damage or
+            were destroyed.
+          </h1>
 
-      <p className="mt-4 max-w-[64ch] text-sm leading-relaxed text-ink-dim">
-        {event.name}
-        {event.event_date ? `, event date ${event.event_date}. ` : ". "}
-        Maxar Open Data captures from <span className="tnum">{p.pre_image.date}</span>{" "}
-        and <span className="tnum">{p.post_image.date}</span>.
-        {reviewedDelta != null && (
-          <>
-            {" "}
-            After human review the severe count stands at{" "}
-            <span className="tnum text-ink">{reviewedDelta.toLocaleString()}</span>.
-          </>
-        )}
-      </p>
+          <p className="measure mt-4 text-sm leading-relaxed text-ink-dim">
+            {event.name}
+            {event.event_date ? `, event date ${event.event_date}. ` : ". "}
+            Maxar Open Data captures from <span className="tnum">{p.pre_image.date}</span> and{" "}
+            <span className="tnum">{p.post_image.date}</span>.
+            {reviewedDelta != null && (
+              <>
+                {" "}
+                After human review the severe count stands at{" "}
+                <span className="tnum text-ink">{reviewedDelta.toLocaleString()}</span>.
+              </>
+            )}
+          </p>
 
-      {/* asymmetric figure block: lead percentage + supporting ticks */}
-      <div className="mt-10 flex flex-col gap-8 sm:flex-row sm:items-end sm:gap-14">
-        <div>
-          <div className="cap mb-1.5">Major or destroyed</div>
-          <div className="tnum text-6xl font-semibold leading-none text-dmg2">
-            <StatNumber value={stats.severePct} decimals={1} />
-            <span className="text-3xl text-ink-faint">%</span>
-          </div>
-        </div>
-        <dl className="grid grid-cols-2 gap-x-10 gap-y-5 sm:grid-cols-3">
-          <Tick k="Buildings assessed" v={stats.total.toLocaleString()} />
-          <Tick k="Destroyed" v={stats.counts[3].toLocaleString()} accent={DAMAGE[3].hex} />
-          <Tick k="Footprint area" v={`${stats.assessedAreaKm2.toFixed(2)} km²`} />
-        </dl>
-      </div>
+          <section className="mt-11 border-t border-line pt-6">
+            <h2 className="section-title mb-4">Distribution by damage level</h2>
+            <div className="space-y-2.5">
+              {DAMAGE.map((d) => {
+                const n = stats.counts[d.index];
+                const pct = (n / total) * 100;
+                return (
+                  <div key={d.index} className="flex items-center gap-3">
+                    <span className="flex w-28 shrink-0 items-center gap-1.5 text-xs text-ink-dim">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+                        style={{ background: d.hex }}
+                      />
+                      {d.label}
+                    </span>
+                    <span className="bar-track relative h-3.5 flex-1">
+                      <span
+                        className="bar-fill absolute inset-y-0 left-0"
+                        style={{ width: `${Math.max(pct, 0.6)}%`, background: d.hex }}
+                      />
+                    </span>
+                    <span className="tnum w-16 shrink-0 text-right text-sm font-medium text-ink">
+                      {n.toLocaleString()}
+                    </span>
+                    <span className="tnum w-12 shrink-0 text-right text-xs text-ink-faint">
+                      {pct.toFixed(1)}%
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
 
-      <section className="mt-12 border-t border-line pt-6">
-        <div className="section-title mb-4">Distribution by damage level</div>
-        <div className="space-y-3">
-          {DAMAGE.map((d) => {
-            const n = stats.counts[d.index];
-            const pct = (n / total) * 100;
-            return (
-              <div key={d.index} className="flex items-center gap-3">
-                <span className="w-24 shrink-0 text-xs text-ink-dim">{d.label}</span>
-                <span className="relative h-4 flex-1 overflow-hidden rounded-sm bg-surface-2">
-                  <span
-                    className="absolute inset-y-0 left-0 transition-[width] duration-500 ease-out"
-                    style={{ width: `${Math.max(pct, 0.6)}%`, background: d.hex }}
-                  />
+          {p.review && (p.review.total_high || p.review.total_review) && (
+            <section className="mt-11 border-t border-line pt-6">
+              <h2 className="section-title mb-4">Confidence</h2>
+              {/* one stacked bar — high vs. needs-review, of the classified total */}
+              <div className="bar-track flex h-4">
+                <span
+                  className="h-full rounded-l-[3px] bg-accent"
+                  style={{
+                    width: `${(p.review.total_high / highTotal) * 100}%`,
+                    boxShadow: "1px 0 0 rgb(var(--surface))",
+                  }}
+                />
+                <span
+                  className="h-full rounded-r-[3px] bg-meter"
+                  style={{ width: `${(p.review.total_review / highTotal) * 100}%` }}
+                />
+              </div>
+              <div className="tnum mt-2 flex justify-between text-xs">
+                <span className="text-accent">
+                  {p.review.total_high.toLocaleString()} high confidence
                 </span>
-                <span className="tnum w-14 shrink-0 text-right text-sm text-ink">
-                  {n.toLocaleString()}
-                </span>
-                <span className="tnum w-14 shrink-0 text-right text-xs text-ink-faint">
-                  {pct.toFixed(1)}%
+                <span className="text-meter">
+                  {p.review.total_review.toLocaleString()} need review
                 </span>
               </div>
-            );
-          })}
+              <p className="measure mt-4 text-xs leading-relaxed text-ink-faint">
+                {p.review.model_agreement_pct != null
+                  ? `The CNN classifier and the change-detection pass agree exactly on ${p.review.model_agreement_pct}% of buildings, and land within one damage level on most of the rest. `
+                  : ""}
+                The {p.review.total_review.toLocaleString()} where they differ by two or more levels
+                are routed to the review queue rather than reported as certain.
+              </p>
+            </section>
+          )}
+
+          <section className="mt-10 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line pt-5 text-xs text-ink-faint">
+            <button
+              onClick={onOpenMap}
+              className="pressable rounded-md border border-line px-3 py-1.5 text-ink-dim hover:border-line-strong hover:text-ink"
+            >
+              View on map →
+            </button>
+            <button
+              onClick={exportGeoJSON}
+              className="pressable rounded-md border border-line px-3 py-1.5 text-ink-dim hover:border-line-strong hover:text-ink"
+            >
+              Export GeoJSON
+            </button>
+            <span className="ml-1">
+              {modelLabel(p.model)}
+              {p.runtime_sec ? ` · ${p.runtime_sec}s` : ""}
+            </span>
+          </section>
+
+          {p.notes && (
+            <p className="mt-4 max-w-[74ch] text-2xs leading-relaxed text-ink-faint">{p.notes}</p>
+          )}
         </div>
-      </section>
 
-      {p.review && (p.review.total_high || p.review.total_review) && (
-        <section className="mt-12 border-t border-line pt-6">
-          <div className="section-title mb-4">Confidence</div>
-          <div className="flex items-center gap-3">
-            <span className="w-24 shrink-0 text-xs text-ink-dim">High confidence</span>
-            <span className="relative h-4 flex-1 overflow-hidden rounded-sm bg-surface-2">
-              <span
-                className="absolute inset-y-0 left-0 bg-accent"
-                style={{
-                  width: `${(p.review.total_high / (p.review.total_high + p.review.total_review || 1)) * 100}%`,
-                }}
+        {/* -------- rail: at a glance -------- */}
+        <aside className="lg:sticky lg:top-6 lg:self-start">
+          <div className="card p-5">
+            <div className="cap mb-1.5">Major or destroyed</div>
+            <div className="tnum font-display text-[3.25rem] font-semibold leading-none text-dmg2">
+              <StatNumber value={stats.severePct} decimals={1} />
+              <span className="text-2xl text-ink-faint">%</span>
+            </div>
+            <dl className="mt-5 space-y-3 border-t border-line pt-4">
+              <RailStat k="Buildings assessed" v={stats.total.toLocaleString()} />
+              <RailStat
+                k="Destroyed"
+                v={stats.counts[3].toLocaleString()}
+                accent={DAMAGE[3].hex}
               />
-            </span>
-            <span className="tnum w-14 shrink-0 text-right text-sm text-ink">
-              {p.review.total_high.toLocaleString()}
-            </span>
-            <span className="tnum w-14 shrink-0 text-right text-xs text-ink-faint" />
+              <RailStat k="Footprint area" v={`${stats.assessedAreaKm2.toFixed(2)} km²`} />
+              {reviewedDelta != null && (
+                <RailStat k="Severe, after review" v={reviewedDelta.toLocaleString()} />
+              )}
+            </dl>
           </div>
-          <div className="mt-3 flex items-center gap-3">
-            <span className="w-24 shrink-0 text-xs text-ink-dim">Needs review</span>
-            <span className="relative h-4 flex-1 overflow-hidden rounded-sm bg-surface-2">
-              <span
-                className="absolute inset-y-0 left-0 bg-meter"
-                style={{
-                  width: `${(p.review.total_review / (p.review.total_high + p.review.total_review || 1)) * 100}%`,
-                }}
-              />
-            </span>
-            <span className="tnum w-14 shrink-0 text-right text-sm text-ink">
-              {p.review.total_review.toLocaleString()}
-            </span>
-            <span className="tnum w-14 shrink-0 text-right text-xs text-ink-faint" />
-          </div>
-          <p className="mt-3 max-w-[64ch] text-xs leading-relaxed text-ink-faint">
-            {p.review.model_agreement_pct != null
-              ? `The CNN classifier and the change-detection pass agree exactly on ${p.review.model_agreement_pct}% of buildings, and land within one damage level on most of the rest. `
-              : ""}
-            The {p.review.total_review.toLocaleString()} where they differ by two or more
-            levels are routed to the review queue rather than reported as certain.
-          </p>
-        </section>
-      )}
-
-      <section className="mt-10 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-5 text-xs text-ink-faint">
-        <button
-          onClick={onOpenMap}
-          className="pressable rounded-md border border-line px-3 py-1.5 text-ink-dim hover:border-accent hover:text-ink"
-        >
-          View on map →
-        </button>
-        <button
-          onClick={exportGeoJSON}
-          className="pressable rounded-md border border-line px-3 py-1.5 text-ink-dim hover:border-accent hover:text-ink"
-        >
-          Export GeoJSON
-        </button>
-        <span className="ml-1">
-          {modelLabel(p.model)}
-          {p.runtime_sec ? ` · ${p.runtime_sec}s` : ""}
-        </span>
-      </section>
-
-      {p.notes && (
-        <p className="mt-4 max-w-[74ch] text-2xs leading-relaxed text-ink-faint">{p.notes}</p>
-      )}
+        </aside>
+      </div>
     </div>
   );
 }
 
-function Tick({ k, v, accent }: { k: string; v: string; accent?: string }) {
+function RailStat({ k, v, accent }: { k: string; v: string; accent?: string }) {
   return (
-    <div className="border-l border-line pl-3">
-      <dt className="cap mb-1">{k}</dt>
+    <div className="flex items-baseline justify-between gap-3">
+      <dt className="text-xs text-ink-dim">{k}</dt>
       <dd
-        className="tnum m-0 text-xl font-semibold text-ink"
+        className="tnum m-0 text-sm font-semibold text-ink"
         style={accent ? { color: accent } : undefined}
       >
         {v}

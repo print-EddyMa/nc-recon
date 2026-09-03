@@ -298,18 +298,36 @@ export default function History({ areas, onOpenAssess, onOpenArea }: Props) {
           ))}
         </div>
 
-        {/* what the record shows */}
+        {/* what the record shows — a short read + the type breakdown as bars */}
         {history && history.byType.length > 0 && (
-          <div className="mt-4 border-t border-line pt-3 text-xs leading-relaxed text-ink-dim">
-            Since {history.sinceYear}, North Carolina has drawn{" "}
-            <span className="font-semibold text-ink">{history.total}</span> federal disaster
-            declarations:{" "}
-            {history.byType
-              .slice(0, 5)
-              .map((t) => `${t.count} ${t.type.toLowerCase()}`)
-              .join(", ")}
-            . Events from 2016 on can be run through the damage pipeline; older ones open the
-            archived NWS radar for that day (the archive reaches back to 1995).
+          <div className="mt-4 grid gap-x-10 gap-y-4 border-t border-line pt-4 md:grid-cols-[1fr_minmax(15rem,20rem)]">
+            <p className="measure text-xs leading-relaxed text-ink-dim">
+              Since {history.sinceYear}, North Carolina has drawn{" "}
+              <span className="font-semibold text-ink">{history.total}</span> federal disaster
+              declarations. Events from 2016 on can be run through the damage pipeline; older ones
+              open the archived NWS radar for that day (the archive reaches back to 1995).
+            </p>
+            <dl className="space-y-1.5">
+              {history.byType.slice(0, 6).map((t) => {
+                const w = (t.count / history.byType[0].count) * 100;
+                return (
+                  <div key={t.type} className="flex items-center gap-2.5 text-2xs">
+                    <dt className="w-24 shrink-0 truncate text-ink-dim" title={t.type}>
+                      {styleFor(t.type).short}
+                    </dt>
+                    <dd className="bar-track relative m-0 h-2.5 flex-1">
+                      <span
+                        className="bar-fill absolute inset-y-0 left-0"
+                        style={{ width: `${Math.max(w, 3)}%`, background: styleFor(t.type).color }}
+                      />
+                    </dd>
+                    <span className="tnum w-6 shrink-0 text-right font-medium text-ink">
+                      {t.count}
+                    </span>
+                  </div>
+                );
+              })}
+            </dl>
           </div>
         )}
       </div>
@@ -402,17 +420,19 @@ function EventDetail({
                   {matches.length === 1 ? "One area has" : `${matches.length} areas have`} been
                   assessed for this event.
                 </p>
-                <div className="mt-2 space-y-1.5">
+                <ul className="mt-2.5 divide-y divide-line border-y border-line">
                   {matches.map(({ area }) => (
-                    <button
-                      key={area.id}
-                      onClick={() => onOpenArea(area.id)}
-                      className="pressable w-full rounded-md bg-accent py-2 text-xs font-semibold text-accent-ink"
-                    >
-                      Open the {area.name} damage map
-                    </button>
+                    <li key={area.id}>
+                      <button
+                        onClick={() => onOpenArea(area.id)}
+                        className="pressable flex w-full items-center justify-between gap-2 py-2 text-left text-xs text-ink-dim hover:text-ink"
+                      >
+                        <span className="font-medium text-ink">{area.name}</span>
+                        <span className="text-accent">damage map →</span>
+                      </button>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </>
             ) : (
               <>

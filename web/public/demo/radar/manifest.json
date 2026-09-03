@@ -1,0 +1,121 @@
+{
+  "bbox3857": [
+    -9412062.94657128,
+    3995282.329624237,
+    -8393489.605812827,
+    4397372.744462241
+  ],
+  "bbox4326": [
+    -84.55,
+    33.75,
+    -75.4,
+    36.7
+  ],
+  "frames": [
+    {
+      "file": "radar/00.png",
+      "at": 1727362800000,
+      "label": "Sep 26, 11:00 AM"
+    },
+    {
+      "file": "radar/01.png",
+      "at": 1727368200000,
+      "label": "Sep 26, 12:30 PM"
+    },
+    {
+      "file": "radar/02.png",
+      "at": 1727373600000,
+      "label": "Sep 26, 2:00 PM"
+    },
+    {
+      "file": "radar/03.png",
+      "at": 1727379000000,
+      "label": "Sep 26, 3:30 PM"
+    },
+    {
+      "file": "radar/04.png",
+      "at": 1727384400000,
+      "label": "Sep 26, 5:00 PM"
+    },
+    {
+      "file": "radar/05.png",
+      "at": 1727389800000,
+      "label": "Sep 26, 6:30 PM"
+    },
+    {
+      "file": "radar/06.png",
+      "at": 1727395200000,
+      "label": "Sep 26, 8:00 PM"
+    },
+    {
+      "file": "radar/07.png",
+      "at": 1727400600000,
+      "label": "Sep 26, 9:30 PM"
+    },
+    {
+      "file": "radar/08.png",
+      "at": 1727406000000,
+      "label": "Sep 26, 11:00 PM"
+    },
+    {
+      "file": "radar/09.png",
+      "at": 1727411400000,
+      "label": "Sep 27, 12:30 AM"
+    },
+    {
+      "file": "radar/10.png",
+      "at": 1727416800000,
+      "label": "Sep 27, 2:00 AM"
+    },
+    {
+      "file": "radar/11.png",
+      "at": 1727422200000,
+      "label": "Sep 27, 3:30 AM"
+    },
+    {
+      "file": "radar/12.png",
+      "at": 1727427600000,
+      "label": "Sep 27, 5:00 AM"
+    },
+    {
+      "file": "radar/13.png",
+      "at": 1727433000000,
+      "label": "Sep 27, 6:30 AM"
+    },
+    {
+      "file": "radar/14.png",
+      "at": 1727438400000,
+      "label": "Sep 27, 8:00 AM"
+    },
+    {
+      "file": "radar/15.png",
+      "at": 1727443800000,
+      "label": "Sep 27, 9:30 AM"
+    },
+    {
+      "file": "radar/16.png",
+      "at": 1727449200000,
+      "label": "Sep 27, 11:00 AM"
+    },
+    {
+      "file": "radar/17.png",
+      "at": 1727454600000,
+      "label": "Sep 27, 12:30 PM"
+    },
+    {
+      "file": "radar/18.png",
+      "at": 1727460000000,
+      "label": "Sep 27, 2:00 PM"
+    },
+    {
+      "file": "radar/19.png",
+      "at": 1727465400000,
+      "label": "Sep 27, 3:30 PM"
+    },
+    {
+      "file": "radar/20.png",
+      "at": 1727470800000,
+      "label": "Sep 27, 5:00 PM"
+    }
+  ]
+}

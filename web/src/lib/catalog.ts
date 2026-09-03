@@ -1,6 +1,6 @@
 /**
  * The Maxar Open Data catalogue (~55 events) + the on-demand assessment bridge.
- * NCResQ is North Carolina-only: the catalogue is filtered to events whose
+ * NC Recon is North Carolina-only: the catalogue is filtered to events whose
  * coverage touches NC (`intersectsNC`), and an AOI can be assessed on the spot
  * when the pipeline service is reachable.
  *
@@ -22,8 +22,9 @@ export interface CatalogEvent {
 }
 
 /**
- * The pipeline service base URL. Set `VITE_API_URL` (in `web/.env.local` for dev,
- * or the host's build env) to enable one-click assessment. When it is unset the
+ * The pipeline service base URL. Set `VITE_API_URL` (in `web/.env.development.local`
+ * for dev, or the host's build env) to enable one-click assessment. When it is unset
+ * the
  * app runs as a pure static site: the NC risk monitor is fully live, and the
  * Assess screen shows the exact commands to run the pipeline yourself.
  */
@@ -71,7 +72,9 @@ export function ncPointFor(ev: CatalogEvent): [number, number] | null {
 
 export async function loadCatalog(): Promise<CatalogEvent[]> {
   try {
-    const res = await fetch(`${import.meta.env.BASE_URL}data/maxar_catalog.json`);
+    const res = await fetch(`${import.meta.env.BASE_URL}data/maxar_catalog.json`, {
+      signal: AbortSignal.timeout(8_000),
+    });
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data) ? (data as CatalogEvent[]) : [];

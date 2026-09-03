@@ -12,7 +12,10 @@
     "refresh-live": "node scripts/refresh_live_snapshots.mjs",
     "refresh-nc": "node scripts/refresh_nc_snapshots.mjs",
     "typecheck": "tsc -b --noEmit",
-    "shoot": "node scripts/shoot.mjs"
+    "shoot": "node scripts/shoot.mjs",
+    "demo:assets": "node scripts/demo_fetch.mjs",
+    "demo:validate": "node scripts/validate_demo.mjs",
+    "demo:shots": "node scripts/demo_shoot.mjs"
   },
   "dependencies": {
     "@deck.gl/core": "^9.3.11",

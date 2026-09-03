@@ -84,23 +84,31 @@ building: `-1` offline `#5A6673` · `0` normal `#5A7C86` · `1` watch `#F5D76E` 
 `@import` from Google Fonts in `index.css`; the families live in
 `tailwind.config.js` `theme.extend.fontFamily` (`display` / `sans` / `mono`) and
 are reached in CSS via `theme("fontFamily.display")`, in markup via
-`font-display` / `font-sans` / `font-mono`. A deliberate pairing — a squared
-grotesque for display against a clean humanist sans for text — chosen so
-headlines read with the flat authority of a printed field report while the body
-stays quiet at small sizes on a dense screen. Not Inter; not the current
-anti-slop trend fonts either.
+`font-display` / `font-sans` / `font-mono`. A deliberate pairing — a text serif
+for headings against a clean grotesque for body and UI — the register US
+government statistical and hazard products use (Census, BLS, USWDS default,
+weather.gov product pages). Headlines read as an official instrument, not a
+generated landing page; the body stays quiet at small sizes on a dense screen.
 
-- `fontFamily.display` · **Archivo** (500 / 600 / 700) — `h1`–`h3`,
-  `.section-title`, wordmark, stat figures. Always roman.
-  `letter-spacing: -0.014em`, `text-wrap: balance`. Headline weight is 600.
+- `fontFamily.display` · **Source Serif 4** (400 / 600 / 700, optical-size
+  8–60) — `h1`–`h3`, wordmark. Always roman. `letter-spacing: -0.006em`,
+  `line-height: 1.16`, `font-optical-sizing: auto`, `text-wrap: balance`.
+  Headline weight 600. Restrained sizes: `--text-display` clamps at ~2.6rem so a
+  headline never becomes drama on a 1280–1440 px operations screen.
 - `fontFamily.sans` · **Geist** (400 / 450 / 500 / 600) — all body and UI text,
-  and the `body` default. `font-feature-settings: "cv11", "ss01"`.
-- `fontFamily.mono` · **Geist Mono** (400 / 500) — only where digits must align
-  in a column (`.tnum` is preferred first) and inline CLI snippets.
+  `.section-title`, `.cap`, `.eyebrow`, and the `body` default.
+  `font-feature-settings: "cv11", "ss01"`.
+- `fontFamily.mono` · **Geist Mono** (400 / 500) — every figure that sits in a
+  column or next to another figure (`.tnum` first) and inline CLI snippets.
 
-Scale is Tailwind's default plus one addition: `text-2xs` = `0.6875rem` /
-`1rem`, the caption size used across panels. `.cap` (11px / 500 / `--ink-faint`)
-is the quiet sentence-case label — never uppercase-mono as decoration.
+Scale: Tailwind's default plus `text-2xs` (`0.6875rem` / `1rem`, the panel
+caption size), `text-display` and `text-display-s` (the two clamps above).
+`.cap` (11 px / 500 / `--ink-faint`) is the quiet sentence-case micro-label —
+a legend key or a figure caption, never a section eyebrow. `.eyebrow` (12 px /
+500 / `--ink-faint`, sans) names *where you are* ("Summary · Old Fort"); it is
+an ordinal/context tag, stacked above its heading, never beside it. `.section-
+title` (14 px / 600 / `--ink`, sans) is a run-in heading inside a panel or
+document block — sans so it reads as structure, not a second serif headline.
 
 **No italic display type.** Emphasis is weight, `--accent`, or a drawn rule.
 
@@ -113,12 +121,19 @@ is the quiet sentence-case label — never uppercase-mono as decoration.
   Corners are tight on purpose — this is closer to a map legend than a SaaS card.
 - **Border** · always a single hairline `1px solid var(--line)`, all four sides.
   No thick side-stripes, no card nested inside a card.
+- **Containers** · two only. `.panel` (hairline + one soft shadow) is for a
+  container that *floats over live map imagery or a scrim* — the deck.gl
+  tooltip, the map-screen side panels, the two modal overlays. `.card` (hairline,
+  **no shadow**) is for every container on a plain surface — the content screens.
+  Depth on a content screen comes from weight, size, and spacing, not elevation.
+  Never nest a card in a card.
 - **Elevation** · `.panel` = `0 1px 2px /.08, 0 6px 20px /.10` of `--shadow`.
-  One soft shadow, opaque surface. **No `backdrop-blur` as decoration** — it is
-  used in exactly four places, each floating over live map imagery or a scrim:
-  the deck.gl map tooltip, the Home "feeds live" pill, and the two modal
-  overlays (⌘K, Dialog). Nowhere else.
-- Dark mode conveys elevation with surface lightness, not glow.
+  **No `backdrop-blur` as decoration.** Dark mode conveys elevation with surface
+  lightness, not glow.
+- **Data bars** · `.bar-track` (surface-2, 3 px radius) + `.bar-fill` (4 px
+  rounded data-end, `--ease-out` width transition). Adjacent fills in a stacked
+  bar carry a 1 px `--surface` gap (`box-shadow: 1px 0 0`). Distribution and
+  confidence bars on Summary, the area cards, and History use this.
 
 ---
 
@@ -182,11 +197,13 @@ bundle stays lean (gzip ~390 KB) without them.
 
 ## Components
 
-- `.panel` — the one container. Opaque `--surface`, hairline `--line`, 10px,
-  one soft shadow. Everything docks in a panel or sits directly on `--canvas`.
-- `.section-title` — Archivo 13px / 600 / `--ink`. Panel headers. **Not** an
-  eyebrow; there are no `01 · SECTION` kickers anywhere, and no tag-left /
-  heading-right split heads.
+- `.panel` / `.card` — the two containers (see Space § Containers). `.panel`
+  floats over a map; `.card` sits on a content screen with no shadow. Everything
+  docks in one or sits directly on `--canvas`.
+- `.section-title` — Geist 14px / 600 / `--ink`, run-in panel/block header.
+  `.eyebrow` — Geist 12px / 500 / `--ink-faint`, the "where you are" tag, always
+  stacked above its heading. **Neither is a decorative kicker**; there are no
+  `01 · SECTION` numbers and no tag-left / heading-right split heads.
 - Primary button — `bg-accent text-accent-ink`, radius `md`, `.pressable`.
 - Secondary button — `border-line bg-surface text-ink-dim`, same radius,
   `hover:text-ink`.

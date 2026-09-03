@@ -1,6 +1,6 @@
-# NCResQ — web
+# NC Recon — web
 
-Control-room damage map for the NCResQ pipeline. React + TypeScript + Vite,
+Control-room damage map for the NC Recon pipeline. React + TypeScript + Vite,
 Tailwind, MapLibre GL + deck.gl.
 
 ```bash

@@ -1,5 +1,5 @@
-<title>Inside NCResQ</title>
-<meta name="description" content="A walkthrough of how NCResQ scores every building after a disaster, using real satellite crops and real numbers from a Hurricane Helene run over Old Fort, North Carolina." />
+<title>Inside NC Recon</title>
+<meta name="description" content="A walkthrough of how NC Recon scores every building after a disaster, using real satellite crops and real numbers from a Hurricane Helene run over Old Fort, North Carolina." />
 <style>
   @import url("https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Geist:wght@400;450;500;600&family=Geist+Mono:wght@400;500&display=swap");
 
@@ -127,6 +127,9 @@
   .hero-meta b { color: rgb(var(--ink)); font-weight: 600; }
   .eyebrow { display: flex; align-items: center; gap: 10px; }
   .eyebrow::before { content: ""; width: 22px; height: 2px; background: rgb(var(--accent)); flex: none; }
+  /* the hero eyebrow carries the NC Recon brand mark instead of the bar */
+  .hero .eyebrow::before { display: none; }
+  .eyebrow-mark { height: 17px; width: auto; flex: none; color: rgb(var(--ink-dim)); }
 
   .schematic { margin-top: 34px; border: 1px solid rgb(var(--line)); border-radius: 10px; background: rgb(var(--canvas)); padding: 18px 18px 10px; overflow-x: auto; }
   .schematic svg { width: 100%; min-width: 600px; height: auto; display: block; }
@@ -303,11 +306,22 @@
 <header class="hero">
   <canvas class="bg" id="bg" aria-hidden="true"></canvas>
   <div class="hero-inner">
-    <div class="cap eyebrow">NCResQ &middot; how it works</div>
+    <div class="cap eyebrow">
+      <svg class="eyebrow-mark" viewBox="0 0 300 96" fill="none" aria-hidden="true">
+        <clipPath id="ncmark-hero"><path d="M 92.04,0.0 L 294.65,1.34 L 298.66,15.28 L 288.92,13.94 L 274.03,19.67 L 266.2,20.24 L 266.58,22.72 L 287.97,20.81 L 291.41,24.06 L 297.71,22.72 L 300.0,31.13 L 297.9,35.14 L 293.7,35.52 L 284.91,44.11 L 273.27,44.49 L 271.36,50.41 L 276.32,56.33 L 280.33,57.48 L 272.88,67.22 L 266.58,66.07 L 247.87,69.13 L 235.84,75.81 L 226.29,84.6 L 221.32,95.67 L 214.07,93.19 L 201.46,95.48 L 161.94,62.25 L 122.79,61.68 L 123.36,57.67 L 118.01,51.75 L 114.39,53.85 L 114.19,50.22 L 71.23,48.5 L 42.2,55.38 L 0.0,55.76 L 0.95,47.55 L 7.83,46.79 L 10.5,41.06 L 19.1,35.9 L 28.64,35.71 L 37.24,30.36 L 46.21,28.45 L 53.85,20.62 L 58.63,18.33 L 59.58,21.77 L 73.33,15.09 L 79.63,16.42 L 84.02,9.93 L 90.52,8.21 L 92.04,0.0 Z"/></clipPath>
+        <path d="M 92.04,0.0 L 294.65,1.34 L 298.66,15.28 L 288.92,13.94 L 274.03,19.67 L 266.2,20.24 L 266.58,22.72 L 287.97,20.81 L 291.41,24.06 L 297.71,22.72 L 300.0,31.13 L 297.9,35.14 L 293.7,35.52 L 284.91,44.11 L 273.27,44.49 L 271.36,50.41 L 276.32,56.33 L 280.33,57.48 L 272.88,67.22 L 266.58,66.07 L 247.87,69.13 L 235.84,75.81 L 226.29,84.6 L 221.32,95.67 L 214.07,93.19 L 201.46,95.48 L 161.94,62.25 L 122.79,61.68 L 123.36,57.67 L 118.01,51.75 L 114.39,53.85 L 114.19,50.22 L 71.23,48.5 L 42.2,55.38 L 0.0,55.76 L 0.95,47.55 L 7.83,46.79 L 10.5,41.06 L 19.1,35.9 L 28.64,35.71 L 37.24,30.36 L 46.21,28.45 L 53.85,20.62 L 58.63,18.33 L 59.58,21.77 L 73.33,15.09 L 79.63,16.42 L 84.02,9.93 L 90.52,8.21 L 92.04,0.0 Z" fill="currentColor"/>
+        <g clip-path="url(#ncmark-hero)">
+          <circle cx="198.09" cy="28.24" r="20" fill="none" stroke="rgb(var(--accent))" stroke-width="3.5"/>
+          <circle cx="198.09" cy="28.24" r="38" fill="none" stroke="rgb(var(--accent))" stroke-width="3.5"/>
+        </g>
+        <circle cx="198.09" cy="28.24" r="6" fill="rgb(var(--accent))"/>
+      </svg>
+      <span>NC Recon &middot; how it works</span>
+    </div>
     <h1>Scoring every building after the storm</h1>
     <p class="lede">
       When a hurricane clears North Carolina, the question is which buildings to reach first.
-      NCResQ answers it one structure at a time, from satellite imagery, and is honest about
+      NC Recon answers it one structure at a time, from satellite imagery, and is honest about
       the calls it is not sure of. Here is the whole method, with the numbers from a real run over
       Old Fort after Hurricane Helene.
     </p>
@@ -398,7 +412,7 @@
       <p>
         Nothing is trained from scratch. The classifier learned on <strong>xBD</strong>, the
         xView2 dataset: about <strong>850,000</strong> hand-labeled building polygons across
-        <strong>19</strong> disasters, on this same four-level scale. NCResQ runs the
+        <strong>19</strong> disasters, on this same four-level scale. NC Recon runs the
         pretrained <strong>xView2 CMU baseline</strong> (a ResNet50 classifier) at inference time.
       </p>
       <div class="tilegrid reveal">
@@ -454,7 +468,7 @@
     <section class="act" id="unknowns">
       <div class="act-head"><span class="act-n">03</span><h2>Knowing the unknowns</h2></div>
       <p class="act-sub">
-        There is no ground truth on the day. Instead of trusting one model, NCResQ runs a
+        There is no ground truth on the day. Instead of trusting one model, NC Recon runs a
         second, independent read and compares them. Where they disagree, the building is not
         published as certain. It goes to a person.
       </p>
@@ -639,7 +653,7 @@
       Damage model: the xView2 CMU baseline classifier, fused with an independent
       change-detection pass and North Carolina context priors.
     </p>
-    <p>Every figure here is measured from an actual NCResQ run. Nothing is placeholder.</p>
+    <p>Every figure here is measured from an actual NC Recon run. Nothing is placeholder.</p>
   </div>
 </footer>
 

@@ -160,7 +160,7 @@ def cmd_fetch(a):
     print(f"[fetch] {a.area}: quadkey {choice.quadkey} epsg {choice.epsg}")
     print(f"        pre  {choice.pre_date}  {choice.pre_url}")
     print(f"        post {choice.post_date}  {choice.post_url}")
-    dl.fetch_pair(choice, RAW)
+    dl.fetch_pair(choice, RAW, lat=a.lat, lon=a.lon)
 
     _save_area_meta(a.area, {
         "event": a.event,

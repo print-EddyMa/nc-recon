@@ -1,0 +1,362 @@
+/* Phase H — the hook sequence. Fixed dark. App visual language: flat, solid,
+   one accent, no gradients, no glow, no blur. Tokens mirror index.css (dark). */
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;450;500;600&family=Geist+Mono:wght@400;500&display=swap");
+
+:root {
+  --bg: #0f1115;
+  --surface: #17191e;
+  --line: #2a2e36;
+  --ink: #e9eae8;
+  --ink-dim: #9ea1a8;
+  --ink-faint: #6c7079;
+  --accent: #4a80f6;
+  --font: "Geist", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* author `display:` rules otherwise beat the UA [hidden] rule, so make the
+   hidden attribute authoritative — every beat layer relies on it */
+[hidden] {
+  display: none !important;
+}
+
+.demo-root {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  overflow: hidden;
+  cursor: none;
+}
+/* a cursor only while sitting on the start prompt, never during playback */
+.demo-root.idle {
+  cursor: default;
+}
+
+.demo-stage,
+.demo-map {
+  position: absolute;
+  inset: 0;
+}
+.demo-map {
+  background: var(--bg);
+}
+/* the demo owns the frame — hide MapLibre's own furniture */
+.demo-map .maplibregl-control-container {
+  display: none;
+}
+
+/* ---- Beat 2: archived radar plate, glued to the NC bbox in screen space --- */
+.demo-radar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+  pointer-events: none;
+}
+.demo-radar-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  opacity: 0;
+  /* the archived NEXRAD PNG has a faint non-transparent "no echo" fill; screen
+     blend drops it so only the reflectivity colours sit over the dark map */
+  mix-blend-mode: screen;
+}
+
+/* ---- Beat 4: before / after wipe ---------------------------------------- */
+.demo-wipe {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.demo-wipe-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background-size: cover;
+  background-position: center;
+}
+.demo-wipe-after {
+  clip-path: inset(0 100% 0 0);
+}
+.demo-wipe-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--accent);
+  opacity: 0;
+}
+.demo-wipe-tags {
+  position: absolute;
+  inset: auto 0 4.5% 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 5%;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.demo-wipe-tags span {
+  background: rgba(15, 17, 21, 0.72);
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+}
+
+/* ---- Beat 7: flood flash --------------------------------------------- */
+.demo-flood {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin: -74px 0 0 10px;
+  pointer-events: none;
+}
+.demo-flood-gauge {
+  position: relative;
+  width: 12px;
+  height: 64px;
+  border: 1px solid var(--accent);
+  background: rgba(15, 17, 21, 0.55);
+}
+.demo-flood-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 18%;
+  background: var(--accent);
+}
+.demo-flood-label {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: rgba(15, 17, 21, 0.72);
+  border: 1px solid var(--line);
+  padding: 5px 9px;
+}
+.demo-flood-label b {
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+/* ---- Beat 8: history scrub ------------------------------------------- */
+.demo-hist {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 132px;
+  background: rgba(15, 17, 21, 0.86);
+  border-top: 1px solid var(--line);
+  overflow: hidden;
+}
+.demo-hist-centre {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line);
+}
+.demo-hist-track {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  height: 100%;
+  will-change: transform;
+}
+.demo-hist-tick {
+  position: absolute;
+  bottom: 26px;
+  width: 2px;
+  margin-left: -1px;
+}
+.demo-hist-label {
+  position: absolute;
+  bottom: 58px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+.demo-hist-year {
+  position: absolute;
+  bottom: 8px;
+  transform: translateX(-50%);
+  font: 400 10px / 1 var(--mono);
+  color: var(--ink-faint);
+}
+.demo-hist-cap {
+  position: absolute;
+  left: 16px;
+  top: 10px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ---- lower-third caption ------------------------------------------- */
+.demo-caption {
+  position: absolute;
+  left: 50%;
+  bottom: 8%;
+  transform: translateX(-50%);
+  opacity: 0;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: rgba(23, 25, 30, 0.74);
+  border: 1px solid var(--line);
+  padding: 7px 14px;
+  white-space: nowrap;
+}
+
+/* ---- Beat 9: title card ------------------------------------------- */
+.demo-title {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+.demo-title-logo {
+  width: min(62vw, 720px);
+  opacity: 0;
+}
+.demo-title-rule {
+  width: 260px;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+.demo-title-sub {
+  opacity: 0;
+  font-size: 14px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+/* ---- preload gate ------------------------------------------------- */
+.demo-loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: var(--bg);
+}
+.demo-loader-bar {
+  width: 260px;
+  height: 2px;
+  background: var(--line);
+}
+.demo-loader-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.18s linear;
+}
+.demo-loader-label {
+  font: 400 11px / 1 var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+
+.demo-start {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(15, 17, 21, 0.55);
+}
+.demo-start-key {
+  font: 500 13px / 1 var(--mono);
+  letter-spacing: 0.3em;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  padding: 10px 18px 10px 22px;
+}
+.demo-start-sub {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.demo-start-sub b {
+  color: var(--ink-dim);
+  font-weight: 500;
+}
+
+/* ---- debug (D / ?debug=1) --------------------------------------- */
+.demo-debug {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font: 400 11px / 1.4 var(--mono);
+  color: var(--ink-dim);
+  background: rgba(15, 17, 21, 0.8);
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  pointer-events: none;
+}
+.demo-debug-tc {
+  color: var(--accent);
+}
+.demo-debug-beat {
+  color: var(--ink);
+}
+.demo-debug-track {
+  position: relative;
+  width: 220px;
+  height: 8px;
+  margin-top: 2px;
+  background: var(--surface);
+}
+.demo-debug-track span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-right: 1px solid var(--bg);
+  background: var(--line);
+}
+.demo-debug-track span.on {
+  background: var(--accent);
+}
+.demo-debug-track i {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--ink);
+}

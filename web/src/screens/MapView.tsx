@@ -6,15 +6,25 @@ import HotspotList from "../components/HotspotList";
 import BuildingCard from "../components/BuildingCard";
 import { hotspots, summarize } from "../lib/data";
 import { useReviewDecisions, overrideClasses } from "../lib/review";
+import AreaLoadError from "../components/AreaLoadError";
 import type { AreaConfig, DamageCollection, EventConfig } from "../lib/types";
 
 interface Props {
   event: EventConfig;
   area: AreaConfig;
   fc: DamageCollection | null;
+  loadError?: string | null;
+  onRetry?: () => void;
 }
 
-export default function MapView({ area, fc }: Props) {
+export default function MapView({ area, fc, loadError, onRetry }: Props) {
+  if (loadError && !fc) {
+    return <AreaLoadError areaName={area.name} detail={loadError} onRetry={onRetry ?? (() => {})} />;
+  }
+  return <MapViewInner area={area} fc={fc} />;
+}
+
+function MapViewInner({ area, fc }: Pick<Props, "area" | "fc">) {
   const [assessment, setAssessment] = useState(1);
   const [imagery, setImagery] = useState<"pre" | "post">("post");
   const [selectedId, setSelectedId] = useState<string | null>(null);

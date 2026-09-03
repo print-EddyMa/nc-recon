@@ -40,6 +40,12 @@ web/dist/
 # GeoJSON are generated on demand by the pipeline (locally or the hosted
 # service) and served from web/public — never checked in.
 web/public/tiles/
+
+# Phase H — the /demo hook sequence's self-hosted basemap (~30 MB of CARTO
+# dark-matter vector tiles). Regenerate with `npm run demo:assets` in web/.
+# The rest of web/public/demo/ (radar frames, stitched Maxar stills, the
+# baked GeoJSON/JSON) is committed so the sequence runs without a re-fetch.
+web/public/demo/basemap/
 web/public/data/*.geojson
 # ...but the committed feeds ARE kept: the NC risk snapshots, the global live
 # hazard snapshots, the Maxar catalogue metadata, and the (initially empty)

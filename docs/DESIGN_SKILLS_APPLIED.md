@@ -134,3 +134,59 @@ one good idea (sliding active-tab indicator), implemented natively.
   not frosted glass. Global radius scale tightened; primary CTA squared.
 - Stats gains a confidence breakdown (high vs review + agreement %).
 - Landing reframed as a product "About" page (was the forced entry).
+
+---
+
+## Third pass — 2026-09-02 (serif display + de-template the content screens)
+
+Wired the `hallmark` anti-AI-slop skill into `.claude/skills/` (it was an inert
+symlink into `.agents/`), then ran its anti-pattern list + `typography` /
+`layout-and-space` / `copy` references against every screen, plus the `dataviz`
+skill for the stat/bar work. Studied USWDS, GOV.UK, and weather.gov for the
+government-instrument register the user asked for.
+
+Fixed:
+- **Display face: Archivo → Source Serif 4.** A text serif for `h1`–`h3` is the
+  register US government statistical / hazard products use (Census, BLS, USWDS
+  default). Body stays Geist, figures stay Geist Mono. Restrained `--text-display`
+  clamp (~2.6rem) — report, not magazine. `DESIGN.md` § Type rewritten.
+- **Template sameness across the content screens.** Home, About, Summary, Review
+  all shared one shape: centred ~720px column, tiny eyebrow, huge colour-number
+  headline, grey sub-paragraph, then a void of whitespace. Each now has a
+  distinct layout:
+  - **About** — rebuilt as a reference document. Killed the blue-dot eyebrow, the
+    decorative `<Contours>` SVG, the icon-in-box CTA (a Hallmark "button-in-
+    button"), and the 3-col faint-border definition grid. Now: lead paragraph +
+    two spec tables (field · source · one sentence, like an NWS product
+    description) + an inline SVG of the fusion pipeline (the real mechanism) +
+    a colophon. One text link, no button.
+  - **Home** — 5 floating shadowed stat tiles → one `.card` status band with
+    dividers. Hero map reframed on NC + gauge dots made visible (were ~invisible
+    at r1.4 / opacity 0.32). Dashed "assess" card → inline link. Area cards on
+    `.card` (no shadow), distribution bar promoted to the card's point.
+  - **Summary** — single centred column → 2-col: report on the left, a sticky
+    "at a glance" rail on the right using the horizontal space. Distribution +
+    confidence bars rebuilt to the `dataviz` spec (colour chips, 4px data-ends,
+    1px surface gaps, one stacked confidence bar instead of two).
+  - **History** — the dead lower third now carries a "declarations by type" bar
+    chart off `history.byType`. EventDetail's 3 stacked identical full-width blue
+    buttons → a hairline-divided list.
+  - **Review** — centred column → 2-col with a sticky "Review progress" rail
+    (progress bar, live severe-count delta, bulk actions).
+  - **Damage map** — `HotspotList` lost the fussy 3px per-row meter + chevron;
+    now rank · label · "N% severe" · a severe-count chip.
+- **Containers** — `.card` (hairline, no shadow) added for content screens;
+  `.panel` (with shadow) reserved for map-floating. `.eyebrow` token added;
+  `.section-title` moved to Geist so it stops competing with the serif `h1`.
+- **`useMapLibre`** now try/catches `new maplibregl.Map()` so a no-WebGL machine
+  degrades to the fallback view instead of the whole screen hitting the error
+  boundary.
+- Copy: `’` for the few visible straight apostrophes; no `--` / `...` in
+  rendered strings (already clean).
+
+## Still deliberately NOT applied
+
+`hallmark`'s macrostructure catalogue, genre themes, and 21-theme rotation — the
+project has a locked `DESIGN.md`, so the diversification rule inverts (pages
+*share* the system). The serif + two-container + spec-table language is now that
+shared system.

@@ -7,7 +7,9 @@ import type { EventConfig, HazardType } from "./types";
  * service). Nothing is pre-baked.
  */
 export async function loadEvents(): Promise<EventConfig[]> {
-  const res = await fetch(`${import.meta.env.BASE_URL}data/events.json`);
+  const res = await fetch(`${import.meta.env.BASE_URL}data/events.json`, {
+    signal: AbortSignal.timeout(10_000),
+  });
   if (!res.ok) throw new Error(`failed to load events.json: ${res.status}`);
   const raw = (await res.json()) as EventConfig[];
   return (Array.isArray(raw) ? raw : []).filter((e) => e.areas && e.areas.length > 0);

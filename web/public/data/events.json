@@ -4,7 +4,7 @@
     "event": "HurricaneHelene-Oct24",
     "name": "Hurricane Helene",
     "hazard": "hurricane",
-    "region": "",
+    "region": "North Carolina",
     "event_date": "2024-09-27",
     "bbox": [
       -85.89369,

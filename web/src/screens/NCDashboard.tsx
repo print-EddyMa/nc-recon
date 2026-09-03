@@ -817,7 +817,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
             onClick={onOpenAbout}
             className="pressable mt-3 border-t border-line pt-2.5 text-2xs text-ink-faint hover:text-ink"
           >
-            About NCResQ
+            About NC Recon
           </button>
           </div>
         </section>

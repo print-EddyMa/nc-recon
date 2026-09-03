@@ -29,7 +29,10 @@ export default {
         dmg3: "#a81b38",
       },
       fontFamily: {
-        display: ['"Archivo"', "ui-sans-serif", "system-ui", "sans-serif"],
+        // Serif display — the register US government statistical / hazard
+        // products use (Census, BLS, USWDS default). Reads as an official
+        // instrument, not a generated landing page. Body + figures stay sans.
+        display: ['"Source Serif 4"', "Georgia", "ui-serif", "serif"],
         sans: ['"Geist"', "ui-sans-serif", "system-ui", "sans-serif"],
         mono: ['"Geist Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
       },
@@ -44,6 +47,9 @@ export default {
       },
       fontSize: {
         "2xs": ["0.6875rem", { lineHeight: "1rem", letterSpacing: "0.005em" }],
+        // restrained display steps (see --text-display in index.css)
+        display: ["var(--text-display)", { lineHeight: "1.12", letterSpacing: "-0.006em" }],
+        "display-s": ["var(--text-display-s)", { lineHeight: "1.16", letterSpacing: "-0.004em" }],
       },
       borderRadius: {
         sm: "4px",

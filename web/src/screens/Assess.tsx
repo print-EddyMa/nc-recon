@@ -227,7 +227,7 @@ export default function Assess({
 
           {point && outside && (
             <p className="rounded-sm bg-dmg2/15 px-2 py-1.5 text-2xs text-dmg1">
-              That point is outside North Carolina. NCResQ only assesses NC areas.
+              That point is outside North Carolina. NC Recon only assesses NC areas.
             </p>
           )}
 
@@ -272,7 +272,7 @@ export default function Assess({
 
               {coverage && !pointOk && (
                 <p className="rounded-sm bg-dmg1/15 px-2 py-1.5 text-2xs text-dmg1">
-                  This spot is outside the event's before/after coverage (shaded on
+                  This spot is outside the event&rsquo;s before/after coverage (shaded on
                   the map). Move the marker into a shaded tile.
                 </p>
               )}

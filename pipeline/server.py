@@ -1,4 +1,4 @@
-"""Assessment service for NCResQ.
+"""Assessment service for NC Recon.
 
 The web app reads GeoJSON + tiles + the event registry as static files and needs
 no backend. This service adds on-demand assessment of a North Carolina area:
@@ -93,7 +93,7 @@ _AREA_RE = re.compile(r"[a-z0-9_]{1,40}")
 _EVENT_RE = re.compile(r"[A-Za-z0-9._-]{1,80}")
 _NAME_STRIP_RE = re.compile(r"[^\w \-.,]", re.UNICODE)
 
-app = FastAPI(title="NCResQ", version="1.2")
+app = FastAPI(title="NC Recon", version="1.2")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS or ["http://localhost:5173"],
@@ -190,7 +190,7 @@ _FEEDS: dict[str, tuple[str, int]] = {
     ),
 }
 _FEED_CACHE: dict[str, tuple[float, bytes, str]] = {}
-_FEED_UA = "NCResQ/1.0 (Congressional App Challenge; +https://github.com/)"
+_FEED_UA = "NCRecon/1.0 (Congressional App Challenge; +https://github.com/)"
 
 
 @app.get("/feed/{name}")
@@ -350,9 +350,29 @@ def _rate_consume(client: str) -> None:
     _RATE.setdefault(client, deque()).append(time.time())
 
 
+# per-step ceilings (a hung fetch surfaces as a real error, and frees its
+# MAX_ACTIVE_JOBS slot, well before the client's ~12-min poll gives up). The
+# job-level JOB_DEADLINE_SEC below is what actually bounds the whole run.
+STEP_TIMEOUT: dict[str, int] = {
+    "fetch imagery": 360,
+    "run damage model": 420,
+    "cut map tiles": 240,
+    "update registry": 120,
+}
+_STUCK_JOB_SEC = 15 * 60
+
+
 def _reap_jobs(ttl_sec: int = 1800) -> None:
     with _JOBS_LOCK:
-        cutoff = time.time() - ttl_sec
+        now = time.time()
+        # a job still "running"/"queued" well past any plausible runtime is wedged
+        # (e.g. the worker thread died) — fail it so the slot is reusable
+        for v in JOBS.values():
+            if v["status"] in ("queued", "running") and now - v.get("started", now) > _STUCK_JOB_SEC:
+                v["status"] = "error"
+                v["error"] = "assessment exceeded the time budget"
+                v["finished"] = now
+        cutoff = now - ttl_sec
         for jid in [
             k for k, v in JOBS.items()
             if v["status"] in ("done", "error") and v.get("finished", v.get("started", 0)) < cutoff
@@ -363,11 +383,20 @@ def _reap_jobs(ttl_sec: int = 1800) -> None:
                 JOBS.pop(jid, None)
 
 
-def _run_step(job: dict, label: str, args: list[str]) -> None:
+# hard ceiling on a whole assessment, independent of the per-step caps — keeps a
+# run from creeping past the browser's ~12-min poll window if several steps each
+# run long. Comfortably above the ~90s a real NC AOI takes.
+JOB_DEADLINE_SEC = 600
+
+
+def _run_step(job: dict, label: str, args: list[str], deadline: float | None = None) -> None:
     job["step"] = label
+    budget = STEP_TIMEOUT.get(label, 900)
+    if deadline is not None:
+        budget = max(1, min(budget, int(deadline - time.time())))
     p = subprocess.run(
         [sys.executable, os.path.join(ROOT, "scripts", *args[:1]), *args[1:]],
-        capture_output=True, text=True, cwd=ROOT, timeout=1800,
+        capture_output=True, text=True, cwd=ROOT, timeout=budget,
     )
     job["log"] = (job.get("log", "") + f"\n$ {' '.join(args)}\n" + p.stdout + p.stderr)[-8000:]
     if p.returncode != 0:
@@ -376,6 +405,7 @@ def _run_step(job: dict, label: str, args: list[str]) -> None:
 
 def _assess_worker(job_id: str, req: AssessReq, area: str, event_date: str | None) -> None:
     job = JOBS[job_id]
+    deadline = time.time() + JOB_DEADLINE_SEC
     try:
         job["status"] = "running"
         common = ["--event", req.event, "--area", area]
@@ -386,18 +416,19 @@ def _assess_worker(job_id: str, req: AssessReq, area: str, event_date: str | Non
             fetch += ["--subtitle", req.subtitle]
         if event_date:
             fetch += ["--event-date", event_date]
-        _run_step(job, "fetch imagery", fetch)
+        _run_step(job, "fetch imagery", fetch, deadline)
         # the service only assesses NC AOIs, so always use NC footprints + priors
         _run_step(
             job, "run damage model",
             ["run.py", "infer", "--area", area, "--source", "auto", "--nc-context"],
+            deadline,
         )
-        _run_step(job, "cut map tiles", ["make_tiles.py", "--area", area])
+        _run_step(job, "cut map tiles", ["make_tiles.py", "--area", area], deadline)
         src = os.path.join(OUT, f"{area}.geojson")
         if os.path.exists(src):
             os.makedirs(WEB_DATA, exist_ok=True)
             shutil.copy2(src, os.path.join(WEB_DATA, f"{area}.geojson"))
-        _run_step(job, "update registry", ["run.py", "events", "registry"])
+        _run_step(job, "update registry", ["run.py", "events", "registry"], deadline)
         job["status"] = "done"
         job["step"] = "done"
         job["area"] = area

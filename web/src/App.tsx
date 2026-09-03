@@ -37,14 +37,47 @@ const AREA_SCREENS: Screen[] = ["map", "review", "stats"];
  * doesn't grow without bound (each area is ~0.1-1 MB). */
 const CACHE_LIMIT = 4;
 
+/** NC Recon brand mark — the real North Carolina outline with a scan-ring
+ * signal over the Triangle. `currentColor` fills the state; the rings and
+ * signal dot use the app's one accent ("this is live"), so the mark tracks
+ * the light / dark theme with everything else. */
+function Mark({ uid, className }: { uid: string; className?: string }) {
+  const nc =
+    "M 92.04,0.0 L 294.65,1.34 L 298.66,15.28 L 288.92,13.94 L 274.03,19.67 L 266.2,20.24 L 266.58,22.72 L 287.97,20.81 L 291.41,24.06 L 297.71,22.72 L 300.0,31.13 L 297.9,35.14 L 293.7,35.52 L 284.91,44.11 L 273.27,44.49 L 271.36,50.41 L 276.32,56.33 L 280.33,57.48 L 272.88,67.22 L 266.58,66.07 L 247.87,69.13 L 235.84,75.81 L 226.29,84.6 L 221.32,95.67 L 214.07,93.19 L 201.46,95.48 L 161.94,62.25 L 122.79,61.68 L 123.36,57.67 L 118.01,51.75 L 114.39,53.85 L 114.19,50.22 L 71.23,48.5 L 42.2,55.38 L 0.0,55.76 L 0.95,47.55 L 7.83,46.79 L 10.5,41.06 L 19.1,35.9 L 28.64,35.71 L 37.24,30.36 L 46.21,28.45 L 53.85,20.62 L 58.63,18.33 L 59.58,21.77 L 73.33,15.09 L 79.63,16.42 L 84.02,9.93 L 90.52,8.21 L 92.04,0.0 Z";
+  // accent parts go through `style` so the CSS var() resolves (var() is not
+  // valid in a bare SVG presentation attribute)
+  const stroke = { stroke: "rgb(var(--accent))" };
+  const fill = { fill: "rgb(var(--accent))" };
+  return (
+    <svg viewBox="0 0 300 96" fill="none" aria-hidden className={className}>
+      <clipPath id={`ncmark-${uid}`}>
+        <path d={nc} />
+      </clipPath>
+      <path d={nc} fill="currentColor" />
+      <g clipPath={`url(#ncmark-${uid})`}>
+        <circle cx="198.09" cy="28.24" r="20" fill="none" style={stroke} strokeWidth="3.5" />
+        <circle cx="198.09" cy="28.24" r="38" fill="none" style={stroke} strokeWidth="3.5" />
+      </g>
+      <circle cx="198.09" cy="28.24" r="6" style={fill} />
+    </svg>
+  );
+}
+
 export default function App() {
-  // NCResQ is a North Carolina product: it opens on the operations home.
+  // NC Recon is a North Carolina product: it opens on the operations home.
   // The damage-assessment screens light up once an NC area has been assessed.
   const [screen, setScreen] = useState<Screen>("home");
   const [registry, setRegistry] = useState<EventConfig[] | null>(null);
   const [areaId, setAreaId] = useState<string | null>(null);
   const [cache, setCache] = useState<Record<string, DamageCollection>>({});
   const [error, setError] = useState<string | null>(null);
+  // area-GeoJSON load failure, kept separate from the registry `error` above so
+  // one bad area load doesn't leave a registry-flavoured banner up all session
+  // error is scoped to the area it happened on, so switching areas clears it
+  // without a set-state-in-effect (the derived `areaError` below goes null when
+  // `areaId` no longer matches).
+  const [areaErr, setAreaErr] = useState<{ id: string; msg: string } | null>(null);
+  const [areaReload, setAreaReload] = useState(0);
   const [cmdkOpen, setCmdkOpen] = useState(false);
 
   const refreshRegistry = useCallback(
@@ -52,6 +85,7 @@ export default function App() {
       loadEvents()
         .then((evs) => {
           setRegistry(evs);
+          setError(null);
           if (selectAreaId) setAreaId(selectAreaId);
         })
         .catch((e) => setError(String(e))),
@@ -75,6 +109,7 @@ export default function App() {
   const event = current?.event ?? null;
   const area = current?.area ?? null;
   const fc = areaId ? (cache[areaId] ?? null) : null;
+  const areaError = areaErr && areaErr.id === areaId ? areaErr.msg : null;
 
   // load (and LRU-cache) the selected area's GeoJSON
   useEffect(() => {
@@ -90,11 +125,16 @@ export default function App() {
           return next;
         });
       })
-      .catch((e) => !cancelled && setError(String(e)));
+      .catch((e) => !cancelled && setAreaErr({ id: areaId, msg: String(e) }));
     return () => {
       cancelled = true;
     };
-  }, [areaId, cache]);
+  }, [areaId, cache, areaReload]);
+
+  const retryArea = useCallback(() => {
+    setAreaErr(null);
+    setAreaReload((n) => n + 1);
+  }, []);
 
   const { decisions } = useReviewDecisions(areaId ?? "");
   const reviewOpen = useMemo(() => {
@@ -184,13 +224,8 @@ export default function App() {
     return (
       <div className="grid h-full place-items-center">
         <div className="flex items-center gap-2.5 text-ink-dim">
-          <span className="grid h-6 w-6 place-items-center rounded-md bg-accent text-accent-ink">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-              <path d="M2 12L8 3l6 9" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-              <path d="M2 12h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-          </span>
-          <span className="font-display text-sm">Loading NCResQ</span>
+          <Mark uid="load" className="h-4 w-[52px] text-ink-dim" />
+          <span className="font-display text-sm">Loading NC Recon</span>
         </div>
       </div>
     );
@@ -248,7 +283,7 @@ export default function App() {
             role="alert"
             className="border-b border-dmg3/40 bg-dmg3/15 px-4 py-2 text-sm text-dmg3"
           >
-            Couldn't load the assessment data. {error}
+            Couldn&rsquo;t load the assessment data. {error}
           </div>
         )}
         <main id="main" className="relative flex-1 overflow-hidden">
@@ -296,17 +331,39 @@ export default function App() {
           )}
           {effScreen === "map" && event && area && (
             <ErrorBoundary label="The damage map">
-              <MapView key={area.id} event={event} area={area} fc={fc} />
+              <MapView
+                key={area.id}
+                event={event}
+                area={area}
+                fc={fc}
+                loadError={areaError}
+                onRetry={retryArea}
+              />
             </ErrorBoundary>
           )}
           {effScreen === "review" && area && (
             <ErrorBoundary label="The review queue">
-              <ReviewQueue key={area.id} area={area} fc={fc} onOpenMap={() => go("map")} />
+              <ReviewQueue
+                key={area.id}
+                area={area}
+                fc={fc}
+                loadError={areaError}
+                onRetry={retryArea}
+                onOpenMap={() => go("map")}
+              />
             </ErrorBoundary>
           )}
           {effScreen === "stats" && event && area && (
             <ErrorBoundary label="The summary">
-              <Stats key={area.id} event={event} area={area} fc={fc} onOpenMap={() => go("map")} />
+              <Stats
+                key={area.id}
+                event={event}
+                area={area}
+                fc={fc}
+                loadError={areaError}
+                onRetry={retryArea}
+                onOpenMap={() => go("map")}
+              />
             </ErrorBoundary>
           )}
           {effScreen === "about" && (
@@ -429,13 +486,8 @@ function TopBar({
           onClick={() => onNav("home")}
           className="pressable flex items-center gap-2 text-sm font-semibold tracking-tight"
         >
-          <span className="grid h-6 w-6 place-items-center rounded-md bg-accent text-accent-ink">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-              <path d="M2 12L8 3l6 9" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-              <path d="M2 12h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-          </span>
-          <span className="font-display">NCResQ</span>
+          <Mark uid="nav" className="h-4 w-[52px] text-ink" />
+          <span className="font-display">NC Recon</span>
           <span className="cap hidden text-ink-faint sm:inline">North Carolina</span>
         </button>
 

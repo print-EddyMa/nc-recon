@@ -9,12 +9,103 @@ from __future__ import annotations
 
 import csv
 import datetime as dt
-import io
 import os
+import time
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from functools import lru_cache
 
 CATALOG_URL = "https://raw.githubusercontent.com/opengeos/maxar-open-data/master/datasets/{event}.tsv"
+
+# --------------------------------------------------------------------------- #
+# HTTP: every network read here goes through _http_stream so a stalled S3
+# connection fails fast (with retry + resume) instead of hanging the whole
+# assessment. urllib.request.urlretrieve, which this replaces, honours no
+# timeout at all — a trickling socket blocks until the caller is killed.
+# --------------------------------------------------------------------------- #
+HTTP_TIMEOUT = 30          # per-read socket timeout, seconds
+HTTP_RETRIES = 4
+HTTP_BACKOFF = 2.0         # sleep = HTTP_BACKOFF * attempt between tries
+MIN_THROUGHPUT_BPS = 64 * 1024   # abort a stream slower than this once warmed up
+
+# GDAL/vsicurl tuning for windowed HTTP range reads of the COGs.
+_GDAL_ENV = {
+    "GDAL_DISABLE_READDIR_ON_OPEN": "EMPTY_DIR",
+    "CPL_VSIL_CURL_ALLOWED_EXTENSIONS": ".tif",
+    "GDAL_HTTP_TIMEOUT": "30",
+    "GDAL_HTTP_CONNECTTIMEOUT": "10",
+    "GDAL_HTTP_MAX_RETRY": "3",
+    "GDAL_HTTP_RETRY_DELAY": "2",
+    "VSI_CACHE": "TRUE",
+    "CPL_VSIL_CURL_CHUNK_SIZE": "1048576",
+    "GDAL_INGESTED_BYTES_AT_OPEN": "32768",
+}
+
+# half-width (metres) of the AOI window cut from each Maxar ARD tile. A full ARD
+# tile is ~5 km / 17408 px a side; the damage map only ever shows a neighbourhood,
+# so a ~2.4 km box keeps the raster ~14x smaller and every downstream step faster.
+AOI_HALF_M = 1200
+
+
+@lru_cache(maxsize=64)
+def _tx(src_epsg, dst_epsg):
+    """Cached pyproj transformer — choose_tile calls this once per catalog row."""
+    from pyproj import Transformer
+
+    return Transformer.from_crs(src_epsg, dst_epsg, always_xy=True)
+
+
+def _have(path: str) -> bool:
+    return os.path.exists(path) and os.path.getsize(path) > 0
+
+
+def _http_stream(url: str, dest: str, *, timeout: int = HTTP_TIMEOUT, retries: int = HTTP_RETRIES) -> str:
+    """Stream `url` to `dest` with a socket timeout, retry + backoff, and
+    resume-within-call from a `.part` file. Raises RuntimeError on final failure.
+    Resume never spans separate pipeline runs — callers discard a stale `.part`
+    before the first attempt."""
+    os.makedirs(os.path.dirname(os.path.abspath(dest)), exist_ok=True)
+    part = dest + ".part"
+    last_err: Exception | None = None
+    for attempt in range(1, retries + 1):
+        have = os.path.getsize(part) if os.path.exists(part) else 0
+        req = urllib.request.Request(url)
+        mode = "ab" if have else "wb"
+        if have:
+            req.add_header("Range", f"bytes={have}-")
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310
+                if have and getattr(r, "status", 200) != 206:
+                    have, mode = 0, "wb"          # server ignored Range — restart
+                started = time.monotonic()
+                with open(part, mode) as fh:
+                    while True:
+                        chunk = r.read(1 << 20)
+                        if not chunk:
+                            break
+                        fh.write(chunk)
+                        have += len(chunk)
+                        elapsed = time.monotonic() - started
+                        if elapsed > 20 and have / elapsed < MIN_THROUGHPUT_BPS:
+                            raise TimeoutError(
+                                f"stalled: {have / 1e6:.1f} MB in {elapsed:.0f}s"
+                            )
+            if not _have(part):
+                raise RuntimeError("empty response body")
+            os.replace(part, dest)
+            return dest
+        except Exception as ex:  # noqa: BLE001
+            last_err = ex
+            print(f"[download] attempt {attempt}/{retries} failed: {ex}")
+            if attempt < retries:
+                time.sleep(HTTP_BACKOFF * attempt)
+    if os.path.exists(part):
+        try:
+            os.remove(part)          # leave nothing half-written for the next run
+        except OSError:
+            pass
+    raise RuntimeError(f"could not download {url}: {last_err}")
 
 
 @dataclass
@@ -36,10 +127,10 @@ class TileChoice:
 def fetch_catalog(event: str, cache_dir: str) -> list[dict]:
     os.makedirs(cache_dir, exist_ok=True)
     local = os.path.join(cache_dir, f"{event}.tsv")
-    if not os.path.exists(local):
+    if not _have(local):
         url = CATALOG_URL.format(event=event)
         print(f"[download] fetching catalog {url}")
-        urllib.request.urlretrieve(url, local)
+        _http_stream(url, local, timeout=20, retries=3)
     with open(local) as fh:
         return list(csv.DictReader(fh, delimiter="\t"))
 
@@ -67,22 +158,16 @@ def row_epsg(row: dict) -> int:
 
 
 def _contains(row: dict, lat: float, lon: float) -> bool:
-    from pyproj import Transformer
-
     epsg = row_epsg(row)
-    x, y = Transformer.from_crs(4326, epsg, always_xy=True).transform(lon, lat)
+    x, y = _tx(4326, epsg).transform(lon, lat)
     minx, miny, maxx, maxy = (float(v) for v in row["proj:bbox"].split(","))
     return minx <= x <= maxx and miny <= y <= maxy
 
 
 def _row_centroid_lonlat(row: dict) -> tuple[float, float]:
-    from pyproj import Transformer
-
     epsg = row_epsg(row)
     minx, miny, maxx, maxy = (float(v) for v in row["proj:bbox"].split(","))
-    lon, lat = Transformer.from_crs(epsg, 4326, always_xy=True).transform(
-        (minx + maxx) / 2, (miny + maxy) / 2
-    )
+    lon, lat = _tx(epsg, 4326).transform((minx + maxx) / 2, (miny + maxy) / 2)
     return lon, lat
 
 
@@ -193,20 +278,106 @@ def choose_tile(
 
 
 def download(url: str, dest: str) -> str:
-    if os.path.exists(dest) and os.path.getsize(dest) > 0:
+    if _have(dest):
         print(f"[download] have {os.path.basename(dest)}")
         return dest
-    os.makedirs(os.path.dirname(os.path.abspath(dest)), exist_ok=True)
+    part = dest + ".part"
+    if os.path.exists(part):
+        try:
+            os.remove(part)          # stale partial from an earlier, killed run
+        except OSError:
+            pass
     print(f"[download] {url}\n        -> {dest}")
-    tmp = dest + ".part"
-    urllib.request.urlretrieve(url, tmp)
-    os.replace(tmp, dest)
+    _http_stream(url, dest)
     print(f"[download]    {os.path.getsize(dest) / 1e6:.1f} MB")
     return dest
 
 
-def fetch_pair(choice: TileChoice, out_dir: str) -> tuple[str, str]:
+def _window_pair(
+    pre_url: str, post_url: str, lon: float, lat: float,
+    dest_pre: str, dest_post: str, half_m: float = AOI_HALF_M,
+) -> tuple[str, str]:
+    """Cut a (2*half_m) box around (lon,lat) straight out of each COG with HTTP
+    range reads and write two small, grid-aligned GeoTIFFs. Maxar ARD tiles for
+    one quadkey share an exact pixel grid, so a single snapped world box yields
+    identical windows for pre and post; we assert that before writing."""
+    import rasterio
+    from rasterio.windows import bounds as _win_bounds, from_bounds
+
+    with rasterio.Env(**_GDAL_ENV):
+        with rasterio.open("/vsicurl/" + pre_url) as a, rasterio.open("/vsicurl/" + post_url) as b:
+            if a.crs != b.crs:
+                raise ValueError(f"CRS mismatch: {a.crs} vs {b.crs}")
+            cx, cy = _tx(4326, a.crs.to_epsg()).transform(lon, lat)
+            # clamp the AOI box to the overlap of the two rasters
+            left = max(cx - half_m, a.bounds.left, b.bounds.left)
+            right = min(cx + half_m, a.bounds.right, b.bounds.right)
+            bot = max(cy - half_m, a.bounds.bottom, b.bounds.bottom)
+            top = min(cy + half_m, a.bounds.top, b.bounds.top)
+            if right - left < 200 or top - bot < 200:
+                raise ValueError("AOI window falls outside the imagery pair")
+            # snap to pre's pixel grid, then reuse that exact world box for both
+            wa = from_bounds(left, bot, right, top, a.transform).round_offsets().round_lengths()
+            wbox = _win_bounds(wa, a.transform)
+            wa = from_bounds(*wbox, a.transform).round_offsets().round_lengths()
+            wb = from_bounds(*wbox, b.transform).round_offsets().round_lengths()
+            # pre + post are independent network reads — overlap them
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                fa = pool.submit(a.read, indexes=[1, 2, 3], window=wa, boundless=True, fill_value=0)
+                fb = pool.submit(b.read, indexes=[1, 2, 3], window=wb, boundless=True, fill_value=0)
+                pa, pb = fa.result(), fb.result()
+            ta, tb = a.window_transform(wa), b.window_transform(wb)
+            if pa.shape != pb.shape or ta != tb:
+                raise RuntimeError(f"pre/post windows did not align ({pa.shape} vs {pb.shape})")
+            if pa.max() == 0 or pb.max() == 0:
+                raise RuntimeError("AOI window is all nodata in one of the captures")
+            # JPEG/YCbCr to match the Maxar source — a DEFLATE re-encode of RGB
+            # aerial imagery is both far larger on disk and CPU-bound to write
+            prof = {
+                "driver": "GTiff", "height": pa.shape[1], "width": pa.shape[2],
+                "count": 3, "dtype": "uint8", "crs": a.crs, "transform": ta,
+                "tiled": True, "blockxsize": 512, "blockysize": 512,
+                "compress": "JPEG", "photometric": "YCBCR", "jpeg_quality": 92,
+            }
+            for dest, arr in ((dest_pre, pa), (dest_post, pb)):
+                os.makedirs(os.path.dirname(os.path.abspath(dest)), exist_ok=True)
+                with rasterio.open(dest, "w", **prof) as dst:
+                    dst.write(arr)
+    return dest_pre, dest_post
+
+
+def fetch_pair(
+    choice: TileChoice, out_dir: str,
+    lat: float | None = None, lon: float | None = None,
+) -> tuple[str, str]:
     d = os.path.join(out_dir, choice.area)
-    pre = download(choice.pre_url, os.path.join(d, f"pre_{choice.pre_date}.tif"))
-    post = download(choice.post_url, os.path.join(d, f"post_{choice.post_date}.tif"))
-    return pre, post
+    os.makedirs(d, exist_ok=True)
+    pre_dest = os.path.join(d, f"pre_{choice.pre_date}.tif")
+    post_dest = os.path.join(d, f"post_{choice.post_date}.tif")
+    if _have(pre_dest) and _have(post_dest):
+        print("[download] have pre + post")
+        return pre_dest, post_dest
+
+    # primary path: read only the AOI window from each COG. Much less data on the
+    # wire and a ~14x smaller raster for infer + make_tiles to process.
+    if lat is not None and lon is not None:
+        try:
+            t0 = time.monotonic()
+            _window_pair(choice.pre_url, choice.post_url, lon, lat, pre_dest, post_dest)
+            print(
+                f"[download] AOI window cut in {time.monotonic() - t0:.1f}s "
+                f"({os.path.getsize(pre_dest) / 1e6:.1f} + "
+                f"{os.path.getsize(post_dest) / 1e6:.1f} MB)"
+            )
+            return pre_dest, post_dest
+        except Exception as ex:  # noqa: BLE001
+            print(f"[download] windowed read failed ({ex}); falling back to full COGs")
+            for p in (pre_dest, post_dest):
+                if os.path.exists(p):
+                    os.remove(p)
+
+    # fallback: pull the whole COGs, pre and post in parallel
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        f_pre = pool.submit(download, choice.pre_url, pre_dest)
+        f_post = pool.submit(download, choice.post_url, post_dest)
+        return f_pre.result(), f_post.result()
