@@ -28,16 +28,83 @@ const NC_BBOX: [number, number, number, number] = [-84.55, 33.75, -75.4, 36.7];
 const HIST_PX_PER_YEAR = 118;
 const HIST_X = (year: number) => (year - 1990) * HIST_PX_PER_YEAR;
 
-const CAPTION: Record<string, string> = {
-  descent: "North Carolina",
-  radar: "Hurricane Helene · 26–27 Sep 2024 · archived NEXRAD",
-  snap: "Old Fort · McDowell County",
-  reveal: "Maxar Open Data · before / after",
-  extrude: "764 buildings classified · xView2 damage scale",
-  network: "hundreds of live gauges, statewide",
-  flood: "National Water Model flood forecast",
+/**
+ * Phase I — lower-third callouts (I1). All-caps; every figure is a real number
+ * from the baked pipeline output (764 = old_fort.geojson feature count, 868 =
+ * sensors.json length) or a plain label where there is no confirmed figure.
+ * `{n}` marks the digits that get the brief "analyzing" settle (I4).
+ */
+const LOWER_THIRD: Record<string, string> = {
+  descent: "",
+  radar: "Hurricane Helene · NEXRAD archive",
+  snap: "Old Fort · McDowell County, NC",
+  reveal: "Maxar Open Data · 2022 / 2024",
+  extrude: "{764} buildings assessed",
+  network: "{868} live sensors",
+  flood: "National Water Model · flood forecast",
   history: "",
 };
+
+/** deterministic 0..1 hash — used for the I4 digit scramble so playback stays
+ *  frame-identical (no Math.random). Quantised so it is stable within a step. */
+const hash01 = (seed: number) => {
+  const x = Math.sin(seed * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+/**
+ * I4 — render a number with a sub-0.5s "system is computing" settle: each digit
+ * scrambles, then locks left-to-right. `t` is ms since the number appeared.
+ */
+function analyzingDigits(value: number, t: number): string {
+  const digits = String(value).split("");
+  const LOCK = 120; // ms between each digit locking
+  const SETTLE = LOCK * digits.length + 90;
+  if (t >= SETTLE) return String(value);
+  return digits
+    .map((d, i) => {
+      if (t >= (i + 1) * LOCK) return d;
+      return String(Math.floor(hash01(Math.floor(t / 40) + i * 17.3) * 10));
+    })
+    .join("");
+}
+
+/** I2 — format a camera centre as a mission-style coordinate stamp. */
+const fmtCoord = (lon: number, lat: number) =>
+  `${Math.abs(lat).toFixed(4)}°${lat >= 0 ? "N" : "S"}  ${Math.abs(lon).toFixed(4)}°${lon >= 0 ? "E" : "W"}`;
+
+const MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+/**
+ * I2 — during the radar timelapse the telemetry shows the ACTUAL archive time
+ * of the frame on screen (Sept 2024), not now. Derived from the manifest epoch
+ * in UTC, so it is identical on every playback.
+ */
+const radarStampAt = (epochMs: number) => {
+  const d = new Date(epochMs);
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
+  return `${String(d.getUTCDate()).padStart(2, "0")} ${MON[d.getUTCMonth()]} ${d.getUTCFullYear()} · ${hh}${mm}Z`;
+};
+
+/** I6 — a 1° lat/long graticule across the wider region, as GeoJSON lines. */
+function makeGraticule(): GeoJSON.FeatureCollection {
+  const lines: GeoJSON.Feature[] = [];
+  for (let lon = -92; lon <= -68; lon += 1) {
+    lines.push({
+      type: "Feature",
+      properties: {},
+      geometry: { type: "LineString", coordinates: [[lon, 26], [lon, 42]] },
+    });
+  }
+  for (let lat = 26; lat <= 42; lat += 1) {
+    lines.push({
+      type: "Feature",
+      properties: {},
+      geometry: { type: "LineString", coordinates: [[-92, lat], [-68, lat]] },
+    });
+  }
+  return { type: "FeatureCollection", features: lines };
+}
 
 const cleanStorm = (s: string) =>
   s
@@ -67,7 +134,17 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
   const titleRef = useRef<HTMLDivElement | null>(null);
   const titleLogoRef = useRef<HTMLImageElement | null>(null);
   const titleRuleRef = useRef<HTMLDivElement | null>(null);
-  const captionRef = useRef<HTMLDivElement | null>(null);
+  // Phase I overlays
+  const l3Ref = useRef<HTMLDivElement | null>(null);
+  const l3RuleRef = useRef<HTMLDivElement | null>(null);
+  const l3TextRef = useRef<HTMLDivElement | null>(null);
+  const telRef = useRef<HTMLDivElement | null>(null);
+  const telCoordRef = useRef<HTMLDivElement | null>(null);
+  const telTagRef = useRef<HTMLDivElement | null>(null);
+  const scanRef = useRef<HTMLDivElement | null>(null);
+  const scanFieldRef = useRef<HTMLDivElement | null>(null);
+  const sitrepRef = useRef<HTMLDivElement | null>(null);
+  const sitrepRuleRef = useRef<HTMLDivElement | null>(null);
 
   const mapRef = useRef<MLMap | null>(null);
   const overlayRef = useRef<MapboxOverlay | null>(null);
@@ -213,6 +290,25 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
         assets.sensors.find((s) => s.kind === "flood") ??
         null;
 
+      // I6 — situation-map graticule. Added FIRST so it sits under nc-fill /
+      // nc-line and under the deck overlay; a track fades line-opacity per beat.
+      try {
+        if (map.getStyle() && !map.getSource("graticule")) {
+          map.addSource("graticule", {
+            type: "geojson",
+            data: makeGraticule() as unknown as GeoJSON.FeatureCollection,
+          });
+          map.addLayer({
+            id: "graticule",
+            type: "line",
+            source: "graticule",
+            paint: { "line-color": C.inkFaint, "line-width": 0.6, "line-opacity": 0 },
+          });
+        }
+      } catch {
+        /* teardown race — safe to skip */
+      }
+
       map.addSource("nc", { type: "geojson", data: assets.ncOutline as unknown as string });
       map.addLayer({
         id: "nc-fill",
@@ -314,6 +410,22 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
         map.setPaintProperty("nc-line", "line-opacity", 0.95 * o);
         map.setPaintProperty("nc-line", "line-width", 1.75);
         map.setPaintProperty("nc-fill", "fill-opacity", 0.11 * o);
+      },
+    });
+
+    // I6 — graticule opacity. Visible on the two WIDE establishing beats (the
+    // descent, and the pull-back to the statewide sensor view); hidden through
+    // the radar plate and the Old Fort close-ups where a 1° grid is meaningless.
+    tl.add({
+      start: 0,
+      end: TOTAL,
+      update: (_p, { ms }) => {
+        const map = mapRef.current;
+        if (!map || !map.getLayer("graticule")) return;
+        const descent = clamp01(ms / 700) * (1 - clamp01((ms - B[1].t0) / 500));
+        const wide =
+          clamp01((ms - (B[4].t1 - 300)) / 800) * (1 - clamp01((ms - (B[8].t0 - 220)) / 200));
+        map.setPaintProperty("graticule", "line-opacity", 0.16 * Math.max(descent, wide));
       },
     });
 
@@ -449,26 +561,140 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
       },
     });
 
-    // lower-third caption (all beats except the title)
+    // -------- Phase I overlays (all playhead-driven; no CSS transitions) -----
+
+    // I1 + I4 — lower-third data callout. Sharp slide-in from the left, hard
+    // cut out; the {digits} in LOWER_THIRD get a brief "analyzing" settle.
+    let lastL3 = " ";
     tl.add({
       start: 0,
-      end: B[8].t0,
+      end: TOTAL,
       update: (_p, { ms }) => {
-        const el = captionRef.current;
-        if (!el) return;
-        if (ms >= B[8].t0) {
-          el.style.opacity = "0";
+        const wrap = l3Ref.current;
+        const rule = l3RuleRef.current;
+        const text = l3TextRef.current;
+        if (!wrap || !rule || !text) return;
+        const b = beatAt(ms);
+        const raw = ms >= B[8].t0 ? "" : LOWER_THIRD[b.id] ?? "";
+        if (!raw) {
+          wrap.style.opacity = "0";
+          lastL3 = "";
           return;
         }
-        const b = beatAt(ms);
-        const local = within(ms, b);
-        const vis = clamp01(local / 0.1) * (1 - clamp01((local - 0.82) / 0.18));
-        el.textContent = CAPTION[b.id] ?? "";
-        el.style.opacity = String(0.92 * vis);
+        const local = ms - b.t0;
+        const beatDur = b.t1 - b.t0;
+        // sharp slide-in over 170ms, hard cut out over the last 110ms
+        const slide = easing.out(clamp01(local / 170));
+        const outK = 1 - clamp01((local - (beatDur - 200)) / 110);
+        wrap.style.opacity = String(clamp01(local / 70) * outK);
+        wrap.style.transform = `translateX(${(1 - slide) * -44}px)`;
+        rule.style.transform = `scaleX(${easing.out(clamp01(local / 150))})`;
+
+        // I4 — digit settle. Rebuild innerHTML only when the rendered string
+        // actually changes (keeps playback cheap and deterministic).
+        const m = raw.match(/^\{(\d+)\}(.*)$/);
+        let str: string;
+        if (m) {
+          const shown = analyzingDigits(Number(m[1]), local - 150);
+          str = `<span class="num">${shown}</span>${m[2].toUpperCase()}`;
+        } else {
+          str = raw.toUpperCase();
+        }
+        if (str !== lastL3) {
+          text.innerHTML = str;
+          lastL3 = str;
+        }
       },
     });
 
-    // title card (B9) — hard cut
+    // I2 — persistent telemetry readout. Real coordinates on live beats; the
+    // real Sept-2024 archive time during the radar timelapse; the scrubbed
+    // year during the history beat. Never `Date.now()`.
+    tl.add({
+      start: 0,
+      end: TOTAL,
+      update: (_p, { ms }) => {
+        const wrap = telRef.current;
+        const coord = telCoordRef.current;
+        const tag = telTagRef.current;
+        if (!wrap || !coord || !tag) return;
+        if (ms >= B[8].t0) {
+          wrap.style.opacity = "0";
+          return;
+        }
+        wrap.style.opacity = String(clamp01(ms / 400) * (1 - clamp01((ms - (B[8].t0 - 220)) / 200)) * 0.92);
+
+        const b = beatAt(ms);
+        if (b.id === "radar") {
+          const frames = assetsRef.current?.radar.manifest.frames ?? [];
+          if (frames.length) {
+            const f = Math.min(frames.length - 1, Math.floor(within(ms, b) * frames.length));
+            coord.textContent = radarStampAt(frames[f].at);
+          }
+          tag.textContent = "NEXRAD Level III";
+        } else if (b.id === "history") {
+          const q = easing.inOut(within(ms, b));
+          coord.textContent = `${Math.round(lerp(1996.5, 2025.2, q))}`;
+          tag.textContent = "FEMA declarations";
+        } else {
+          const c = cameraAt(ms).center;
+          coord.textContent = fmtCoord(c[0], c[1]);
+          tag.textContent =
+            b.id === "reveal"
+              ? "Maxar Open Data"
+              : b.id === "extrude"
+                ? "xView2 · xBD"
+                : b.id === "network"
+                  ? "NWPS · USGS · NWS"
+                  : b.id === "flood"
+                    ? "Nat'l Water Model"
+                    : "SITREP // active";
+        }
+      },
+    });
+
+    // I3 — scan-line wipe on the cut INTO the analysis beat (extrude). One
+    // crisp accent line sweeping top→bottom; a flat, faint accent field as it
+    // passes. Callback to the logo / radar-ring scan motif.
+    tl.add({
+      start: 0,
+      end: TOTAL,
+      update: (_p, { ms }) => {
+        const line = scanRef.current;
+        const field = scanFieldRef.current;
+        if (!line || !field) return;
+        const t0 = B[4].t0 - 160;
+        const local = ms - t0;
+        const on = local >= 0 && local <= 520;
+        show(line, on);
+        show(field, on);
+        if (!on) return;
+        const p = clamp01(local / 420);
+        line.style.transform = `translateY(${(p * 100).toFixed(2)}vh)`;
+        line.style.opacity = p > 0.01 && p < 0.99 ? "0.9" : "0";
+        field.style.opacity = String(0.06 * Math.sin(p * Math.PI));
+      },
+    });
+
+    // I5 — opening situation-report header. Flat document title, hard cut in
+    // and out, does not slow the descent.
+    tl.add({
+      start: 0,
+      end: 1600,
+      update: (_p, { ms }) => {
+        const wrap = sitrepRef.current;
+        const rule = sitrepRuleRef.current;
+        if (!wrap || !rule) return;
+        const on = ms < 1450;
+        show(wrap, on);
+        if (!on) return;
+        wrap.style.opacity = ms >= 60 && ms < 1280 ? "1" : "0";
+        wrap.style.transform = `translateX(${(1 - easing.out(clamp01(ms / 240))) * -22}px)`;
+        rule.style.transform = `scaleX(${easing.out(clamp01((ms - 120) / 300))})`;
+      },
+    });
+
+    // title card (B9) — hard cut, then held dead still (I5 close)
     tl.add({
       start: B[8].t0,
       end: TOTAL,
@@ -478,14 +704,15 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
         if (!active) return;
         for (const el of [radarWrapRef.current, wipeRef.current, floodRef.current, histWrapRef.current])
           show(el, false);
-        if (captionRef.current) captionRef.current.style.opacity = "0";
+        if (l3Ref.current) l3Ref.current.style.opacity = "0";
+        if (telRef.current) telRef.current.style.opacity = "0";
         const k = easing.out(clamp01((ms - (B[8].t0 + 120)) / 420));
         if (titleLogoRef.current) {
           titleLogoRef.current.style.opacity = String(k);
-          titleLogoRef.current.style.transform = `translateY(${(1 - k) * 12}px)`;
+          titleLogoRef.current.style.transform = `translateY(${(1 - k) * 8}px)`;
         }
         if (titleRuleRef.current)
-          titleRuleRef.current.style.transform = `scaleX(${easing.out(clamp01((ms - (B[8].t0 + 360)) / 460))})`;
+          titleRuleRef.current.style.transform = `scaleX(${easing.out(clamp01((ms - (B[8].t0 + 340)) / 440))})`;
       },
     });
   }
@@ -556,7 +783,28 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
         <div className="demo-hist-cap">North Carolina · federally declared disasters</div>
       </div>
 
-      <div ref={captionRef} className="demo-caption" />
+      {/* I3 — scan-line wipe */}
+      <div ref={scanFieldRef} className="demo-scanline-field" hidden />
+      <div ref={scanRef} className="demo-scanline" hidden />
+
+      {/* I5 — opening situation-report header */}
+      <div ref={sitrepRef} className="demo-sitrep" hidden>
+        <div className="demo-sitrep-kicker">Situation report</div>
+        <div ref={sitrepRuleRef} className="demo-sitrep-rule" />
+        <div className="demo-sitrep-place">North Carolina</div>
+      </div>
+
+      {/* I2 — persistent telemetry readout */}
+      <div ref={telRef} className="demo-telemetry">
+        <div ref={telCoordRef} className="demo-telemetry-coord" />
+        <div ref={telTagRef} className="demo-telemetry-tag" />
+      </div>
+
+      {/* I1 — lower-third data callout */}
+      <div ref={l3Ref} className="demo-l3">
+        <div ref={l3RuleRef} className="demo-l3-rule" />
+        <div ref={l3TextRef} className="demo-l3-text" />
+      </div>
 
       <div ref={titleRef} className="demo-title" hidden>
         <img ref={titleLogoRef} className="demo-title-logo" alt="NC Recon" />

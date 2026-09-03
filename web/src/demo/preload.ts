@@ -174,7 +174,8 @@ export async function preload(
     onProgress(0.72 + (0.2 * (i + 1)) / WARMUP_CAMS.length, `warming ${i + 1}/${WARMUP_CAMS.length}`);
   }
   // pass 2: settle at each beat's hold camera so nothing is still in flight
-  for (const ms of [200, 3600, 6900, 8000, 10200, 13400]) {
+  // (samples recomputed for the Phase I retimed boundaries)
+  for (const ms of [300, 3400, 6400, 8000, 10600, 13300]) {
     const c = cameraAt(ms);
     map.jumpTo({ center: c.center, zoom: c.zoom, pitch: c.pitch, bearing: c.bearing });
     await idle();

@@ -213,21 +213,126 @@
   color: var(--ink-faint);
 }
 
-/* ---- lower-third caption ------------------------------------------- */
-.demo-caption {
+/* =================================================================
+   Phase I — documentary / government-briefing treatment.
+   Every overlay here is positioned/faded by a timeline track writing
+   inline style per frame (deterministic playback). NOTHING in this
+   block uses `transition`, `animation`, gradient, glow or blur.
+   ================================================================= */
+
+/* ---- I1: lower-third data callout — accent rule + all-caps mono,
+   no card background. Slid in from the left by its track. ---------- */
+.demo-l3 {
   position: absolute;
-  left: 50%;
-  bottom: 8%;
-  transform: translateX(-50%);
+  left: 4.5%;
+  bottom: 8.5%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   opacity: 0;
-  font-size: 13px;
-  letter-spacing: 0.12em;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+.demo-l3-rule {
+  width: 190px;
+  height: 3px;
+  background: var(--accent);
+  transform-origin: left center;
+}
+.demo-l3-text {
+  font: 500 14px/1.1 var(--mono);
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--ink);
-  background: rgba(23, 25, 30, 0.74);
-  border: 1px solid var(--line);
-  padding: 7px 14px;
   white-space: nowrap;
+}
+/* the "analyzing" digits (I4) inside a callout */
+.demo-l3-text .num {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* ---- I2: persistent telemetry readout — mission-control corner
+   stamp. Real coords / archive date, driven off the playhead. ------ */
+.demo-telemetry {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  opacity: 0;
+  pointer-events: none;
+  text-align: right;
+}
+.demo-telemetry-coord {
+  font: 400 11px/1.2 var(--mono);
+  letter-spacing: 0.12em;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.demo-telemetry-tag {
+  font: 400 10px/1.2 var(--mono);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+/* ---- I3: scan-line wipe — a single crisp accent line sweeping the
+   frame at the cut into the analysis beat. Callback to the logo /
+   radar-ring scan motif. --------------------------------------------- */
+.demo-scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: var(--accent);
+  opacity: 0;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+/* the faint field it passes over — flat accent tint, no gradient */
+.demo-scanline-field {
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---- I5: opening situation-report header — flat document title,
+   precise type + one rule line, hard cut in and out. --------------- */
+.demo-sitrep {
+  position: absolute;
+  left: 6%;
+  top: 12%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  opacity: 0;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+.demo-sitrep-kicker {
+  font: 500 12px/1 var(--mono);
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.demo-sitrep-rule {
+  width: 96px;
+  height: 2px;
+  background: var(--accent);
+  transform-origin: left center;
+}
+.demo-sitrep-place {
+  font: 600 clamp(28px, 4.6vw, 52px) / 1.05 "Geist", var(--font);
+  letter-spacing: 0.01em;
+  color: var(--ink);
 }
 
 /* ---- Beat 9: title card ------------------------------------------- */

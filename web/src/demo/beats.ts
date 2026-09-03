@@ -57,16 +57,20 @@ export interface Beat {
 }
 
 // --- beat boundaries ------------------------------------------------------- //
+// Phase I retime (§I7 — deliberate pacing contrast, same ~17.8s total):
+// the two HELD beats breathe longer (reveal +300, title +400); the time is
+// taken back from the faster analysis/transition beats (radar -300, network
+// -200, history -200). The two URGENT beats (descent, snap) are untouched.
 export const BEATS: Beat[] = [
   { id: "descent", name: "Descent", t0: 0, t1: 2000 },
-  { id: "radar", name: "Helene radar timelapse", t0: 2000, t1: 5200 },
-  { id: "snap", name: "Snap to western NC", t0: 5200, t1: 7000 },
-  { id: "reveal", name: "Before / after", t0: 7000, t1: 9200 },
+  { id: "radar", name: "Helene radar timelapse", t0: 2000, t1: 4900 },
+  { id: "snap", name: "Snap to western NC", t0: 4900, t1: 6700 },
+  { id: "reveal", name: "Before / after", t0: 6700, t1: 9200 },
   { id: "extrude", name: "Damage model rises", t0: 9200, t1: 11200 },
-  { id: "network", name: "Statewide sensor network", t0: 11200, t1: 13400 },
-  { id: "flood", name: "Flood risk flash", t0: 13400, t1: 14600 },
-  { id: "history", name: "Disaster history scrub", t0: 14600, t1: 16600 },
-  { id: "title", name: "Title card", t0: 16600, t1: 17800 },
+  { id: "network", name: "Statewide sensor network", t0: 11200, t1: 13200 },
+  { id: "flood", name: "Flood risk flash", t0: 13200, t1: 14400 },
+  { id: "history", name: "Disaster history scrub", t0: 14400, t1: 16200 },
+  { id: "title", name: "Title card", t0: 16200, t1: 17800 },
 ];
 export const TOTAL = BEATS[BEATS.length - 1].t1;
 
@@ -91,24 +95,25 @@ const OF_FLAT: Cam = { center: OLDFORT, zoom: 16, pitch: 0, bearing: 0 };
 const OF_3D: Cam = { center: OLDFORT, zoom: 16.4, pitch: 52, bearing: -17 };
 const STATEWIDE_OUT: Cam = { center: NC_CENTER, zoom: 6.28, pitch: 0, bearing: 0 };
 
+// `until` MUST equal the matching BEATS[].t1 or the camera desyncs from the beats.
 const SEGS: Seg[] = [
   // B1 descent — fast off the line, eases to rest
   { until: 2000, from: START, to: STATEWIDE, ease: easing.outExpo },
   // B2 radar — near-still, a hair of push so it isn't dead
-  { until: 5200, from: STATEWIDE, to: STATEWIDE_TIGHT, ease: easing.linear },
+  { until: 4900, from: STATEWIDE, to: STATEWIDE_TIGHT, ease: easing.linear },
   // B3 snap — fast swoop that decelerates hard into Old Fort (arrives ~55%
   // through the beat, leaving room for the imagery to resolve before the wipe)
-  { until: 7000, from: STATEWIDE_TIGHT, to: OF_FLAT, ease: easing.out },
+  { until: 6700, from: STATEWIDE_TIGHT, to: OF_FLAT, ease: easing.out },
   // B4 before/after — hold
   { until: 9200, from: OF_FLAT, to: OF_FLAT, ease: easing.linear },
   // B5 extrude — smooth push into 3-D so the eye tracks the rise
   { until: 11200, from: OF_FLAT, to: OF_3D, ease: easing.inOut },
   // B6 pull back — fast out, settle
-  { until: 13400, from: OF_3D, to: STATEWIDE_OUT, ease: easing.outQuint },
+  { until: 13200, from: OF_3D, to: STATEWIDE_OUT, ease: easing.outQuint },
   // B7 flood flash — hold
-  { until: 14600, from: STATEWIDE_OUT, to: STATEWIDE_OUT, ease: easing.linear },
+  { until: 14400, from: STATEWIDE_OUT, to: STATEWIDE_OUT, ease: easing.linear },
   // B8 history — hold (the scrub is a DOM strip)
-  { until: 16600, from: STATEWIDE_OUT, to: STATEWIDE_OUT, ease: easing.linear },
+  { until: 16200, from: STATEWIDE_OUT, to: STATEWIDE_OUT, ease: easing.linear },
   // B9 title — hold (map is hidden)
   { until: 17800, from: STATEWIDE_OUT, to: STATEWIDE_OUT, ease: easing.linear },
 ];

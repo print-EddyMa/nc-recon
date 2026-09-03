@@ -13,7 +13,10 @@ import puppeteer from "puppeteer-core";
 const BASE = process.argv[2] || "http://localhost:4173";
 const URL = `${BASE}/demo.html?fixed=1&debug=1`;
 const RUNS = 10;
-const SAMPLE_MS = [0, 1000, 2600, 3800, 4900, 6200, 7000, 8200, 9600, 10600, 12200, 13800, 15600, 16900, 17800];
+// sample points land mid-beat under the Phase I retimed boundaries; includes
+// one inside each lengthened HELD beat (7800 reveal, 16600 title) and one on
+// the scan-line wipe into the extrude (9300).
+const SAMPLE_MS = [0, 1200, 2400, 3600, 4600, 5800, 6600, 7800, 8900, 9300, 10400, 12200, 13800, 15300, 16600, 17800];
 const CHROME =
   process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
