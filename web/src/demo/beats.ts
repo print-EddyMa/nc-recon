@@ -89,7 +89,9 @@ interface Seg {
 }
 
 const STATEWIDE: Cam = { center: NC_CENTER, zoom: 6.32, pitch: 0, bearing: 0 };
-const STATEWIDE_TIGHT: Cam = { center: NC_CENTER, zoom: 6.42, pitch: 0, bearing: 0 };
+// B2 eases back and drifts SW toward the storm's approach so the wide NEXRAD
+// plate reads in and out over GA / TN / SC / VA / the Atlantic, NC still central.
+const STORM_WIDE: Cam = { center: [-80.5, 35.25], zoom: 6.02, pitch: 0, bearing: 0 };
 const START: Cam = { center: [-80.6, 37.7], zoom: 4.7, pitch: 0, bearing: 0 };
 const OF_FLAT: Cam = { center: OLDFORT, zoom: 16, pitch: 0, bearing: 0 };
 const OF_3D: Cam = { center: OLDFORT, zoom: 16.4, pitch: 52, bearing: -17 };
@@ -99,11 +101,11 @@ const STATEWIDE_OUT: Cam = { center: NC_CENTER, zoom: 6.28, pitch: 0, bearing: 0
 const SEGS: Seg[] = [
   // B1 descent — fast off the line, eases to rest
   { until: 2000, from: START, to: STATEWIDE, ease: easing.outExpo },
-  // B2 radar — near-still, a hair of push so it isn't dead
-  { until: 4900, from: STATEWIDE, to: STATEWIDE_TIGHT, ease: easing.linear },
+  // B2 radar — gentle ease-back + SW drift so the storm fills in from the edges
+  { until: 4900, from: STATEWIDE, to: STORM_WIDE, ease: easing.out },
   // B3 snap — fast swoop that decelerates hard into Old Fort (arrives ~55%
   // through the beat, leaving room for the imagery to resolve before the wipe)
-  { until: 6700, from: STATEWIDE_TIGHT, to: OF_FLAT, ease: easing.out },
+  { until: 6700, from: STORM_WIDE, to: OF_FLAT, ease: easing.out },
   // B4 before/after — hold
   { until: 9200, from: OF_FLAT, to: OF_FLAT, ease: easing.linear },
   // B5 extrude — smooth push into 3-D so the eye tracks the rise

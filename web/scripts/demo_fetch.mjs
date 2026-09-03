@@ -40,14 +40,17 @@ const CHROME =
 const OLDFORT = { lon: -82.1804, lat: 35.6293, zoom: 16 };
 const SHOT_W = 1600;
 const SHOT_H = 1000;
-// NC bbox in EPSG:3857, matches NC_BBOX in src/lib/nc.ts / radar.ts
+// Beat-2 NEXRAD plate box in EPSG:3857. Deliberately WIDER than NC so Helene is
+// seen sweeping in and out over GA / SC / TN / VA / the Atlantic with NC still
+// the framed focus. MUST match RADAR_BBOX in src/demo/Stage.tsx.
+const RADAR_BBOX4326 = [-88, 30, -74, 39.5];
 const R = 6378137;
 const merc = (lon, lat) => [
   (lon * Math.PI * R) / 180,
   R * Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360)),
 ];
-const [ncX0, ncY0] = merc(-84.55, 33.75);
-const [ncX1, ncY1] = merc(-75.4, 36.7);
+const [ncX0, ncY0] = merc(RADAR_BBOX4326[0], RADAR_BBOX4326[1]);
+const [ncX1, ncY1] = merc(RADAR_BBOX4326[2], RADAR_BBOX4326[3]);
 
 const IEM_WMST =
   "https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r-t.cgi";
@@ -71,7 +74,7 @@ async function radar() {
     const iso = new Date(t).toISOString().replace(/\.\d{3}Z$/, "Z");
     // match the EPSG:3857 bbox aspect so the reflectivity isn't squished
     const aspect = (ncX1 - ncX0) / (ncY1 - ncY0);
-    const H = 600;
+    const H = 720; // a touch higher-res since the plate now covers more ground
     const W = Math.round(H * aspect);
     const q = new URLSearchParams({
       SERVICE: "WMS",
@@ -107,7 +110,7 @@ async function radar() {
   writeFileSync(
     resolve(OUT, "radar/manifest.json"),
     JSON.stringify(
-      { bbox3857: [ncX0, ncY0, ncX1, ncY1], bbox4326: [-84.55, 33.75, -75.4, 36.7], frames },
+      { bbox3857: [ncX0, ncY0, ncX1, ncY1], bbox4326: RADAR_BBOX4326, frames },
       null,
       2,
     ),

@@ -24,7 +24,11 @@ interface Props {
   onFrame?: (ctx: FrameCtx) => void;
 }
 
-const NC_BBOX: [number, number, number, number] = [-84.55, 33.75, -75.4, 36.7];
+// Regional box for the Beat-2 NEXRAD plate — wide enough that Helene is seen
+// sweeping in and out over GA / SC / TN / VA / the Atlantic, with NC still the
+// framed focus. MUST match BBOX4326 in scripts/demo_fetch.mjs `radar()` and
+// public/demo/radar/manifest.json.
+const RADAR_BBOX: [number, number, number, number] = [-88, 30, -74, 39.5];
 const HIST_PX_PER_YEAR = 118;
 const HIST_X = (year: number) => (year - 1990) * HIST_PX_PER_YEAR;
 
@@ -381,8 +385,8 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
     }
     const rw = radarWrapRef.current;
     if (rw && !rw.hidden) {
-      const p0 = map.project([NC_BBOX[0], NC_BBOX[3]]);
-      const p1 = map.project([NC_BBOX[2], NC_BBOX[1]]);
+      const p0 = map.project([RADAR_BBOX[0], RADAR_BBOX[3]]);
+      const p1 = map.project([RADAR_BBOX[2], RADAR_BBOX[1]]);
       rw.style.transform = `translate(${p0.x}px,${p0.y}px)`;
       rw.style.width = `${p1.x - p0.x}px`;
       rw.style.height = `${p1.y - p0.y}px`;
