@@ -499,10 +499,11 @@ export default function Home({
         )}
 
         <div className="mt-12 border-t border-line pt-5 text-2xs leading-relaxed text-ink-faint">
-          Live feeds from NOAA NWPS, USGS NWIS, the National Weather Service, the National
-          Hurricane Center, NASA FIRMS, NCDOT DriveNC, and OpenFEMA. Imagery from Maxar
-          Open Data, building footprints from OpenStreetMap. Damage model: the xView2 CMU
-          baseline classifier fused with a change-detection pass.{" "}
+          Live feeds from NOAA NWPS and the National Weather Service, the National Hurricane
+          Center, USGS NWIS, NASA FIRMS, NCDOT DriveNC, the NC State Climate Office, IEM
+          NEXRAD radar, and OpenFEMA. Imagery from Maxar Open Data, building footprints from
+          OpenStreetMap. Damage model: the xView2 CMU baseline classifier fused with a
+          change-detection pass.{" "}
           <button onClick={onOpenAbout} className="pressable text-accent hover:underline">
             About NC Recon
           </button>

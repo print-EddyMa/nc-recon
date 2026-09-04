@@ -40,9 +40,21 @@ const RISK_SOURCES: Source[] = [
       "Temperature, wind, rainfall, and RAWS fuel-moisture from the NC State Climate Office CLOUDS API (free key).",
   },
   {
+    field: "Active fire",
+    source: "NASA FIRMS",
+    detail:
+      "Near-real-time VIIRS thermal anomalies over North Carolina from the past 24–72 hours (free map key).",
+  },
+  {
     field: "Active storms",
     source: "NHC",
     detail: "Forecast cone, track line, and watch/warning zones — shown only while an Atlantic storm is active.",
+  },
+  {
+    field: "Live radar",
+    source: "IEM NEXRAD",
+    detail:
+      "NWS base-reflectivity mosaic from the Iowa Environmental Mesonet — a rolling one-hour loop, with an archive back to 1995 for the history timeline.",
   },
   {
     field: "Ground truth",
@@ -107,8 +119,8 @@ export default function About({ onEnter }: Props) {
         <section className="mt-14">
           <h2 className="section-title mb-1 text-[0.95rem]">Before and during — the risk monitor</h2>
           <p className="measure mb-5 text-xs text-ink-faint">
-            Seven live feeds, keyless except fire weather. Each falls back to a committed snapshot
-            when its upstream is unreachable, so the map is never blank.
+            Nine live feeds, keyless except fire weather and active-fire detection. Most fall back to
+            a committed snapshot when the upstream is unreachable, so the map is never blank.
           </p>
           <SourceTable rows={RISK_SOURCES} />
         </section>

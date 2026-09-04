@@ -240,7 +240,7 @@ const jobs = [
     () =>
       getJSON("https://api.weather.gov/alerts/active?area=NC", {
         headers: {
-          "User-Agent": "TerraTriage/1.0 (github.com/terratriage)",
+          "User-Agent": "NCRecon/1.0 (NC disaster monitor; contact via project repo)",
           Accept: "application/geo+json",
         },
       }).then(nwsSnapshot),

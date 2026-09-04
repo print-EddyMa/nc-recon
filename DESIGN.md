@@ -1,4 +1,4 @@
-# Design — TerraTriage
+# Design — NC Recon
 
 Locked design system. This file is transcribed from the shipped implementation
 (`web/src/index.css`, `web/tailwind.config.js`, `web/src/lib/damage.ts`,

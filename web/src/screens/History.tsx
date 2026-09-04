@@ -373,6 +373,13 @@ function EventDetail({
   );
   const imgEra = hasImageryEra(d);
 
+  // Lead with the name the rest of the product uses (events.json, e.g.
+  // "Hurricane Helene") when an assessed event maps to this declaration; keep
+  // FEMA's own title as a sub-note so the official record still shows.
+  const femaTitle = cleanTitle(d.declarationTitle);
+  const eventName = matches.length ? matches[0].event.name : null;
+  const showFemaNote = !!eventName && eventName.toLowerCase() !== femaTitle.toLowerCase();
+
   return (
     <div>
       <div className="flex items-center gap-2">
@@ -382,8 +389,11 @@ function EventDetail({
         </span>
       </div>
       <h2 className="mt-1 font-display text-lg font-semibold leading-tight text-ink">
-        {cleanTitle(d.declarationTitle)}
+        {eventName ?? femaTitle}
       </h2>
+      {showFemaNote && (
+        <p className="mt-0.5 text-2xs text-ink-faint">FEMA declaration title: {femaTitle}</p>
+      )}
       <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-2xs text-ink-faint">
         <div>
           <dt className="inline text-ink-dim">Declared</dt>{" "}

@@ -531,7 +531,13 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
     // a disabled layer isn't an error, say why in plain words
     let metaLine = "loading…";
     if (res) {
-      if (!res.disabled) metaLine = `${count.toLocaleString()} · ${res.source.replace(/^[^·]+· /, "")}`;
+      // `res.source` names the feed and sometimes tacks on its own count
+      // ("USGS NWIS · 291 gages"); drop both the source-name prefix and a
+      // leading count so the row doesn't read "291 · 291 gages"
+      if (!res.disabled)
+        metaLine = `${count.toLocaleString()} · ${res.source
+          .replace(/^[^·]+·\s*/, "")
+          .replace(/^[\d,]+\s+/, "")}`;
       else if (id === "climate" || id === "fire") metaLine = "optional, add a free key";
       else if (id === "storm") metaLine = "none active";
       else metaLine = "unavailable";
