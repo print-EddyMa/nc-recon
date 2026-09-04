@@ -61,11 +61,17 @@ export interface Beat {
 // the two HELD beats breathe longer (reveal +300, title +400); the time is
 // taken back from the faster analysis/transition beats (radar -300, network
 // -200, history -200). The two URGENT beats (descent, snap) are untouched.
+//
+// Post-Phase-I: snap widened 1800 → 2400ms (taken from reveal, which holds
+// under the full-frame before/after wipe and can spare it). A z6→z16 plunge in
+// ~1s outruns MapLibre's per-frame vector-tile upload even with every tile
+// already cache-resident — the frame flew over bare ground. 2400ms gives the
+// upload pipeline enough headroom that the swoop stays painted.
 export const BEATS: Beat[] = [
   { id: "descent", name: "Descent", t0: 0, t1: 2000 },
   { id: "radar", name: "Helene radar timelapse", t0: 2000, t1: 4900 },
-  { id: "snap", name: "Snap to western NC", t0: 4900, t1: 6700 },
-  { id: "reveal", name: "Before / after", t0: 6700, t1: 9200 },
+  { id: "snap", name: "Snap to western NC", t0: 4900, t1: 7300 },
+  { id: "reveal", name: "Before / after", t0: 7300, t1: 9200 },
   { id: "extrude", name: "Damage model rises", t0: 9200, t1: 11200 },
   { id: "network", name: "Statewide sensor network", t0: 11200, t1: 13200 },
   { id: "flood", name: "Flood risk flash", t0: 13200, t1: 14400 },
@@ -103,9 +109,10 @@ const SEGS: Seg[] = [
   { until: 2000, from: START, to: STATEWIDE, ease: easing.outExpo },
   // B2 radar — gentle ease-back + SW drift so the storm fills in from the edges
   { until: 4900, from: STATEWIDE, to: STORM_WIDE, ease: easing.out },
-  // B3 snap — fast swoop that decelerates hard into Old Fort (arrives ~55%
-  // through the beat, leaving room for the imagery to resolve before the wipe)
-  { until: 6700, from: STORM_WIDE, to: OF_FLAT, ease: easing.out },
+  // B3 snap — fast swoop that decelerates hard into Old Fort (arrives ~45%
+  // through the now-wider beat, leaving room for the tiles to paint and the
+  // imagery to resolve before the wipe)
+  { until: 7300, from: STORM_WIDE, to: OF_FLAT, ease: easing.out },
   // B4 before/after — hold
   { until: 9200, from: OF_FLAT, to: OF_FLAT, ease: easing.linear },
   // B5 extrude — smooth push into 3-D so the eye tracks the rise
@@ -138,17 +145,3 @@ export function cameraAt(ms: number): Cam {
   }
   return SEGS[SEGS.length - 1].to;
 }
-
-/**
- * Cameras to pre-warm before playback: the ACTUAL sequence path sampled every
- * ~120ms across the whole map-visible span (0 → B7, where the camera then just
- * holds statewide). Dense enough that every fractional-zoom tile set the
- * playback crosses is already in MapLibre's cache — playback then makes zero
- * tile requests.
- */
-export const WARMUP_CAMS: Cam[] = (() => {
-  const out: Cam[] = [];
-  const end = BEATS[6].t1; // end of the flood beat; B7/B8 hold statewide, B9 no map
-  for (let ms = 0; ms <= end; ms += 120) out.push(cameraAt(ms));
-  return out;
-})();

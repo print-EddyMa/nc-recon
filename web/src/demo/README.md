@@ -23,25 +23,53 @@ The CARTO dark-matter basemap is **self-hosted** under `public/demo/basemap/`
 (style + every vector tile / glyph / sprite the camera path crosses) so
 playback makes **zero external network calls**.
 
+### Preload gate (`src/demo/preload.ts`)
+
+The "SPACE" prompt is held back until the run genuinely cannot pop-in:
+
+1. `await document.fonts.ready` — the stage `@import`s Geist from Google Fonts;
+   wait so no lower-third reflows mid-sequence.
+2. **HTTP-cache prewarm** — `fetch()` every file listed in
+   `public/demo/basemap/tiles/manifest.json` (~880 tiles + glyph ranges,
+   written by `demo_fetch.mjs`). `vite.config.ts` serves everything under
+   `demo/basemap/` `immutable`, so MapLibre's later requests are pure
+   in-memory hits — no revalidation round-trips stacking up behind the camera.
+3. **Warm walk** — step the real camera path at 60 ms and dwell to idle at each
+   sample, so every tile parses into MapLibre's tile cache.
+4. **Verification lap** — re-walk the whole path and require a lap that loads
+   *zero* new tiles (the honest "everything is resident" signal). Bounded; the
+   debug HUD shows `verified in N lap(s)` or `verify budget hit`.
+
+Even with every tile resident, a z6→z16 plunge in ~1 s outruns MapLibre's
+per-frame vector-tile upload, so **beat 3 (snap) is 2400 ms**, widened from
+1800 ms (time taken from the reveal, which holds under the full-frame wipe).
+
 ## Recording
 
 - open `http://localhost:4173/demo.html` (after `npm run build && npm run preview`)
   or `http://localhost:5173/demo.html` (`npm run dev`)
-- a full preload gates playback — the "SPACE" prompt appears only when every
-  asset is in memory and the basemap is warmed
+- wait for the **SPACE** prompt — see the preload-gate steps above
 - **Space / K** play-pause · **R** restart from frame 0 (instant, no reload) ·
   **F** browser fullscreen · **D** toggle the debug HUD
 - the stage is chrome-free with `cursor: none`; `?autoplay=1` starts on load,
-  `?debug=1` shows the timecode HUD, `?fixed=1` uses a fixed 60fps step
+  `?debug=1` shows the timecode HUD, `?fixed=1` uses a fixed 60fps step —
+  **use `?fixed=1` for frame-capture recording** so a slow capture frame slows
+  the playhead instead of letting the camera outrun the tile loader
 
 ## Regenerating / checking
 
 ```bash
-npm run demo:assets      # re-bake public/demo/ (network; ~1–2 min)
-npm run demo:validate     # 10x back-to-back: completes, zero external calls,
+npm run demo:assets      # re-bake public/demo/ + basemap/tiles/manifest.json
+                          #   (network; ~1–2 min)
+npm run demo:validate     # cold first play fetches ZERO map tiles, then 10x
+                          #   back-to-back: completes, zero external calls,
                           #   zero console errors, frame-identical
 npm run demo:shots        # screenshot each beat to a folder for review
 ```
+
+`public/demo/basemap/` is git-ignored (regenerated, not committed). If you have
+an older `basemap/` without `tiles/manifest.json`, re-run `demo:assets` — the
+preload falls back to warm-only (no HTTP prewarm) when the manifest is absent.
 
 Geography constants (`OLDFORT`, the camera keyframes, `OLDFORT_IMG_BOUNDS`) live
 in `src/demo/beats.ts` and **must stay in lockstep** with the path/grid math in

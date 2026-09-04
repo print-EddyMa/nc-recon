@@ -292,7 +292,7 @@ async function basemap() {
     if (Array.isArray(f)) stacks.add(f.join(","));
   }
   const glyphTpl = style.glyphs;
-  let gN = 0;
+  const glyphManifest = [];
   for (const stack of stacks) {
     const dir = resolve(OUTB, "glyphs", stack);
     mkdirSync(dir, { recursive: true });
@@ -302,13 +302,13 @@ async function basemap() {
         .replace("{range}", range);
       try {
         writeFileSync(resolve(dir, `${range}.pbf`), await getBuf(url));
-        gN++;
+        glyphManifest.push(`${stack}/${range}`);
       } catch {
         /* some ranges 404 — fine */
       }
     }
   }
-  console.log(`  basemap glyphs  ${gN} files, ${stacks.size} fontstacks`);
+  console.log(`  basemap glyphs  ${glyphManifest.length} files, ${stacks.size} fontstacks`);
 
   // 6c. vector tiles for the whole camera path
   const srcKey = Object.keys(style.sources)[0];
@@ -337,6 +337,7 @@ async function basemap() {
   let ok = 0;
   let bytes = 0;
   const list = [...want];
+  const tileManifest = [];
   for (let i = 0; i < list.length; i += 24) {
     await Promise.all(
       list.slice(i, i + 24).map(async (k) => {
@@ -349,6 +350,7 @@ async function basemap() {
           writeFileSync(resolve(d, `${y}.mvt`), b);
           ok++;
           bytes += b.length;
+          tileManifest.push(`${z}/${x}/${y}`);
         } catch {
           /* edge tile 404 — MapLibre tolerates a missing tile */
         }
@@ -357,6 +359,16 @@ async function basemap() {
     process.stdout.write(`\r  basemap tiles  ${ok}/${list.length}  (${(bytes / 1e6).toFixed(1)} MB)`);
   }
   console.log("");
+
+  // 6c-2. the manifest src/demo/preload.ts reads to pull every one of these
+  // files into the browser HTTP cache BEFORE playback is unlocked.
+  tileManifest.sort();
+  glyphManifest.sort();
+  writeFileSync(
+    resolve(OUTB, "tiles/manifest.json"),
+    JSON.stringify({ generated: new Date().toISOString().slice(0, 10), tiles: tileManifest, glyphs: glyphManifest }),
+  );
+  console.log(`  basemap manifest  ${tileManifest.length} tiles + ${glyphManifest.length} glyph ranges`);
 
   // 6d. rewrite the style to point at the local files
   style.sprite = "__BASE__demo/basemap/sprite";

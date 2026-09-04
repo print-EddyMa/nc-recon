@@ -9,7 +9,7 @@
  */
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { WARMUP_CAMS, OLDFORT, cameraAt } from "./beats";
+import { BEATS, OLDFORT, cameraAt, type Cam } from "./beats";
 
 const BASE = import.meta.env.BASE_URL;
 const D = `${BASE}demo/`;
@@ -65,6 +65,50 @@ const loadJSON = async <T>(src: string): Promise<T> => {
   return r.json() as Promise<T>;
 };
 
+interface TileManifest {
+  tiles: string[];
+  glyphs: string[];
+}
+
+/**
+ * Pull every baked basemap tile + glyph range into the browser HTTP cache
+ * BEFORE the map is even built. During playback MapLibre re-requests these from
+ * its Web Worker; with the bytes already cached each request is an instant hit
+ * (a ~1ms 304 on the dev server), so the camera never flies over a tile that is
+ * still downloading. `demo_fetch.mjs` writes the manifest from the exact set it
+ * bakes — see scripts/demo_fetch.mjs §6c.
+ */
+async function prewarmHttpCache(onStep: (frac: number) => void): Promise<number> {
+  let manifest: TileManifest;
+  try {
+    manifest = await loadJSON<TileManifest>(`${D}basemap/tiles/manifest.json`);
+  } catch {
+    // no manifest baked yet — the warm/verify passes below still gate playback,
+    // just without the HTTP-cache head start
+    return 0;
+  }
+  const urls = [
+    ...manifest.tiles.map((t) => `${D}basemap/tiles/${t}.mvt`),
+    ...manifest.glyphs.map((g) => `${D}basemap/glyphs/${g}.pbf`),
+  ];
+  let done = 0;
+  const BATCH = 48;
+  for (let i = 0; i < urls.length; i += BATCH) {
+    await Promise.all(
+      urls.slice(i, i + BATCH).map((u) =>
+        fetch(u)
+          .then((r) => r.arrayBuffer())
+          .catch(() => {})
+          .finally(() => {
+            done++;
+          }),
+      ),
+    );
+    onStep(done / urls.length);
+  }
+  return urls.length;
+}
+
 // A fully self-hosted copy of the CARTO dark-matter style — every vector tile,
 // glyph and sprite the camera path crosses lives under public/demo/basemap/
 // (baked by scripts/demo_fetch.mjs). Playback makes zero network calls.
@@ -80,7 +124,11 @@ export interface PreloadResult {
   assets: DemoAssets;
   map: maplibregl.Map;
   tilesWarmed: number;
+  /** how many verification laps it took to get a clean pass (0 = budget hit) */
+  verifyLaps: number;
 }
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 /**
  * @param container the (hidden) node the live demo map will live in
@@ -90,14 +138,23 @@ export async function preload(
   container: HTMLDivElement,
   onProgress: (p: number, label: string) => void,
 ): Promise<PreloadResult> {
-  const steps = 7;
-  let done = 0;
-  const tick = (label: string) => onProgress(++done / steps, label);
+  // progress is carved into weighted phases so the bar tracks real work:
+  // fonts+data 0→12%, http-cache prewarm 12→40%, style+map 40→50%,
+  // warm walk 50→82%, verification lap 82→100%.
+  const phase = (lo: number, hi: number) => (f: number, label: string) =>
+    onProgress(lo + (hi - lo) * Math.max(0, Math.min(1, f)), label);
 
-  onProgress(0, "manifest");
+  // 0. fonts — the stage CSS @imports Geist/Geist Mono from Google Fonts; wait
+  // for them here so no lower-third or telemetry text reflows mid-sequence.
+  onProgress(0, "fonts");
+  await Promise.race([
+    (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts?.ready ?? Promise.resolve(),
+    sleep(4000),
+  ]);
+
+  // 1. data + imagery
   const manifest = await loadJSON<RadarManifest>(`${D}radar/manifest.json`);
-  tick("radar frames");
-
+  phase(0, 0.12)(0.3, "data");
   const [images, oldFort, ncOutline, sensors, history] = await Promise.all([
     Promise.all(manifest.frames.map((f) => loadImage(`${D}${f.file}`))),
     loadJSON<GeoJSON.FeatureCollection>(`${D}old_fort.geojson`),
@@ -105,19 +162,23 @@ export async function preload(
     loadJSON<Sensor[]>(`${D}sensors.json`),
     loadJSON<HistoryRow[]>(`${D}history.json`),
   ]);
-  tick("imagery");
-
-  const [beforeImg, afterImg, logo, basemapStyle] = await Promise.all([
+  const [beforeImg, afterImg, logo] = await Promise.all([
     loadImage(`${D}oldfort_pre.png`),
     loadImage(`${D}oldfort_post.png`),
     loadImage(`${D}ncrecon-logo-dark.svg`),
-    loadBasemapStyle(),
   ]);
-  tick("basemap");
+  phase(0, 0.12)(1, "data");
 
-  // --- build the real demo map, hidden. `preserveDrawingBuffer` keeps the
-  // WebGL backbuffer readable between renders, which a recording/screenshot
-  // capture needs; `maxTileCacheSize` high so the warmup below is not undone.
+  // 2. pull EVERY baked basemap tile + glyph into the HTTP cache up front
+  const prewarmProg = phase(0.12, 0.4);
+  const prewarmed = await prewarmHttpCache((f) => prewarmProg(f, "caching basemap"));
+
+  // 3. style + hidden map
+  const basemapStyle = await loadBasemapStyle();
+  phase(0.4, 0.5)(0.4, "basemap");
+  // `preserveDrawingBuffer` keeps the WebGL backbuffer readable between renders
+  // (recording/screenshots need it); the big tile cache means a close-up push
+  // never evicts a low-zoom tile the later pull-back reuses.
   const map = new maplibregl.Map({
     container,
     style: basemapStyle,
@@ -126,70 +187,102 @@ export async function preload(
     interactive: false,
     attributionControl: false,
     fadeDuration: 0,
-    // keep the WebGL backbuffer readable between renders (recording/screenshots)
     canvasContextAttributes: { preserveDrawingBuffer: true, antialias: true },
-    // the path crosses z5→16; hold onto everything so a pull-back never re-reads
-    // a low-zoom tile that a close-up evicted
     maxTileCacheSize: 20000,
     maxTileCacheZoomLevels: 20,
     refreshExpiredTiles: false,
   });
   await new Promise<void>((res) => map.once("load", () => res()));
-  tick("warm basemap");
+  phase(0.4, 0.5)(1, "basemap");
 
   // The Old Fort imagery is a stitched still drawn by a deck.gl BitmapLayer
   // (see Stage.tsx) — no map raster source, so nothing to warm here.
 
-  // --- step the ACTUAL keyframe cameras (not a flyTo sweep) and wait for idle
-  const idle = () =>
-    new Promise<void>((res) => {
-      if (map.areTilesLoaded()) return res();
-      const on = () => {
-        if (map.areTilesLoaded()) {
-          map.off("idle", on);
-          res();
-        }
-      };
-      map.on("idle", on);
-      // hard cap so a stuck tile can't wedge the loader
-      setTimeout(() => {
-        map.off("idle", on);
-        res();
-      }, 4000);
-    });
-
+  // count every tile that finishes parsing into MapLibre's own cache
   const seen = new Set<string>();
   map.on("data", (e: { tile?: { tileID?: { key?: unknown } }; sourceId?: string }) => {
     if (e.tile?.tileID?.key != null) seen.add(`${e.sourceId}:${e.tile.tileID.key}`);
   });
-  const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-  // pass 1: walk the whole camera path quickly to fire every tile request the
-  // playback will make; MapLibre loads them in parallel into the (huge) cache
-  for (let i = 0; i < WARMUP_CAMS.length; i++) {
-    const c = WARMUP_CAMS[i];
-    map.jumpTo({ center: c.center, zoom: c.zoom, pitch: c.pitch, bearing: c.bearing });
-    await sleep(70);
-    if (i % 6 === 0) await idle();
-    onProgress(0.72 + (0.2 * (i + 1)) / WARMUP_CAMS.length, `warming ${i + 1}/${WARMUP_CAMS.length}`);
-  }
-  // pass 2: settle at each beat's hold camera so nothing is still in flight
-  // (samples recomputed for the Phase I retimed boundaries)
-  for (const ms of [300, 3400, 6400, 8000, 10600, 13300]) {
-    const c = cameraAt(ms);
-    map.jumpTo({ center: c.center, zoom: c.zoom, pitch: c.pitch, bearing: c.bearing });
-    await idle();
-  }
-  const tilesWarmed = seen.size;
+  // The playback camera path, sampled every 60ms across the whole map-visible
+  // span (0 → end of the flood beat; B7/B8 only hold statewide, B9 hides the
+  // map). 60ms is tight enough that even the fast B3 swoop / B6 pull-back can't
+  // skip an integer zoom level between samples — the old 120ms sampling did,
+  // which is how z8/z11 tiles never got warmed and the frame flew over black.
+  const PATH: Cam[] = [];
+  for (let ms = 0; ms <= BEATS[6].t1; ms += 60) PATH.push(cameraAt(ms));
 
-  const first = WARMUP_CAMS[0];
-  map.jumpTo({ center: first.center, zoom: first.zoom, pitch: 0, bearing: 0 });
-  await idle();
-  tick("ready");
+  // Move to a camera and wait until MapLibre is genuinely idle THERE — i.e. the
+  // NEXT idle event after this jump, not whatever stale state a sync check would
+  // see one tick after jumpTo. `idle` already implies "all requested tiles
+  // loaded"; the areTilesLoaded() re-check is just belt-and-braces. capMs only
+  // bounds a genuinely wedged tile.
+  const jumpAndSettle = (c: Cam, capMs: number) =>
+    new Promise<void>((res) => {
+      let fin = false;
+      const done = () => {
+        if (fin) return;
+        fin = true;
+        map.off("idle", check);
+        clearTimeout(timer);
+        res();
+      };
+      const check = () => {
+        if (map.areTilesLoaded()) done();
+      };
+      const timer = setTimeout(done, capMs);
+      map.on("idle", check);
+      map.jumpTo({ center: c.center, zoom: c.zoom, pitch: c.pitch, bearing: c.bearing });
+    });
+
+  // 4. warm pass — walk the dense path once, dwelling until idle at each step so
+  // every tile the playback camera will cross is fetched (from the primed HTTP
+  // cache) and parsed into MapLibre's own tile cache.
+  const warmProg = phase(0.5, 0.82);
+  for (let i = 0; i < PATH.length; i++) {
+    await jumpAndSettle(PATH[i], 2000);
+    if (i % 8 === 0) warmProg((i + 1) / PATH.length, `warming ${i + 1}/${PATH.length}`);
+  }
+
+  // 5. verification lap — re-walk the whole path and require a lap that loads
+  // NOT ONE new tile: the honest signal that everything the run touches is
+  // already resident. The `seen`-set delta is the gate (it needs no tile to
+  // reach a terminal state); areTilesLoaded() is only logged. Retry a couple of
+  // times, bounded, so a genuinely wedged tile can't hang the gate forever.
+  const verifyProg = phase(0.82, 1);
+  const VERIFY_BUDGET_MS = 12000;
+  const vStart = performance.now();
+  let verifyLaps = 0; // stays 0 until a lap comes back genuinely clean
+  for (let lap = 1; lap <= 3; lap++) {
+    const before = seen.size;
+    let allLoaded = true;
+    for (let i = 0; i < PATH.length; i++) {
+      await jumpAndSettle(PATH[i], 1500);
+      if (!map.areTilesLoaded()) allLoaded = false;
+      if (i % 8 === 0) verifyProg((lap - 1 + (i + 1) / PATH.length) / 3, `verifying ${lap}·${i + 1}`);
+    }
+    if (seen.size === before) {
+      verifyLaps = lap;
+      break;
+    }
+    if (performance.now() - vStart > VERIFY_BUDGET_MS) {
+      console.warn(
+        `[demo] preload verification hit its ${VERIFY_BUDGET_MS}ms budget after ${lap} lap(s); ` +
+          `${seen.size - before} tile(s) still resolving (areTilesLoaded=${allLoaded}) — ` +
+          `the first playthrough may show brief pop-in (a second play is always clean)`,
+      );
+      break;
+    }
+  }
+
+  // 6. park on the opening frame, fully painted
+  await jumpAndSettle({ ...PATH[0], pitch: 0, bearing: 0 }, 2500);
+  onProgress(1, prewarmed ? `ready · ${seen.size} tiles` : "ready");
 
   return {
     assets: { radar: { manifest, images }, oldFort, ncOutline, sensors, history, beforeImg, afterImg, logo },
     map,
-    tilesWarmed,
+    tilesWarmed: seen.size,
+    verifyLaps,
   };
 }

@@ -18,6 +18,7 @@ export default function Demo() {
   const [phase, setPhase] = useState<"loading" | "ready" | "running">("loading");
   const [prog, setProg] = useState({ p: 0, label: "" });
   const [warmed, setWarmed] = useState(0);
+  const [verifyLaps, setVerifyLaps] = useState(0);
   const [debug, setDebug] = useState(DEBUG0);
   const [hud, setHud] = useState<{ ms: number; playing: boolean }>({ ms: 0, playing: false });
   const startedRef = useRef(false);
@@ -27,8 +28,9 @@ export default function Demo() {
   }, []);
 
   const onReady = useCallback(
-    ({ tilesWarmed }: { tilesWarmed: number }) => {
+    ({ tilesWarmed, verifyLaps }: { tilesWarmed: number; verifyLaps: number }) => {
       setWarmed(tilesWarmed);
+      setVerifyLaps(verifyLaps);
       setPhase("ready");
       if (AUTOPLAY && !startedRef.current) {
         startedRef.current = true;
@@ -134,7 +136,9 @@ export default function Demo() {
             {BEATS.indexOf(beat) + 1}. {beat.name}
           </span>
           <span className="demo-debug-meta">
-            {hud.playing ? "▶" : "⏸"} · {warmed} tiles warmed{FIXED ? " · fixed-step" : ""}
+            {hud.playing ? "▶" : "⏸"} · {warmed} tiles warmed ·{" "}
+            {verifyLaps ? `verified in ${verifyLaps} lap${verifyLaps > 1 ? "s" : ""}` : "verify budget hit"}
+            {FIXED ? " · fixed-step" : ""}
           </span>
           <div className="demo-debug-track">
             {BEATS.map((b) => (

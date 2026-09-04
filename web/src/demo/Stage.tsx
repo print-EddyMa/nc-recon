@@ -20,7 +20,7 @@ interface Props {
   mode: "realtime" | "fixed";
   fixedStep?: number;
   onProgress: (p: number, label: string) => void;
-  onReady: (info: { tilesWarmed: number }) => void;
+  onReady: (info: { tilesWarmed: number; verifyLaps: number }) => void;
   onFrame?: (ctx: FrameCtx) => void;
 }
 
@@ -260,7 +260,7 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
     if (!host) return;
 
     (async () => {
-      const { assets, map, tilesWarmed } = await preload(host, onProgress);
+      const { assets, map, tilesWarmed, verifyLaps } = await preload(host, onProgress);
       if (disposed) {
         map.remove();
         return;
@@ -359,7 +359,7 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
       addTracks(tl);
       tlRef.current = tl;
       tl.seek(0);
-      onReady({ tilesWarmed });
+      onReady({ tilesWarmed, verifyLaps });
     })();
 
     return () => {
