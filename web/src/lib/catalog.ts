@@ -79,7 +79,7 @@ export async function loadCatalog(): Promise<CatalogEvent[]> {
     const data = await res.json();
     return Array.isArray(data) ? (data as CatalogEvent[]) : [];
   } catch {
-    // offline / asset missing — the Assess screen still works (manual commands)
+    // offline / asset missing - the Assess screen still works (manual commands)
     return [];
   }
 }

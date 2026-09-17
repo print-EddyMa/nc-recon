@@ -11,7 +11,11 @@
 //   public/demo/old_fort.geojson     (copy of the real 764-building assessment)
 //   public/demo/sensors.json         (real NC flood + stream gauge locations)
 //   public/demo/history.json         (real NC FEMA disaster declarations)
-//   public/demo/oldfort_pre.png / oldfort_post.png
+//   public/demo/aircraft.json        (real ADS-B point-in-time snapshot over NC —
+//       Phase J "god's-eye" beat; re-run this script to refresh it)
+//   public/demo/cameras.json         (real NCDOT DriveNC camera locations, from
+//       the committed public/data/nc snapshot — Phase J)
+//   public/demo/oldfort_pre.jpg / oldfort_post.jpg
 //       (real Maxar Open Data imagery of Old Fort, stitched from the committed
 //        tile pyramid at the exact camera the sequence uses)
 //   public/demo/basemap/  (the CARTO dark-matter style + every vector tile,
@@ -38,8 +42,12 @@ const CHROME =
 // ---- shared geography (keep in lockstep with src/demo/beats.ts) -------------
 // Old Fort, McDowell County — the B3/B4/B5 camera.
 const OLDFORT = { lon: -82.1804, lat: 35.6293, zoom: 16 };
-const SHOT_W = 1600;
-const SHOT_H = 1000;
+// Phase J — 4K pass: stitched at z17 (real tile detail, not upscaled) over
+// double the z16 pixel dimensions so the geographic extent — and therefore
+// beats.ts OLDFORT_IMG_BOUNDS — is unchanged. Keep SHOT_W/H and stitchMaxar's
+// internal zoom in lockstep with beats.ts's imgBounds(...) call.
+const SHOT_W = 3200;
+const SHOT_H = 2000;
 // Beat-2 NEXRAD plate box in EPSG:3857. Deliberately WIDER than NC so Helene is
 // seen sweeping in and out over GA / SC / TN / VA / the Atlantic with NC still
 // the framed focus. MUST match RADAR_BBOX in src/demo/Stage.tsx.
@@ -54,6 +62,10 @@ const [ncX1, ncY1] = merc(RADAR_BBOX4326[2], RADAR_BBOX4326[3]);
 
 const IEM_WMST =
   "https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r-t.cgi";
+// Phase J — same keyless ADS-B endpoint as src/lib/nc.ts AIRCRAFT_URL, baked
+// once instead of polled live (the hook makes zero network calls at playback).
+const AIRCRAFT_URL = "https://api.adsb.lol/v2/point/35.55/-79.2/250";
+const NC_BBOX = [-84.55, 33.75, -75.4, 36.7];
 
 async function getBuf(url) {
   const res = await fetch(url);
@@ -133,9 +145,42 @@ async function ncOutline() {
 }
 
 // ---- 3/4. copy the real committed data ----------------------------------
+// Phase J — a one-time real ADS-B point query over NC (same source as the
+// live NCDashboard "god's-eye" aircraft layer, credited in About), downsampled
+// to a deterministic, render-light set: [lon, lat, track_deg, isMilitary].
+async function aircraft() {
+  const res = await fetch(AIRCRAFT_URL);
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText} — ${AIRCRAFT_URL}`);
+  const raw = await res.json();
+  const inNC = (lon, lat) =>
+    lon >= NC_BBOX[0] && lon <= NC_BBOX[2] && lat >= NC_BBOX[1] && lat <= NC_BBOX[3];
+  const pts = [];
+  for (const a of raw.ac ?? []) {
+    if (typeof a.lat !== "number" || typeof a.lon !== "number" || !inNC(a.lon, a.lat)) continue;
+    const mil = ((a.dbFlags ?? 0) & 1) === 1 ? 1 : 0;
+    const track = typeof a.track === "number" ? a.track : (a.nav_heading ?? 0);
+    pts.push([+a.lon.toFixed(3), +a.lat.toFixed(3), +track.toFixed(1), mil]);
+  }
+  const step = Math.max(1, Math.floor(pts.length / 90));
+  const sample = pts.filter((_, i) => i % step === 0);
+  writeFileSync(resolve(OUT, "aircraft.json"), JSON.stringify(sample));
+  console.log(`  aircraft.json  ${sample.length}/${pts.length} in-state aircraft`);
+}
+
 function copyData() {
   cpSync(resolve(DATA, "old_fort.geojson"), resolve(OUT, "old_fort.geojson"));
   console.log("  old_fort.geojson  copied");
+
+  // Phase J — real NCDOT DriveNC camera locations (already a committed
+  // snapshot for the main app's offline fallback); slimmed to [lon, lat].
+  const cams = JSON.parse(readFileSync(resolve(DATA, "nc/ncdot_cameras_snapshot.geojson"), "utf8"));
+  const camPts = cams.features
+    .filter((f) => f.geometry?.type === "Point")
+    .map((f) => [+f.geometry.coordinates[0].toFixed(4), +f.geometry.coordinates[1].toFixed(4)]);
+  const camStep = Math.max(1, Math.floor(camPts.length / 500));
+  const camSample = camPts.filter((_, i) => i % camStep === 0);
+  writeFileSync(resolve(OUT, "cameras.json"), JSON.stringify(camSample));
+  console.log(`  cameras.json  ${camSample.length}/${camPts.length} DOT cameras`);
 
   // trim the two gauge snapshots to id/lon/lat/kind/severity/title
   const pick = (path, kind) => {
@@ -183,7 +228,7 @@ function tileXY(lon, lat, z) {
 }
 
 async function stitchMaxar() {
-  const z = 16;
+  const z = 17; // Phase J 4K pass — see SHOT_W/H comment above
   const { x: cx, y: cy } = tileXY(OLDFORT.lon, OLDFORT.lat, z);
   // pixel position of the AOI centre within the world at this zoom
   const centrePxX = cx * 256;
@@ -221,9 +266,12 @@ async function stitchMaxar() {
       await page.setContent(html, { waitUntil: "networkidle0" });
       await page.$eval("#s", () => {});
       const el = await page.$("#s");
-      await el.screenshot({ path: resolve(OUT, `oldfort_${kind}.png`) });
+      // JPEG, not PNG: the source tiles are already JPEG, and at 3200x2000
+      // a lossless PNG of satellite photography is ~11MB for no visible gain
+      // over quality-92 JPEG (~1-2MB) — this is a page-load asset.
+      await el.screenshot({ path: resolve(OUT, `oldfort_${kind}.jpg`), type: "jpeg", quality: 92 });
       await page.close();
-      console.log(`  oldfort_${kind}.png  (${cells.length} tiles, z${z})`);
+      console.log(`  oldfort_${kind}.jpg  (${cells.length} tiles, z${z})`);
     }
   } finally {
     await browser.close();
@@ -387,6 +435,7 @@ console.log("Phase H demo assets ->", OUT);
 await radar();
 await ncOutline();
 copyData();
+await aircraft();
 await stitchMaxar();
 await basemap();
 console.log("done.");

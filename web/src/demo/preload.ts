@@ -1,11 +1,11 @@
 /**
- * Phase H — gate playback behind a full preload. Nothing in the sequence runs
+ * Phase H - gate playback behind a full preload. Nothing in the sequence runs
  * until every asset it touches is already in memory AND the basemap tiles for
  * the whole camera path are already in MapLibre's tile cache.
  *
  * Everything here is served from the app's own origin (public/demo/, public/
  * tiles/) or from the CARTO basemap CDN the app already depends on. During
- * playback there are zero further requests — see scripts/validate_demo.mjs.
+ * playback there are zero further requests - see scripts/validate_demo.mjs.
  */
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -38,6 +38,10 @@ export interface HistoryRow {
   type: string;
   dr: boolean;
 }
+/** Phase J - [lon, lat, track_deg, isMilitary] from a real ADS-B snapshot. */
+export type AircraftPt = [number, number, number, number];
+/** Phase J - [lon, lat] from the real NCDOT DriveNC camera snapshot. */
+export type CameraPt = [number, number];
 
 export interface DemoAssets {
   radar: { manifest: RadarManifest; images: HTMLImageElement[] };
@@ -45,6 +49,8 @@ export interface DemoAssets {
   ncOutline: GeoJSON.FeatureCollection;
   sensors: Sensor[];
   history: HistoryRow[];
+  aircraft: AircraftPt[];
+  cameras: CameraPt[];
   beforeImg: HTMLImageElement;
   afterImg: HTMLImageElement;
   logo: HTMLImageElement;
@@ -76,14 +82,16 @@ interface TileManifest {
  * its Web Worker; with the bytes already cached each request is an instant hit
  * (a ~1ms 304 on the dev server), so the camera never flies over a tile that is
  * still downloading. `demo_fetch.mjs` writes the manifest from the exact set it
- * bakes — see scripts/demo_fetch.mjs §6c.
+ * bakes - see scripts/demo_fetch.mjs §6c.
  */
-async function prewarmHttpCache(onStep: (frac: number) => void): Promise<number> {
+async function prewarmHttpCache(
+  onStep: (frac: number) => void,
+): Promise<number> {
   let manifest: TileManifest;
   try {
     manifest = await loadJSON<TileManifest>(`${D}basemap/tiles/manifest.json`);
   } catch {
-    // no manifest baked yet — the warm/verify passes below still gate playback,
+    // no manifest baked yet - the warm/verify passes below still gate playback,
     // just without the HTTP-cache head start
     return 0;
   }
@@ -109,15 +117,17 @@ async function prewarmHttpCache(onStep: (frac: number) => void): Promise<number>
   return urls.length;
 }
 
-// A fully self-hosted copy of the CARTO dark-matter style — every vector tile,
+// A fully self-hosted copy of the CARTO dark-matter style - every vector tile,
 // glyph and sprite the camera path crosses lives under public/demo/basemap/
 // (baked by scripts/demo_fetch.mjs). Playback makes zero network calls.
 async function loadBasemapStyle(): Promise<maplibregl.StyleSpecification> {
   const txt = await (await fetch(`${D}basemap/style.json`)).text();
   // MapLibre loads vector tiles in a Web Worker where `new URL(relative)`
-  // throws — the tile/glyph/sprite URLs must be absolute.
+  // throws - the tile/glyph/sprite URLs must be absolute.
   const abs = new URL(BASE, location.href).href;
-  return JSON.parse(txt.replaceAll("__BASE__", abs)) as maplibregl.StyleSpecification;
+  return JSON.parse(
+    txt.replaceAll("__BASE__", abs),
+  ) as maplibregl.StyleSpecification;
 }
 
 export interface PreloadResult {
@@ -144,34 +154,40 @@ export async function preload(
   const phase = (lo: number, hi: number) => (f: number, label: string) =>
     onProgress(lo + (hi - lo) * Math.max(0, Math.min(1, f)), label);
 
-  // 0. fonts — the stage CSS @imports Geist/Geist Mono from Google Fonts; wait
+  // 0. fonts - the stage CSS @imports Geist/Geist Mono from Google Fonts; wait
   // for them here so no lower-third or telemetry text reflows mid-sequence.
   onProgress(0, "fonts");
   await Promise.race([
-    (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts?.ready ?? Promise.resolve(),
+    (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts
+      ?.ready ?? Promise.resolve(),
     sleep(4000),
   ]);
 
   // 1. data + imagery
   const manifest = await loadJSON<RadarManifest>(`${D}radar/manifest.json`);
   phase(0, 0.12)(0.3, "data");
-  const [images, oldFort, ncOutline, sensors, history] = await Promise.all([
-    Promise.all(manifest.frames.map((f) => loadImage(`${D}${f.file}`))),
-    loadJSON<GeoJSON.FeatureCollection>(`${D}old_fort.geojson`),
-    loadJSON<GeoJSON.FeatureCollection>(`${D}nc-outline.json`),
-    loadJSON<Sensor[]>(`${D}sensors.json`),
-    loadJSON<HistoryRow[]>(`${D}history.json`),
-  ]);
+  const [images, oldFort, ncOutline, sensors, history, aircraft, cameras] =
+    await Promise.all([
+      Promise.all(manifest.frames.map((f) => loadImage(`${D}${f.file}`))),
+      loadJSON<GeoJSON.FeatureCollection>(`${D}old_fort.geojson`),
+      loadJSON<GeoJSON.FeatureCollection>(`${D}nc-outline.json`),
+      loadJSON<Sensor[]>(`${D}sensors.json`),
+      loadJSON<HistoryRow[]>(`${D}history.json`),
+      loadJSON<AircraftPt[]>(`${D}aircraft.json`),
+      loadJSON<CameraPt[]>(`${D}cameras.json`),
+    ]);
   const [beforeImg, afterImg, logo] = await Promise.all([
-    loadImage(`${D}oldfort_pre.png`),
-    loadImage(`${D}oldfort_post.png`),
+    loadImage(`${D}oldfort_pre.jpg`),
+    loadImage(`${D}oldfort_post.jpg`),
     loadImage(`${D}ncrecon-logo-dark.svg`),
   ]);
   phase(0, 0.12)(1, "data");
 
   // 2. pull EVERY baked basemap tile + glyph into the HTTP cache up front
   const prewarmProg = phase(0.12, 0.4);
-  const prewarmed = await prewarmHttpCache((f) => prewarmProg(f, "caching basemap"));
+  const prewarmed = await prewarmHttpCache((f) =>
+    prewarmProg(f, "caching basemap"),
+  );
 
   // 3. style + hidden map
   const basemapStyle = await loadBasemapStyle();
@@ -196,23 +212,27 @@ export async function preload(
   phase(0.4, 0.5)(1, "basemap");
 
   // The Old Fort imagery is a stitched still drawn by a deck.gl BitmapLayer
-  // (see Stage.tsx) — no map raster source, so nothing to warm here.
+  // (see Stage.tsx) - no map raster source, so nothing to warm here.
 
   // count every tile that finishes parsing into MapLibre's own cache
   const seen = new Set<string>();
-  map.on("data", (e: { tile?: { tileID?: { key?: unknown } }; sourceId?: string }) => {
-    if (e.tile?.tileID?.key != null) seen.add(`${e.sourceId}:${e.tile.tileID.key}`);
-  });
+  map.on(
+    "data",
+    (e: { tile?: { tileID?: { key?: unknown } }; sourceId?: string }) => {
+      if (e.tile?.tileID?.key != null)
+        seen.add(`${e.sourceId}:${e.tile.tileID.key}`);
+    },
+  );
 
   // The playback camera path, sampled every 60ms across the whole map-visible
   // span (0 → end of the flood beat; B7/B8 only hold statewide, B9 hides the
   // map). 60ms is tight enough that even the fast B3 swoop / B6 pull-back can't
-  // skip an integer zoom level between samples — the old 120ms sampling did,
+  // skip an integer zoom level between samples - the old 120ms sampling did,
   // which is how z8/z11 tiles never got warmed and the frame flew over black.
   const PATH: Cam[] = [];
   for (let ms = 0; ms <= BEATS[6].t1; ms += 60) PATH.push(cameraAt(ms));
 
-  // Move to a camera and wait until MapLibre is genuinely idle THERE — i.e. the
+  // Move to a camera and wait until MapLibre is genuinely idle THERE - i.e. the
   // NEXT idle event after this jump, not whatever stale state a sync check would
   // see one tick after jumpTo. `idle` already implies "all requested tiles
   // loaded"; the areTilesLoaded() re-check is just belt-and-braces. capMs only
@@ -232,19 +252,25 @@ export async function preload(
       };
       const timer = setTimeout(done, capMs);
       map.on("idle", check);
-      map.jumpTo({ center: c.center, zoom: c.zoom, pitch: c.pitch, bearing: c.bearing });
+      map.jumpTo({
+        center: c.center,
+        zoom: c.zoom,
+        pitch: c.pitch,
+        bearing: c.bearing,
+      });
     });
 
-  // 4. warm pass — walk the dense path once, dwelling until idle at each step so
+  // 4. warm pass - walk the dense path once, dwelling until idle at each step so
   // every tile the playback camera will cross is fetched (from the primed HTTP
   // cache) and parsed into MapLibre's own tile cache.
   const warmProg = phase(0.5, 0.82);
   for (let i = 0; i < PATH.length; i++) {
     await jumpAndSettle(PATH[i], 2000);
-    if (i % 8 === 0) warmProg((i + 1) / PATH.length, `warming ${i + 1}/${PATH.length}`);
+    if (i % 8 === 0)
+      warmProg((i + 1) / PATH.length, `warming ${i + 1}/${PATH.length}`);
   }
 
-  // 5. verification lap — re-walk the whole path and require a lap that loads
+  // 5. verification lap - re-walk the whole path and require a lap that loads
   // NOT ONE new tile: the honest signal that everything the run touches is
   // already resident. The `seen`-set delta is the gate (it needs no tile to
   // reach a terminal state); areTilesLoaded() is only logged. Retry a couple of
@@ -259,7 +285,11 @@ export async function preload(
     for (let i = 0; i < PATH.length; i++) {
       await jumpAndSettle(PATH[i], 1500);
       if (!map.areTilesLoaded()) allLoaded = false;
-      if (i % 8 === 0) verifyProg((lap - 1 + (i + 1) / PATH.length) / 3, `verifying ${lap}·${i + 1}`);
+      if (i % 8 === 0)
+        verifyProg(
+          (lap - 1 + (i + 1) / PATH.length) / 3,
+          `verifying ${lap}·${i + 1}`,
+        );
     }
     if (seen.size === before) {
       verifyLaps = lap;
@@ -268,7 +298,7 @@ export async function preload(
     if (performance.now() - vStart > VERIFY_BUDGET_MS) {
       console.warn(
         `[demo] preload verification hit its ${VERIFY_BUDGET_MS}ms budget after ${lap} lap(s); ` +
-          `${seen.size - before} tile(s) still resolving (areTilesLoaded=${allLoaded}) — ` +
+          `${seen.size - before} tile(s) still resolving (areTilesLoaded=${allLoaded}) - ` +
           `the first playthrough may show brief pop-in (a second play is always clean)`,
       );
       break;
@@ -280,7 +310,18 @@ export async function preload(
   onProgress(1, prewarmed ? `ready · ${seen.size} tiles` : "ready");
 
   return {
-    assets: { radar: { manifest, images }, oldFort, ncOutline, sensors, history, beforeImg, afterImg, logo },
+    assets: {
+      radar: { manifest, images },
+      oldFort,
+      ncOutline,
+      sensors,
+      history,
+      aircraft,
+      cameras,
+      beforeImg,
+      afterImg,
+      logo,
+    },
     map,
     tilesWarmed: seen.size,
     verifyLaps,

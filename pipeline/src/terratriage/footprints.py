@@ -85,7 +85,7 @@ def fetch_arcgis_buildings(bounds_lonlat, service_url: str, page: int = 2000):
                 polys.append(g)
             elif g.geom_type == "MultiPolygon":
                 polys.extend(p for p in g.geoms if p.is_valid and p.area > 0)
-        # advance by what we actually got — servers often cap the page below the
+        # advance by what we actually got - servers often cap the page below the
         # requested size. Stop on an empty page, or when the server says there is
         # no more, or at the safety valve.
         if not feats:
@@ -196,7 +196,7 @@ def load_for_area(pre_path: str, cache_dir: str, area: str, source: str = "osm")
             polys_ll = []
     elif resolved == "nc_onemap":
         print("[footprints] source=nc_onemap but TERRATRIAGE_NC_FOOTPRINTS_URL "
-              "is unset — using OSM")
+              "is unset - using OSM")
 
     if not polys_ll:
         # Key the OSM cache by the AOI bounds, not just the area name: reusing an
@@ -224,7 +224,7 @@ def load_for_area(pre_path: str, cache_dir: str, area: str, source: str = "osm")
 
 
 def load_osm_polys(pre_path: str, cache_dir: str, area: str):
-    """Just the OSM footprints for an AOI, in the raster CRS — for use as a
+    """Just the OSM footprints for an AOI, in the raster CRS - for use as a
     filter over a *separate* set of model-predicted polygons (Phase D1)."""
     polys, dst_crs, _src = load_for_area(pre_path, cache_dir, area, source="osm")
     return polys, dst_crs

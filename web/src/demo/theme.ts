@@ -1,4 +1,4 @@
-/** Phase H — the demo is fixed-dark; these are the app tokens (index.css dark
+/** Phase H - the demo is fixed-dark; these are the app tokens (index.css dark
  * block) inlined so the sequence never depends on the runtime theme. */
 export const C = {
   bg: "#0F1115",
@@ -11,7 +11,7 @@ export const C = {
   accentRGB: [74, 128, 246] as [number, number, number],
 };
 
-/** NC live-severity ramp (DESIGN.md — cooler than the damage ramp) */
+/** NC live-severity ramp (DESIGN.md - cooler than the damage ramp) */
 export const SEV: Record<number, [number, number, number]> = {
   [-1]: [90, 103, 115],
   0: [90, 124, 134],

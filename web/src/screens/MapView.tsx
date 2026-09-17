@@ -104,7 +104,7 @@ function MapViewInner({ area, fc }: Pick<Props, "area" | "fc">) {
         <section className="panel px-3.5 py-3.5">
           <div className="mb-2.5 flex items-baseline justify-between">
             <h2 className="section-title">Hardest-hit clusters</h2>
-            <span className="cap">ranked</span>
+            <span className="cap">Ranked</span>
           </div>
           <HotspotList
             items={spots}

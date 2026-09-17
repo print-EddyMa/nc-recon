@@ -1,6 +1,6 @@
 /**
  * Terminal state for the area screens (damage map, review, summary) when the
- * assessment for the selected area can't be fetched — the service is down, slow
+ * assessment for the selected area can't be fetched - the service is down, slow
  * past the timeout, or returned an error. Without this the screens sit on a
  * skeleton forever.
  */

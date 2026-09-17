@@ -113,7 +113,7 @@ def run(
         notes += (
             f" NC context priors applied (flood_stage={priors.get('flood_stage')}, "
             f"fema_declaration={priors.get('in_fema_decl')}, "
-            f"slope_deg={priors.get('slope_deg')}) — they only move borderline "
+            f"slope_deg={priors.get('slope_deg')}) - they only move borderline "
             "confidence tiers, never the damage class."
         )
     meta = contract.RunMeta(

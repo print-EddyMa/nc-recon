@@ -1,11 +1,11 @@
-# TerraTriage — Phase A (model & data pipeline)
+# TerraTriage - Phase A (model & data pipeline)
 
 Turns a **pre/post satellite image pair** of a disaster area into a **GeoJSON of
-building footprints, each tagged with a 0–3 damage class**, geo-referenced to real
-lon/lat. That GeoJSON is the only thing Phase B (the web app) consumes — see
+building footprints, each tagged with a 0-3 damage class**, geo-referenced to real
+lon/lat. That GeoJSON is the only thing Phase B (the web app) consumes - see
 [`src/terratriage/contract.py`](src/terratriage/contract.py) for the exact schema.
 
-Demo case: **Hurricane Helene**, western North Carolina, Sept–Oct 2024
+Demo case: **Hurricane Helene**, western North Carolina, Sept-Oct 2024
 (Old Fort & Spruce Pine).
 
 ## Quick start
@@ -36,11 +36,13 @@ pre.tif + post.tif
    ├─ classify.py     per-building 128 px pre/post crop  ─►  damage class 0..3
    │                     backend=heuristic : structure-loss change detection (offline)
    │                     backend=keras     : xView2 CMU baseline (ResNet50+CNN head)
+   │ backend=fusion : heuristic + keras combined into a per-building
+   │ confidence tier (see fusion.py, Phase D)
    │
    └─ predict_footprints.py   footprints + classes  ─►  contract.collection()  ─►  GeoJSON
 ```
 
-There is a second, fully-built path — `scripts/run.py infer-seg` — that runs the
+There is a second, fully-built path - `scripts/run.py infer-seg` - that runs the
 **xView2 1st-place architecture** (Siamese U-Nets, 4 encoder families, ported to
 torch 2.x in `src/terratriage/models/`) as a tiled segmentation ensemble. It is
 wired and smoke-tested but **parked**: the published weights are offline (see
@@ -54,13 +56,13 @@ Short version:
 
 | Component | State |
 |---|---|
-| Maxar Helene imagery download | ✅ working (Old Fort, Spruce Pine, pre+post) |
-| Tiling + geo-referencing + polygonisation + contract | ✅ working, tested |
-| OSM footprints | ✅ working (766 buildings Old Fort, 139 Spruce Pine) |
-| xView2 **baseline** damage classifier | ✅ **working** — Keras 2.2.5 weights-only HDF5, ResNet50-v1 rebuilt name-for-name in `_keras_infer.py`, verified tensor-exact (`_keras_verify.py`). Default backend. |
-| Heuristic damage scorer | ✅ working — offline fallback |
-| xView2 **1st-place** weights | ⛔ `vdurnov.s3` AccessDenied; Wayback copy exists but archive.org unreachable here. Architectures ported (`models/`) & wired (`infer-seg`) — drop the zip in `weights/` to activate. |
-| xView2 **baseline** localisation weights | ⚠️ `weights/localization.h5` is a **Chainer** `save_npz` (dead framework) — superseded by OSM footprints. |
+| Maxar Helene imagery download | working (Old Fort, Spruce Pine, pre+post) |
+| Tiling + geo-referencing + polygonisation + contract | working, tested |
+| OSM footprints | working (764 buildings Old Fort, 147 Spruce Pine) |
+| xView2 **baseline** damage classifier | **working** - Keras 2.2.5 weights-only HDF5, ResNet50-v1 rebuilt name-for-name in `_keras_infer.py`, verified tensor-exact (`_keras_verify.py`). See root README for `--backend auto`'s resolution order. |
+| Heuristic damage scorer | working - offline fallback |
+| xView2 **1st-place** weights | blocked - `vdurnov.s3` AccessDenied; Wayback copy exists but archive.org unreachable here. Architectures ported (`models/`) & wired (`infer-seg`) - drop the zip in `weights/` to activate. |
+| xView2 **baseline** localisation weights | not used - `weights/localization.h5` is a **Chainer** `save_npz` (dead framework) - superseded by OSM footprints. |
 
 ## TF env for `--backend keras`
 

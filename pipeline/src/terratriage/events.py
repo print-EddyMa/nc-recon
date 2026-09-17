@@ -4,7 +4,7 @@ Phase A/B were hardcoded to one event (`HurricaneHelene-Oct24`). This module
 makes the event a lookup: it lists every event the community STAC mirror
 (github.com/opengeos/maxar-open-data) publishes, and for any one of them derives
 the coverage bbox, capture date range, and whether pre/post captures straddle a
-given event date — all from the per-event TSV that `download.py` already knows
+given event date - all from the per-event TSV that `download.py` already knows
 how to fetch.
 
 `write_registry` emits `web/public/data/events.json`, the offline contract the
@@ -114,7 +114,7 @@ def _infer_event_date(dates: list[str]) -> str | None:
         score = (after, gap)
         if score > best_score:
             best_score, best_i = score, i
-    if best_score == (-1, -1):  # no gap >= 14 days — fall back to the widest
+    if best_score == (-1, -1):  # no gap >= 14 days - fall back to the widest
         best_i = max(range(len(ds) - 1), key=lambda i: (ds[i + 1] - ds[i]).days)
     # the event sits just after the last pre-event capture
     return (ds[best_i] + dt.timedelta(days=1)).isoformat()
@@ -175,7 +175,7 @@ def event_summary(
 
 
 def coverage(event: str, cache_dir: str, event_date: str | None = None) -> dict[str, Any]:
-    """The footprint of a Maxar event's *assessable* area — the quadkeys that
+    """The footprint of a Maxar event's *assessable* area - the quadkeys that
     have both a pre-event and a post-event capture. Returns lon/lat cell boxes
     the Assess screen draws so the user clicks where there is real before/after
     imagery."""
@@ -263,7 +263,7 @@ def build_registry(area_metas: list[dict], cache_dir: str) -> list[dict[str, Any
 
 
 def catalog(cache_dir: str, refresh: bool = False, only: list[str] | None = None) -> list[dict]:
-    """Compact summary of *every* Maxar Open Data event — the full catalogue the
+    """Compact summary of *every* Maxar Open Data event - the full catalogue the
     Live Monitor cross-references live hazards against. Cached aggregate at
     data/cache/maxar_catalog.json; per-event TSVs are cached by fetch_catalog.
     """

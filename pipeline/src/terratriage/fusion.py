@@ -12,7 +12,7 @@ we run a second, independent pass, the change-detection heuristic, and turn
           classify, or the CNN's softmax is genuinely undecided
 
 `review` buildings are what the Phase D3 web review queue lists for a human to
-confirm or override. The reported `damage_class` is still the CNN's — the
+confirm or override. The reported `damage_class` is still the CNN's - the
 heuristic only informs confidence, it does not outvote a trained model.
 """
 from __future__ import annotations

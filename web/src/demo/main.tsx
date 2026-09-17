@@ -1,4 +1,4 @@
-// Phase H — isolated entry for the scripted hook sequence. Deliberately NOT
+// Phase H - isolated entry for the scripted hook sequence. Deliberately NOT
 // wrapped in <StrictMode>: the preload builds one MapLibre instance and warms
 // its tile cache, and a double-mount would run that twice. This is a recording
 // tool, not part of the interactive app.

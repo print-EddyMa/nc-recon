@@ -53,6 +53,7 @@ export default function KeyForm({
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         placeholder={placeholder}
+        aria-label={placeholder}
         className="min-w-0 flex-1 rounded-md border border-line bg-canvas px-2 py-1 text-2xs text-ink outline-none placeholder:text-ink-faint focus-visible:border-accent"
       />
       <button

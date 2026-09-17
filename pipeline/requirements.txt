@@ -1,4 +1,4 @@
-# TerraTriage pipeline (Phase A) — Python 3.13, macOS/Linux, CPU-only
+# NC Recon pipeline - Python 3.13, macOS/Linux, CPU-only
 numpy
 Pillow
 requests

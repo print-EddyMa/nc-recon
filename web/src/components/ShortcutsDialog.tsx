@@ -28,7 +28,14 @@ export default function ShortcutsDialog({
     let gPending = 0;
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (
+        t &&
+        (t.tagName === "INPUT" ||
+          t.tagName === "TEXTAREA" ||
+          t.tagName === "SELECT" ||
+          t.isContentEditable)
+      )
+        return;
       if (e.key === "?") {
         e.preventDefault();
         setOpen((o) => !o);

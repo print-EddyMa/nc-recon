@@ -30,14 +30,15 @@ const ReviewQueue = lazy(() => import("./screens/ReviewQueue"));
 const Stats = lazy(() => import("./screens/Stats"));
 const History = lazy(() => import("./screens/History"));
 
-type Screen = "home" | "nc" | "history" | "assess" | "map" | "review" | "stats" | "about";
+type Screen =
+  "home" | "nc" | "history" | "assess" | "map" | "review" | "stats" | "about";
 const AREA_SCREENS: Screen[] = ["map", "review", "stats"];
 
 /** cap the in-memory GeoJSON cache so a long session over many assessed areas
  * doesn't grow without bound (each area is ~0.1-1 MB). */
 const CACHE_LIMIT = 4;
 
-/** NC Recon brand mark — the real North Carolina outline with a scan-ring
+/** NC Recon brand mark - the real North Carolina outline with a scan-ring
  * signal over the Triangle. `currentColor` fills the state; the rings and
  * signal dot use the app's one accent ("this is live"), so the mark tracks
  * the light / dark theme with everything else. */
@@ -55,8 +56,22 @@ function Mark({ uid, className }: { uid: string; className?: string }) {
       </clipPath>
       <path d={nc} fill="currentColor" />
       <g clipPath={`url(#ncmark-${uid})`}>
-        <circle cx="198.09" cy="28.24" r="20" fill="none" style={stroke} strokeWidth="3.5" />
-        <circle cx="198.09" cy="28.24" r="38" fill="none" style={stroke} strokeWidth="3.5" />
+        <circle
+          cx="198.09"
+          cy="28.24"
+          r="20"
+          fill="none"
+          style={stroke}
+          strokeWidth="3.5"
+        />
+        <circle
+          cx="198.09"
+          cy="28.24"
+          r="38"
+          fill="none"
+          style={stroke}
+          strokeWidth="3.5"
+        />
       </g>
       <circle cx="198.09" cy="28.24" r="6" style={fill} />
     </svg>
@@ -76,7 +91,9 @@ export default function App() {
   // error is scoped to the area it happened on, so switching areas clears it
   // without a set-state-in-effect (the derived `areaError` below goes null when
   // `areaId` no longer matches).
-  const [areaErr, setAreaErr] = useState<{ id: string; msg: string } | null>(null);
+  const [areaErr, setAreaErr] = useState<{ id: string; msg: string } | null>(
+    null,
+  );
   const [areaReload, setAreaReload] = useState(0);
   const [cmdkOpen, setCmdkOpen] = useState(false);
 
@@ -99,7 +116,9 @@ export default function App() {
   // flat [{ event, area }] view of every assessed NC area
   const areas = useMemo(
     () =>
-      (registry ?? []).flatMap((ev) => ev.areas.map((a) => ({ event: ev, area: a }))),
+      (registry ?? []).flatMap((ev) =>
+        ev.areas.map((a) => ({ event: ev, area: a })),
+      ),
     [registry],
   );
   const current = useMemo(
@@ -119,7 +138,10 @@ export default function App() {
       .then((data) => {
         if (cancelled) return;
         setCache((c) => {
-          const next: Record<string, DamageCollection> = { ...c, [areaId]: data };
+          const next: Record<string, DamageCollection> = {
+            ...c,
+            [areaId]: data,
+          };
           const keys = Object.keys(next);
           if (keys.length > CACHE_LIMIT) delete next[keys[0]];
           return next;
@@ -140,7 +162,9 @@ export default function App() {
   const reviewOpen = useMemo(() => {
     if (!fc) return 0;
     return fc.features.filter(
-      (f) => f.properties.confidence_tier === "review" && !decisions[f.properties.id],
+      (f) =>
+        f.properties.confidence_tier === "review" &&
+        !decisions[f.properties.id],
     ).length;
   }, [fc, decisions]);
 
@@ -193,7 +217,8 @@ export default function App() {
     else if (screen === "about") hash = "#/about";
     else if (areaId && AREA_SCREENS.includes(screen))
       hash = `#/a/${encodeURIComponent(areaId)}/${screen}`;
-    if (hash !== window.location.hash) window.history.replaceState(null, "", hash);
+    if (hash !== window.location.hash)
+      window.history.replaceState(null, "", hash);
   }, [screen, areaId, registry]);
 
   // shared "assess an NC area" flow, used by the Assess screen and ⌘K
@@ -208,8 +233,8 @@ export default function App() {
         <div>
           <div className="section-title mb-2">Event registry didn't load</div>
           <p className="text-sm text-ink-dim">
-            The app still runs without it, this only lists NC areas that have been
-            assessed. Rebuild it with{" "}
+            The app still runs without it, this only lists NC areas that have
+            been assessed. Rebuild it with{" "}
             <code className="tnum rounded bg-surface-2 px-1.5 py-0.5 text-xs">
               python scripts/run.py events registry
             </code>
@@ -287,91 +312,98 @@ export default function App() {
           </div>
         )}
         <main id="main" className="relative flex-1 overflow-hidden">
-         <Suspense
-           fallback={
-             <div className="grid h-full place-items-center text-sm text-ink-faint">
-               Loading…
-             </div>
-           }
-         >
-          {effScreen === "home" && (
-            <ErrorBoundary label="The home dashboard">
-              <Home
-                areas={areas}
-                online={online}
-                onOpenArea={pickArea}
-                onOpenMonitor={() => go("nc")}
-                onOpenAssess={() => go("assess")}
-                onOpenAbout={() => go("about")}
-              />
-            </ErrorBoundary>
-          )}
-          {effScreen === "nc" && (
-            <ErrorBoundary label="The North Carolina risk dashboard">
-              <NCDashboard onOpenAssess={() => go("assess")} onOpenAbout={() => go("about")} />
-            </ErrorBoundary>
-          )}
-          {effScreen === "history" && (
-            <ErrorBoundary label="The disaster-history timeline">
-              <History areas={areas} onOpenAssess={() => go("assess")} onOpenArea={pickArea} />
-            </ErrorBoundary>
-          )}
-          {effScreen === "assess" && (
-            <ErrorBoundary label="On-demand assessment">
-              <Assess
-                areas={areas}
-                catalog={catalog}
-                online={online}
-                jobs={jobs}
-                onIngest={ingest}
-                onOpenArea={pickArea}
-                onBack={() => go("nc")}
-              />
-            </ErrorBoundary>
-          )}
-          {effScreen === "map" && event && area && (
-            <ErrorBoundary label="The damage map">
-              <MapView
-                key={area.id}
-                event={event}
-                area={area}
-                fc={fc}
-                loadError={areaError}
-                onRetry={retryArea}
-              />
-            </ErrorBoundary>
-          )}
-          {effScreen === "review" && area && (
-            <ErrorBoundary label="The review queue">
-              <ReviewQueue
-                key={area.id}
-                area={area}
-                fc={fc}
-                loadError={areaError}
-                onRetry={retryArea}
-                onOpenMap={() => go("map")}
-              />
-            </ErrorBoundary>
-          )}
-          {effScreen === "stats" && event && area && (
-            <ErrorBoundary label="The summary">
-              <Stats
-                key={area.id}
-                event={event}
-                area={area}
-                fc={fc}
-                loadError={areaError}
-                onRetry={retryArea}
-                onOpenMap={() => go("map")}
-              />
-            </ErrorBoundary>
-          )}
-          {effScreen === "about" && (
-            <ErrorBoundary label="About">
-              <About onEnter={() => go("nc")} />
-            </ErrorBoundary>
-          )}
-         </Suspense>
+          <Suspense
+            fallback={
+              <div className="grid h-full place-items-center text-sm text-ink-faint">
+                Loading…
+              </div>
+            }
+          >
+            {effScreen === "home" && (
+              <ErrorBoundary label="The home dashboard">
+                <Home
+                  areas={areas}
+                  online={online}
+                  onOpenArea={pickArea}
+                  onOpenMonitor={() => go("nc")}
+                  onOpenAssess={() => go("assess")}
+                  onOpenAbout={() => go("about")}
+                />
+              </ErrorBoundary>
+            )}
+            {effScreen === "nc" && (
+              <ErrorBoundary label="The North Carolina risk dashboard">
+                <NCDashboard
+                  onOpenAssess={() => go("assess")}
+                  onOpenAbout={() => go("about")}
+                />
+              </ErrorBoundary>
+            )}
+            {effScreen === "history" && (
+              <ErrorBoundary label="The disaster-history timeline">
+                <History
+                  areas={areas}
+                  onOpenAssess={() => go("assess")}
+                  onOpenArea={pickArea}
+                />
+              </ErrorBoundary>
+            )}
+            {effScreen === "assess" && (
+              <ErrorBoundary label="On-demand assessment">
+                <Assess
+                  areas={areas}
+                  catalog={catalog}
+                  online={online}
+                  jobs={jobs}
+                  onIngest={ingest}
+                  onOpenArea={pickArea}
+                  onBack={() => go("nc")}
+                />
+              </ErrorBoundary>
+            )}
+            {effScreen === "map" && event && area && (
+              <ErrorBoundary label="The damage map">
+                <MapView
+                  key={area.id}
+                  event={event}
+                  area={area}
+                  fc={fc}
+                  loadError={areaError}
+                  onRetry={retryArea}
+                />
+              </ErrorBoundary>
+            )}
+            {effScreen === "review" && area && (
+              <ErrorBoundary label="The review queue">
+                <ReviewQueue
+                  key={area.id}
+                  area={area}
+                  fc={fc}
+                  loadError={areaError}
+                  onRetry={retryArea}
+                  onOpenMap={() => go("map")}
+                />
+              </ErrorBoundary>
+            )}
+            {effScreen === "stats" && event && area && (
+              <ErrorBoundary label="The summary">
+                <Stats
+                  key={area.id}
+                  event={event}
+                  area={area}
+                  fc={fc}
+                  loadError={areaError}
+                  onRetry={retryArea}
+                  onOpenMap={() => go("map")}
+                />
+              </ErrorBoundary>
+            )}
+            {effScreen === "about" && (
+              <ErrorBoundary label="About">
+                <About onEnter={() => go("nc")} />
+              </ErrorBoundary>
+            )}
+          </Suspense>
         </main>
       </div>
     </>
@@ -442,9 +474,7 @@ function NavTabs({
           }}
           onClick={() => onNav(t.id as Screen)}
           aria-current={screen === t.id ? "page" : undefined}
-          className={`pressable relative shrink-0 px-3 py-2 transition-colors duration-200 ${
-            screen === t.id ? "text-ink" : "text-ink-dim hover:text-ink"
-          }`}
+          className={`pressable relative shrink-0 px-3 py-2 transition-colors duration-200 ${screen === t.id ? "text-ink" : "text-ink-dim hover:text-ink"}`}
         >
           {t.label}
           {"badge" in t && t.badge ? (
@@ -488,10 +518,17 @@ function TopBar({
         >
           <Mark uid="nav" className="h-4 w-[52px] text-ink" />
           <span className="font-display">NC Recon</span>
-          <span className="cap hidden text-ink-faint sm:inline">North Carolina</span>
+          <span className="cap hidden text-ink-faint sm:inline">
+            North Carolina
+          </span>
         </button>
 
-        <NavTabs screen={screen} hasArea={hasArea} reviewOpen={reviewOpen} onNav={onNav} />
+        <NavTabs
+          screen={screen}
+          hasArea={hasArea}
+          reviewOpen={reviewOpen}
+          onNav={onNav}
+        />
       </div>
 
       {hasArea && eventName && (
@@ -501,14 +538,23 @@ function TopBar({
           <button
             onClick={() => {
               navigator.clipboard?.writeText(window.location.href).then(
-                () => toast.success("Link copied", { description: "Opens straight to this view." }),
+                () =>
+                  toast.success("Link copied", {
+                    description: "Opens straight to this view.",
+                  }),
                 () => void 0,
               );
             }}
             className="pressable rounded-sm px-1 text-ink-faint hover:text-ink"
             aria-label="Copy a link to this view"
           >
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden
+            >
               <path
                 d="M6 10a3 3 0 004 0l2-2a3 3 0 00-4-4l-1 1M10 6a3 3 0 00-4 0L4 8a3 3 0 004 4l1-1"
                 stroke="currentColor"
@@ -520,18 +566,37 @@ function TopBar({
         </span>
       )}
 
-      <div className="flex items-center gap-2 md:ml-auto">
+      <div className="flex flex-wrap items-center gap-2 md:ml-auto">
         <button
           onClick={onOpenSearch}
           className="pressable hidden items-center gap-2 rounded-md border border-line bg-surface-2 px-2 py-1.5 text-xs text-ink-faint hover:text-ink-dim lg:flex"
           aria-label="Open command menu"
         >
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
-            <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M11 11l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 16 16"
+            fill="none"
+            aria-hidden
+          >
+            <circle
+              cx="7"
+              cy="7"
+              r="4.5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <path
+              d="M11 11l3 3"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
           </svg>
           <span>Search</span>
-          <kbd className="tnum rounded-sm border border-line px-1 text-[10px] leading-4">⌘K</kbd>
+          <kbd className="tnum rounded-sm border border-line px-1 text-[10px] leading-4">
+            ⌘K
+          </kbd>
         </button>
         <ThemeToggle />
         {areas.length > 0 && (
@@ -575,7 +640,13 @@ function ThemeToggle() {
     >
       {effective === "dark" ? (
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-          <circle cx="8" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.4" />
+          <circle
+            cx="8"
+            cy="8"
+            r="3.2"
+            stroke="currentColor"
+            strokeWidth="1.4"
+          />
           <path
             d="M8 1.5v1.6M8 12.9v1.6M14.5 8h-1.6M3.1 8H1.5M12.6 3.4l-1.1 1.1M4.5 11.5l-1.1 1.1M12.6 12.6l-1.1-1.1M4.5 4.5L3.4 3.4"
             stroke="currentColor"

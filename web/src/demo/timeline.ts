@@ -1,12 +1,12 @@
 /**
- * Phase H — a tiny deterministic timeline. NOT GSAP: the task brief assumed
+ * Phase H - a tiny deterministic timeline. NOT GSAP: the task brief assumed
  * GSAP was already in the stack; it is not, and the project deliberately runs
  * with no motion library (see DESIGN.md § Motion). More to the point, the hard
  * requirement here is *frame-identical re-recordable playback*, which needs an
  * owned clock:
  *
- *   - mode "realtime" — advance by wall-clock delta. Use this for recording.
- *   - mode "fixed"    — advance by exactly `step` ms per frame regardless of
+ *   - mode "realtime" - advance by wall-clock delta. Use this for recording.
+ *   - mode "fixed" - advance by exactly `step` ms per frame regardless of
  *                       elapsed time. Use this for the 10x validation run so a
  *                       dropped frame can't shift which positions get sampled.
  *
@@ -22,7 +22,7 @@ export const easing = {
   out: (t: number) => 1 - Math.pow(1 - t, 3),
   outQuint: (t: number) => 1 - Math.pow(1 - t, 5),
   in: (t: number) => t * t * t,
-  /** aggressive "drop in" — slow to leave, then snaps home (Beats 3, 6) */
+  /** aggressive "drop in" - slow to leave, then snaps home (Beats 3, 6) */
   inExpo: (t: number) => (t === 0 ? 0 : Math.pow(2, 10 * t - 10)),
   /** fast off the line, eases to rest (Beats 1) */
   outExpo: (t: number) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t)),

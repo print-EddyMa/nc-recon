@@ -26,13 +26,13 @@
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
-    /* type scale — restrained, report register, not magazine.
+    /* type scale - restrained, report register, not magazine.
        Display caps at ~2.75rem so a headline never becomes drama on a
-       1280–1440px operations screen. */
+       1280-1440px operations screen. */
     --text-display: clamp(1.9rem, 2.4vw + 1rem, 2.6rem);
     --text-display-s: clamp(1.55rem, 1.4vw + 1rem, 1.9rem);
 
-    /* spacing — 4px base, named by role (Hallmark layout-and-space) */
+    /* spacing - 4px base, named by role */
     --space-3xs: 0.125rem;
     --space-2xs: 0.25rem;
     --space-xs: 0.5rem;
@@ -125,7 +125,7 @@
     text-wrap: pretty;
   }
 
-  /* body measure — every running paragraph sits 60–68ch */
+  /* body measure - every running paragraph sits 60-68ch */
   .measure {
     max-width: 64ch;
   }
@@ -150,7 +150,7 @@
 }
 
 @layer components {
-  /* .panel — ONLY for a container that floats over live map imagery or a scrim.
+  /* .panel - ONLY for a container that floats over live map imagery or a scrim.
      The shadow is earning its keep there. Everywhere else on a plain surface,
      use .card (hairline, no shadow). */
   .panel {
@@ -162,7 +162,7 @@
       0 6px 20px rgb(var(--shadow) / 0.1);
   }
 
-  /* .card — the content-screen container. One hairline, no shadow, no nesting.
+  /* .card - the content-screen container. One hairline, no shadow, no nesting.
      Depth comes from weight and spacing, not elevation. */
   .card {
     background: rgb(var(--surface));
@@ -207,7 +207,7 @@
   }
 
   /* quiet metadata label. sentence case, sans. Used for a true micro-label
-     (a legend key, a figure caption) — never as a section eyebrow. */
+     (a legend key, a figure caption) - never as a section eyebrow. */
   .cap {
     font-size: 0.6875rem;
     font-weight: 500;
@@ -225,7 +225,7 @@
     color: rgb(var(--ink));
   }
 
-  /* eyebrow — a genuine ordinal/context tag ("Summary · Old Fort"). Sentence
+  /* eyebrow - a genuine ordinal/context tag ("Summary · Old Fort"). Sentence
      case, sans, quiet. Not decoration; it names where you are. */
   .eyebrow {
     font-family: theme("fontFamily.sans");

@@ -131,7 +131,7 @@ export default function Stats({ event, area, fc, loadError, onRetry, onOpenMap }
           {p.review && (p.review.total_high || p.review.total_review) && (
             <section className="mt-11 border-t border-line pt-6">
               <h2 className="section-title mb-4">Confidence</h2>
-              {/* one stacked bar — high vs. needs-review, of the classified total */}
+              {/* one stacked bar - high vs. needs-review, of the classified total */}
               <div className="bar-track flex h-4">
                 <span
                   className="h-full rounded-l-[3px] bg-accent"

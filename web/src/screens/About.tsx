@@ -1,5 +1,5 @@
 /**
- * What NC Recon is: a North Carolina disaster instrument with two halves — live
+ * What NC Recon is: a North Carolina disaster instrument with two halves - live
  * risk monitoring (before / during) and on-demand imagery-based damage
  * assessment (after). No sample data is bundled; every number in the app comes
  * from a live feed or a pipeline run. This screen is the reference document:
@@ -31,7 +31,8 @@ const RISK_SOURCES: Source[] = [
   {
     field: "Official alerts",
     source: "NWS",
-    detail: "Active watches, warnings, and advisories for North Carolina, rolled up to county.",
+    detail:
+      "Active watches, warnings, and advisories for North Carolina, rolled up to county.",
   },
   {
     field: "Fire weather",
@@ -43,18 +44,19 @@ const RISK_SOURCES: Source[] = [
     field: "Active fire",
     source: "NASA FIRMS",
     detail:
-      "Near-real-time VIIRS thermal anomalies over North Carolina from the past 24–72 hours (free map key).",
+      "Near-real-time VIIRS thermal anomalies over North Carolina from the past 24-72 hours (free map key).",
   },
   {
     field: "Active storms",
     source: "NHC",
-    detail: "Forecast cone, track line, and watch/warning zones — shown only while an Atlantic storm is active.",
+    detail:
+      "Forecast cone, track line, and watch/warning zones, shown only while an Atlantic storm is active.",
   },
   {
     field: "Live radar",
     source: "IEM NEXRAD",
     detail:
-      "NWS base-reflectivity mosaic from the Iowa Environmental Mesonet — a rolling one-hour loop, with an archive back to 1995 for the history timeline.",
+      "NWS base-reflectivity mosaic from the Iowa Environmental Mesonet, a rolling one-hour loop, with an archive back to 1995 for the history timeline.",
   },
   {
     field: "Ground truth",
@@ -64,7 +66,20 @@ const RISK_SOURCES: Source[] = [
   {
     field: "Disaster history",
     source: "OpenFEMA",
-    detail: "Federally declared disasters in North Carolina since 1990, for context on what has happened here before.",
+    detail:
+      "Federally declared disasters in North Carolina since 1990, for context on what has happened here before.",
+  },
+  {
+    field: "Live aircraft",
+    source: "ADS-B via adsb.lol",
+    detail:
+      "Aircraft currently broadcasting position over North Carolina. Guard rotary-wing, medevac, and post-storm aerial survey flights read the same as any other traffic. Off by default; data under ODbL.",
+  },
+  {
+    field: "Traffic congestion",
+    source: "TomTom Traffic API",
+    detail:
+      "Every road coloured by its real live speed vs free-flow speed, per segment. Deliberately not an animation of simulated cars: TomTom's aggregate flow data doesn't track individual vehicles, so this shows the real signal instead of a synthetic one. Optional, free key.",
   },
 ];
 
@@ -78,7 +93,8 @@ const DAMAGE_PARTS: Source[] = [
   {
     field: "Footprints",
     source: "NC OneMap → OSM",
-    detail: "Authoritative NC statewide building footprints where available; OpenStreetMap elsewhere.",
+    detail:
+      "Authoritative NC statewide building footprints where available; OpenStreetMap elsewhere.",
   },
   {
     field: "Damage model",
@@ -90,7 +106,7 @@ const DAMAGE_PARTS: Source[] = [
     field: "Confidence",
     source: "2 models + NC priors",
     detail:
-      "Each building’s tier is fused from the model margin, cross-model agreement, and NC context — flood stage, FEMA declaration, terrain. Disagreements go to review.",
+      "Each building’s tier is fused from the model margin, cross-model agreement, and NC context: flood stage, FEMA declaration, terrain. Disagreements go to review.",
   },
 ];
 
@@ -105,11 +121,15 @@ export default function About({ onEnter }: Props) {
         </h1>
 
         <p className="measure mt-5 text-[0.95rem] leading-relaxed text-ink-dim">
-          NC Recon watches North Carolina for the conditions that precede a disaster — river-flood
-          forecasts, fire weather, official warnings, storm tracks, road closures. Once post-event
-          satellite imagery exists, it rates the damage to every building on a four-level scale and
-          routes the uncertain calls to a human review queue.{" "}
-          <button onClick={onEnter} className="pressable text-accent underline underline-offset-2 hover:text-ink">
+          NC Recon watches North Carolina for the conditions that precede a
+          disaster: river-flood forecasts, fire weather, official warnings,
+          storm tracks, road closures. Once post-event satellite imagery exists,
+          it rates the damage to every building on a four-level scale and routes
+          the uncertain calls to a human review queue.{" "}
+          <button
+            onClick={onEnter}
+            className="pressable text-accent underline underline-offset-2 hover:text-ink"
+          >
             Open the live map
           </button>
           .
@@ -117,42 +137,71 @@ export default function About({ onEnter }: Props) {
 
         {/* -------- before / during -------- */}
         <section className="mt-14">
-          <h2 className="section-title mb-1 text-[0.95rem]">Before and during — the risk monitor</h2>
+          <h2 className="section-title mb-1 text-[0.95rem]">
+            Before and during · the risk monitor
+          </h2>
           <p className="measure mb-5 text-xs text-ink-faint">
-            Nine live feeds, keyless except fire weather and active-fire detection. Most fall back to
-            a committed snapshot when the upstream is unreachable, so the map is never blank.
+            Eleven live feeds, keyless except fire weather, active-fire
+            detection, and traffic. Most fall back to a committed snapshot when
+            the upstream is unreachable, so the map is never blank.
           </p>
           <SourceTable rows={RISK_SOURCES} />
         </section>
 
         {/* -------- after -------- */}
         <section className="mt-14">
-          <h2 className="section-title mb-1 text-[0.95rem]">After — damage assessment</h2>
+          <h2 className="section-title mb-1 text-[0.95rem]">
+            After · damage assessment
+          </h2>
           <p className="measure mb-5 text-xs text-ink-faint">
-            Runs on demand against one North Carolina area with a clean pre/post imagery pair.
+            Runs on demand against one North Carolina area with a clean pre/post
+            imagery pair.
           </p>
           <SourceTable rows={DAMAGE_PARTS} />
         </section>
 
         {/* -------- how the model decides -------- */}
         <section className="mt-14">
-          <h2 className="section-title mb-4 text-[0.95rem]">How a building gets its damage class</h2>
+          <h2 className="section-title mb-4 text-[0.95rem]">
+            How a building gets its damage class
+          </h2>
           <ModelDiagram />
           <p className="measure mt-5 text-xs leading-relaxed text-ink-faint">
-            Two models see every building. The CNN classifier reads the post-event chip directly; an
-            independent change-detection pass compares pre and post. Where they land within one level
-            of each other, the building is reported at high confidence. Where they differ by two or
-            more levels — or the footprint is too small to read — it goes to the review queue instead
-            of being reported as certain. NC context priors only move borderline tiers; they never
-            change the damage class.
+            Two models see every building. The CNN classifier reads the
+            post-event chip directly; an independent change-detection pass
+            compares pre and post. Where they land within one level of each
+            other, the building is reported at high confidence. Where they
+            differ by two or more levels, or the footprint is too small to read,
+            it goes to the review queue instead of being reported as certain. NC
+            context priors only move borderline tiers; they never change the
+            damage class.
           </p>
         </section>
 
         <hr className="rule mt-14" />
         <p className="mt-5 text-2xs leading-relaxed text-ink-faint">
-          No assessment data ships with the app. Areas appear on the damage map only after the
-          pipeline has run for them, locally or against a hosted service. Damage classes are model
-          output, not a field survey.
+          No assessment data ships with the app. Areas appear on the damage map
+          only after the pipeline has run for them, locally or against a hosted
+          service. Damage classes are model output, not a field survey.
+        </p>
+        <p className="mt-2 text-2xs leading-relaxed text-ink-faint">
+          The live-aircraft and traffic layers were added after{" "}
+          <a
+            href="https://github.com/bilawalsidhu/gods-eye-view"
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-2 hover:text-ink"
+          >
+            God&rsquo;s Eye View
+          </a>{" "}
+          showed the same open-data idea at global scale, worth a look if you
+          want live aircraft, ships, and satellites for the whole planet rather
+          than just North Carolina. Its traffic layer falls back to a synthetic
+          animation of moving cars when no paid provider is configured; this app
+          shows real TomTom road speeds instead, or nothing. Camera images work
+          the same way. DriveNC doesn&rsquo;t publish a documented feed for the
+          live image behind each camera, so clicking one here links out to the
+          real image on drivenc.gov rather than guessing at an unofficial one.
         </p>
       </div>
     </main>
@@ -170,9 +219,11 @@ function SourceTable({ rows }: { rows: Source[] }) {
           <dt className="text-sm font-medium text-ink">{r.field}</dt>
           <dd className="tnum order-3 text-xs leading-relaxed text-ink-dim sm:order-2 sm:col-span-1 sm:text-[0.8125rem]">
             <span className="font-mono text-2xs uppercase tracking-wide text-ink-faint sm:hidden">
-              {r.source} —{" "}
+              {r.source}:{" "}
             </span>
-            <span className="hidden font-medium text-ink-dim sm:inline">{r.source}</span>
+            <span className="hidden font-medium text-ink-dim sm:inline">
+              {r.source}
+            </span>
           </dd>
           <dd className="order-2 col-span-2 text-xs leading-relaxed text-ink-dim sm:order-3 sm:col-span-1 sm:pl-0">
             {r.detail}
@@ -183,7 +234,7 @@ function SourceTable({ rows }: { rows: Source[] }) {
   );
 }
 
-/** The fusion pipeline, drawn as the real mechanism — imagery in, a damage
+/** The fusion pipeline, drawn as the real mechanism - imagery in, a damage
  * class + confidence tier out, with the review branch shown explicitly. */
 function ModelDiagram() {
   return (

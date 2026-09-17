@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Phase D5 — automated pipeline trigger.
+"""Phase D5 - automated pipeline trigger.
 
 Every run:
   1. refresh the Maxar Open Data event index
@@ -149,7 +149,7 @@ def main():
     # remember what we've now seen
     os.makedirs(CACHE, exist_ok=True)
     json.dump(sorted(set(names)), open(SEEN, "w"), indent=2)
-    print(f"[poller] {'DRY-RUN — no pipeline run' if a.dry_run else 'done'}; "
+    print(f"[poller] {'DRY-RUN - no pipeline run' if a.dry_run else 'done'}; "
           f"{len(matched)} match(es)")
 
 

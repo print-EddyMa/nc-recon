@@ -6,7 +6,8 @@
  * current sensor conditions, river-flood *forecasts*, active-storm tracking,
  * official watches/warnings, and DOT ground-truth (cameras / closures).
  *
- * It is still the "risk" half of the app, what could happen or is happening,  * as opposed to the damage-assessment pipeline (what already happened).
+ * It is still the "risk" half of the app, what could happen or is happening,
+ * as opposed to the damage-assessment pipeline (what already happened).
  *
  * Access model, mirroring `hazards.ts`:
  *   - NWPS (E2) and NWS alerts (E5) are open, keyless, CORS-enabled → fetched
@@ -24,32 +25,49 @@ import { API_URL } from "./catalog";
 
 /**
  * Fetch a keyless NC feed through the pipeline server's cached pass-through when
- * one is configured (`/feed/<name>` — keeps the console clean past NOAA's flaky
+ * one is configured (`/feed/<name>` - keeps the console clean past NOAA's flaky
  * CORS + rate limits and adds a polite User-Agent), else hit the upstream
  * directly. Callers still fall back to the committed snapshot on any failure.
  */
-async function feedFetch(name: string, directUrl: string, init?: RequestInit): Promise<Response> {
+async function feedFetch(
+  name: string,
+  directUrl: string,
+  init?: RequestInit,
+): Promise<Response> {
   if (API_URL) {
     try {
       // the proxy caps its own upstream at 20s (USGS NWIS can genuinely take
-      // ~18s cold, then it's cached 5 min) — give it headroom past that so a
+      // ~18s cold, then it's cached 5 min) - give it headroom past that so a
       // slow first load still lands live instead of dropping to the snapshot
-      const r = await fetch(`${API_URL}/feed/${name}`, { signal: AbortSignal.timeout(26000) });
+      const r = await fetch(`${API_URL}/feed/${name}`, {
+        signal: AbortSignal.timeout(26000),
+      });
       if (r.ok) return r;
     } catch {
-      /* server down or slow — fall through to the upstream */
+      /* server down or slow - fall through to the upstream */
     }
   }
   return fetch(directUrl, { signal: AbortSignal.timeout(15000), ...init });
 }
 
 // NC bounding box [w, s, e, n] and a sensible default map centre.
-export const NC_BBOX: [number, number, number, number] = [-84.55, 33.75, -75.4, 36.7];
+export const NC_BBOX: [number, number, number, number] = [
+  -84.55, 33.75, -75.4, 36.7,
+];
 export const NC_CENTER: [number, number] = [-79.2, 35.55];
 
 export interface NCPointProps {
   id: string;
-  layer: "climate" | "gauge" | "alert" | "storm" | "camera" | "closure" | "fire" | "flow";
+  layer:
+    | "climate"
+    | "gauge"
+    | "alert"
+    | "storm"
+    | "camera"
+    | "closure"
+    | "fire"
+    | "flow"
+    | "aircraft";
   title: string;
   detail?: string;
   /** -1 = offline/no-data, 0 = normal, 1 = watch, 2 = elevated, 3 = severe */
@@ -62,7 +80,11 @@ export interface NCPointProps {
 
 export type NCPointFC = GeoJSON.FeatureCollection<GeoJSON.Point, NCPointProps>;
 export type NCGeomFC = GeoJSON.FeatureCollection<
-  GeoJSON.Polygon | GeoJSON.MultiPolygon | GeoJSON.LineString | GeoJSON.MultiLineString | GeoJSON.Point,
+  | GeoJSON.Polygon
+  | GeoJSON.MultiPolygon
+  | GeoJSON.LineString
+  | GeoJSON.MultiLineString
+  | GeoJSON.Point,
   NCPointProps
 >;
 
@@ -105,7 +127,7 @@ function memoFeed<T>(key: string, fn: () => Promise<T>): Promise<T> {
   if (hit && Date.now() - hit.at < FEED_TTL) return hit.p as Promise<T>;
   const p = fn();
   _feedCache.set(key, { at: Date.now(), p });
-  // a rejected fetch shouldn't be cached — let the next caller retry
+  // a rejected fetch shouldn't be cached - let the next caller retry
   p.catch(() => {
     if (_feedCache.get(key)?.p === p) _feedCache.delete(key);
   });
@@ -113,7 +135,10 @@ function memoFeed<T>(key: string, fn: () => Promise<T>): Promise<T> {
 }
 
 const inNC = (lon: number, lat: number) =>
-  lon >= NC_BBOX[0] && lon <= NC_BBOX[2] && lat >= NC_BBOX[1] && lat <= NC_BBOX[3];
+  lon >= NC_BBOX[0] &&
+  lon <= NC_BBOX[2] &&
+  lat >= NC_BBOX[1] &&
+  lat <= NC_BBOX[3];
 
 // --------------------------------------------------------------------------- //
 // E2. NOAA National Water Prediction Service: river stage + flood *forecast*
@@ -159,7 +184,8 @@ const isNCGauge = (g: NWPSGauge) =>
 function nwpsToFC(gauges: NWPSGauge[]): NCPointFC {
   const feats: NCPointFC["features"] = [];
   for (const g of gauges) {
-    if (typeof g.longitude !== "number" || typeof g.latitude !== "number") continue;
+    if (typeof g.longitude !== "number" || typeof g.latitude !== "number")
+      continue;
     if (!inNC(g.longitude, g.latitude) || !isNCGauge(g)) continue;
     const obs = g.status?.observed;
     const fcst = g.status?.forecast;
@@ -172,9 +198,13 @@ function nwpsToFC(gauges: NWPSGauge[]): NCPointFC {
     // headline category: the worse of observed / forecast
     const worstCat = fcstSev > obsSev ? fcstCat : obsCat;
     const stage =
-      obs && obs.primary > -900 ? `${obs.primary.toFixed(1)} ${obs.primaryUnit}` : "no reading";
+      obs && obs.primary > -900
+        ? `${obs.primary.toFixed(1)} ${obs.primaryUnit}`
+        : "no reading";
     const forecastStage =
-      fcst && fcst.primary > -900 ? `${fcst.primary.toFixed(1)} ${fcst.primaryUnit}` : null;
+      fcst && fcst.primary > -900
+        ? `${fcst.primary.toFixed(1)} ${fcst.primaryUnit}`
+        : null;
     feats.push({
       type: "Feature",
       geometry: { type: "Point", coordinates: [g.longitude, g.latitude] },
@@ -183,15 +213,15 @@ function nwpsToFC(gauges: NWPSGauge[]): NCPointFC {
         layer: "gauge",
         title: g.name || g.lid,
         detail: rising
-          ? `Forecast to rise into ${FLOOD_LABEL[fcstCat] ?? fcstCat} (${forecastStage ?? "-"} by ${
-              fcst?.validTime ? fcst.validTime.slice(11, 16) + " UTC" : "next window"
-            })`
+          ? `Forecast to rise into ${FLOOD_LABEL[fcstCat] ?? fcstCat} (${forecastStage ?? "-"} by ${fcst?.validTime ? fcst.validTime.slice(11, 16) + " UTC" : "next window"})`
           : forecastStage
             ? `Forecast ${forecastStage}, ${FLOOD_LABEL[fcstCat] ?? "steady"}`
             : "Observation only, no NWM forecast at this gauge",
         severity,
         value: stage,
-        category: FLOOD_LABEL[worstCat] ?? (severity < 0 ? "Gauge offline" : "Below flood stage"),
+        category:
+          FLOOD_LABEL[worstCat] ??
+          (severity < 0 ? "Gauge offline" : "Below flood stage"),
         url: `https://water.noaa.gov/gauges/${g.lid}`,
         time: obs?.validTime ? Date.parse(obs.validTime) : null,
       },
@@ -208,7 +238,7 @@ async function _ncFloodForecasts(): Promise<NCResult<NCPointFC>> {
     const raw = (await r.json()) as { gauges?: NWPSGauge[] };
     const data = nwpsToFC(raw.gauges ?? []);
     // NC always has ~579 NWPS gauges; an empty result means the fetch was
-    // rate-limited / proxied-empty — use the committed snapshot instead
+    // rate-limited / proxied-empty - use the committed snapshot instead
     if (!data.features.length) throw new Error("empty NWPS response");
     return {
       data,
@@ -247,7 +277,9 @@ export const ncFloodForecasts = () => memoFeed("flood", _ncFloodForecasts);
 async function _ncAlerts(): Promise<NCResult<NCGeomFC>> {
   const now = Date.now();
   try {
-    const r = await feedFetch("nws", NWS_URL, { headers: { Accept: "application/geo+json" } });
+    const r = await feedFetch("nws", NWS_URL, {
+      headers: { Accept: "application/geo+json" },
+    });
     if (!r.ok) throw new Error(String(r.status));
     const raw = (await r.json()) as GeoJSON.FeatureCollection;
     const data = nwsToFC(raw);
@@ -277,7 +309,9 @@ function nwsToFC(raw: GeoJSON.FeatureCollection): NCGeomFC {
     const event = String(p.event ?? "Alert");
     const sev = NWS_SEVERITY[String(p.severity ?? "Unknown")] ?? 1;
     // fire-weather / flood events get bumped, they're the ones this app cares about
-    const isPriority = /flood|red flag|fire|hurricane|tropical|tornado/i.test(event);
+    const isPriority = /flood|red flag|fire|hurricane|tropical|tornado/i.test(
+      event,
+    );
     const geom = f.geometry as NCGeomFC["features"][number]["geometry"] | null;
     if (!geom) return; // zone-only alerts have null geometry; skip the polygon
     feats.push({
@@ -342,7 +376,9 @@ async function _ncCameras(): Promise<NCResult<NCPointFC>> {
         : undefined,
     source: "NCDOT DriveNC · committed snapshot",
     fetchedAt: now,
-    headline: data.features.length ? `${data.features.length} statewide` : undefined,
+    headline: data.features.length
+      ? `${data.features.length} statewide`
+      : undefined,
   };
 }
 
@@ -361,7 +397,9 @@ async function _ncClosures(): Promise<NCResult<NCPointFC>> {
         : undefined,
     source: "NCDOT DriveNC · committed snapshot",
     fetchedAt: now,
-    headline: data.features.length ? `${data.features.length} on the network` : undefined,
+    headline: data.features.length
+      ? `${data.features.length} on the network`
+      : undefined,
   };
 }
 export const ncClosures = () => memoFeed("closures", _ncClosures);
@@ -391,9 +429,14 @@ async function cloudsNetwork(
     obtype: "H,O",
     output: "geojson",
   });
-  const r = await fetch(`${CLOUDS_BASE}?${qs}`, { signal: AbortSignal.timeout(15000) });
+  const r = await fetch(`${CLOUDS_BASE}?${qs}`, {
+    signal: AbortSignal.timeout(15000),
+  });
   if (!r.ok) throw new Error(`${net} ${r.status}`);
-  const fc = (await r.json()) as GeoJSON.FeatureCollection<GeoJSON.Point, CloudsFeatureProps>;
+  const fc = (await r.json()) as GeoJSON.FeatureCollection<
+    GeoJSON.Point,
+    CloudsFeatureProps
+  >;
   if (fc?.type !== "FeatureCollection") throw new Error(`${net}: not GeoJSON`);
   return fc.features.filter((f) => f.geometry?.type === "Point");
 }
@@ -402,7 +445,8 @@ function numField(p: CloudsFeatureProps, ...names: string[]): number | null {
   for (const n of names) {
     const v = p[n];
     if (typeof v === "number" && Number.isFinite(v)) return v;
-    if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) return Number(v);
+    if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)))
+      return Number(v);
   }
   return null;
 }
@@ -431,18 +475,22 @@ async function _ncClimate(): Promise<NCResult<NCPointFC>> {
   try {
     // allSettled so a RAWS failure doesn't throw away good ECONet data
     const settled = await Promise.allSettled([
-      cloudsNetwork(hash, "ECONET", "temp2m,rh2m,windspeed10m,precip1m").catch(() =>
-        cloudsNetwork(hash, "ECONET", "temp2m,precip1m"),
+      cloudsNetwork(hash, "ECONET", "temp2m,rh2m,windspeed10m,precip1m").catch(
+        () => cloudsNetwork(hash, "ECONET", "temp2m,precip1m"),
       ),
-      cloudsNetwork(hash, "RAWS", "temp2m,windspeed10m,fuelmoisture,precip1m").catch(() =>
-        cloudsNetwork(hash, "RAWS", "temp2m,precip1m"),
-      ),
+      cloudsNetwork(
+        hash,
+        "RAWS",
+        "temp2m,windspeed10m,fuelmoisture,precip1m",
+      ).catch(() => cloudsNetwork(hash, "RAWS", "temp2m,precip1m")),
     ]);
     const val = (i: number) =>
       settled[i].status === "fulfilled"
-        ? (settled[i] as PromiseFulfilledResult<
-            GeoJSON.Feature<GeoJSON.Point, CloudsFeatureProps>[]
-          >).value
+        ? (
+            settled[i] as PromiseFulfilledResult<
+              GeoJSON.Feature<GeoJSON.Point, CloudsFeatureProps>[]
+            >
+          ).value
         : [];
     const econet = val(0);
     const raws = val(1);
@@ -457,12 +505,26 @@ async function _ncClimate(): Promise<NCResult<NCPointFC>> {
     ] as const) {
       for (const f of list) {
         const [lon, lat] = f.geometry.coordinates;
-        if (!Number.isFinite(lon) || !Number.isFinite(lat) || !inNC(lon, lat)) continue;
+        if (!Number.isFinite(lon) || !Number.isFinite(lat) || !inNC(lon, lat))
+          continue;
         const p = f.properties ?? {};
         const name =
-          strField(p, "name", "location_name", "location", "station", "loc") ?? "Station";
-        const temp = numField(p, "temp2m", "temperature", "airtemp1m", "airtemp");
-        const wind = numField(p, "windspeed10m", "windspeed2m", "windspeed", "wind");
+          strField(p, "name", "location_name", "location", "station", "loc") ??
+          "Station";
+        const temp = numField(
+          p,
+          "temp2m",
+          "temperature",
+          "airtemp1m",
+          "airtemp",
+        );
+        const wind = numField(
+          p,
+          "windspeed10m",
+          "windspeed2m",
+          "windspeed",
+          "wind",
+        );
         const rain = numField(p, "precip1m", "precip", "rain");
         const fuel = numField(p, "fuelmoisture", "fuel_moisture", "fm10");
         const bits: string[] = [];
@@ -471,7 +533,8 @@ async function _ncClimate(): Promise<NCResult<NCPointFC>> {
         if (rain != null && rain > 0) bits.push(`rain ${rain.toFixed(2)}"`);
         if (fuel != null) bits.push(`fuel ${fuel.toFixed(0)}%`);
         // fire-weather flag: RAWS with low fuel moisture + wind
-        const fireRisk = fuel != null && fuel <= 8 && (wind == null || wind >= 10);
+        const fireRisk =
+          fuel != null && fuel <= 8 && (wind == null || wind >= 10);
         feats.push({
           type: "Feature",
           geometry: { type: "Point", coordinates: [lon, lat] },
@@ -482,7 +545,8 @@ async function _ncClimate(): Promise<NCResult<NCPointFC>> {
             detail: `${net}${bits.length ? " · " + bits.join(" · ") : " · reporting"}`,
             severity: fireRisk ? 2 : 0,
             value: bits[0] ?? "reporting",
-            category: net === "RAWS" ? "Fire-weather station" : "Research station",
+            category:
+              net === "RAWS" ? "Fire-weather station" : "Research station",
           },
         });
       }
@@ -537,13 +601,24 @@ async function _ncStreamflow(): Promise<NCResult<NCPointFC>> {
   try {
     const r = await feedFetch("nwis", NWIS_URL);
     if (!r.ok) throw new Error(String(r.status));
-    const raw = (await r.json()) as { value?: { timeSeries?: NWISTimeSeries[] } };
+    const raw = (await r.json()) as {
+      value?: { timeSeries?: NWISTimeSeries[] };
+    };
     const series = raw.value?.timeSeries ?? [];
     if (!series.length) throw new Error("empty NWIS response"); // → committed snapshot
     // fold the per-parameter series into one point per site
     const bySite = new Map<
       string,
-      { name: string; lon: number; lat: number; q?: number; qUnit?: string; h?: number; hUnit?: string; t?: number }
+      {
+        name: string;
+        lon: number;
+        lat: number;
+        q?: number;
+        qUnit?: string;
+        h?: number;
+        hUnit?: string;
+        t?: number;
+      }
     >();
     for (const ts of series) {
       const code = ts.sourceInfo.siteCode[0]?.value;
@@ -555,7 +630,13 @@ async function _ncStreamflow(): Promise<NCResult<NCPointFC>> {
       const v = latest ? Number(latest.value) : NaN;
       const rec =
         bySite.get(code) ??
-        bySite.set(code, { name: ts.sourceInfo.siteName, lon: g.longitude, lat: g.latitude }).get(code)!;
+        bySite
+          .set(code, {
+            name: ts.sourceInfo.siteName,
+            lon: g.longitude,
+            lat: g.latitude,
+          })
+          .get(code)!;
       if (latest) rec.t = Math.max(rec.t ?? 0, Date.parse(latest.dateTime));
       const param = ts.variable.variableCode[0]?.value;
       if (param === "00060" && Number.isFinite(v) && v > -1e5) {
@@ -570,7 +651,8 @@ async function _ncStreamflow(): Promise<NCResult<NCPointFC>> {
     for (const [code, s] of bySite) {
       if (s.q == null && s.h == null) continue;
       const bits: string[] = [];
-      if (s.q != null) bits.push(`${s.q.toLocaleString()} ${s.qUnit ?? "ft³/s"}`);
+      if (s.q != null)
+        bits.push(`${s.q.toLocaleString()} ${s.qUnit ?? "ft³/s"}`);
       if (s.h != null) bits.push(`stage ${s.h.toFixed(1)} ${s.hUnit ?? "ft"}`);
       feats.push({
         type: "Feature",
@@ -602,7 +684,9 @@ async function _ncStreamflow(): Promise<NCResult<NCPointFC>> {
       stale: true,
       source: "USGS NWIS · cached snapshot",
       fetchedAt: now,
-      headline: data.features.length ? `${data.features.length} gages (cached)` : undefined,
+      headline: data.features.length
+        ? `${data.features.length} gages (cached)`
+        : undefined,
     };
   }
 }
@@ -646,7 +730,8 @@ async function _ncFires(): Promise<NCResult<NCPointFC>> {
       const c = line.split(",");
       const lon = Number(c[lo]);
       const lat = Number(c[li]);
-      if (!Number.isFinite(lon) || !Number.isFinite(lat) || !inNC(lon, lat)) continue;
+      if (!Number.isFinite(lon) || !Number.isFinite(lat) || !inNC(lon, lat))
+        continue;
       const frp = Number(c[fr]) || 0;
       feats.push({
         type: "Feature",
@@ -666,7 +751,10 @@ async function _ncFires(): Promise<NCResult<NCPointFC>> {
       data: { type: "FeatureCollection", features: feats },
       stale: false,
       disabled: feats.length === 0,
-      reason: feats.length === 0 ? "No active-fire detections in NC in the past 24 h." : undefined,
+      reason:
+        feats.length === 0
+          ? "No active-fire detections in NC in the past 24 h."
+          : undefined,
       source: `NASA FIRMS · ${feats.length} detections`,
       fetchedAt: now,
       headline: feats.length ? `${feats.length} in past 24 h` : undefined,
@@ -710,7 +798,7 @@ export interface NCHistory {
   sinceYear: number;
   byType: { type: string; count: number }[];
   recent: FemaDeclaration[];
-  /** every deduped NC declaration, newest first — feeds the history timeline */
+  /** every deduped NC declaration, newest first - feeds the history timeline */
   all: FemaDeclaration[];
   stale: boolean;
   source: string;
@@ -741,10 +829,15 @@ function dedupeFema(rows: FemaDeclaration[]): FemaDeclaration[] {
   return uniq;
 }
 
-function femaFromRows(rows: FemaDeclaration[], stale: boolean, source: string): NCHistory {
+function femaFromRows(
+  rows: FemaDeclaration[],
+  stale: boolean,
+  source: string,
+): NCHistory {
   const uniq = dedupeFema(rows);
   const counts = new Map<string, number>();
-  for (const d of uniq) counts.set(d.incidentType, (counts.get(d.incidentType) ?? 0) + 1);
+  for (const d of uniq)
+    counts.set(d.incidentType, (counts.get(d.incidentType) ?? 0) + 1);
   return {
     total: uniq.length,
     sinceYear: FEMA_SINCE_YEAR,
@@ -763,19 +856,120 @@ async function _ncFemaHistory(): Promise<NCHistory> {
   try {
     const r = await fetch(FEMA_URL, { signal: AbortSignal.timeout(15000) });
     if (!r.ok) throw new Error(String(r.status));
-    const raw = (await r.json()) as { DisasterDeclarationsSummaries?: FemaDeclaration[] };
-    return femaFromRows(raw.DisasterDeclarationsSummaries ?? [], false, "OpenFEMA · Disaster Declarations");
+    const raw = (await r.json()) as {
+      DisasterDeclarationsSummaries?: FemaDeclaration[];
+    };
+    return femaFromRows(
+      raw.DisasterDeclarationsSummaries ?? [],
+      false,
+      "OpenFEMA · Disaster Declarations",
+    );
   } catch {
     // committed offline copy, same shape as the API rows
-    const rows = await snapshot<FemaDeclaration[]>("fema_history_snapshot.json", () => []);
-    if (rows.length) return femaFromRows(rows, true, "OpenFEMA · cached snapshot");
+    const rows = await snapshot<FemaDeclaration[]>(
+      "fema_history_snapshot.json",
+      () => [],
+    );
+    if (rows.length)
+      return femaFromRows(rows, true, "OpenFEMA · cached snapshot");
     return {
-      total: 0, sinceYear: FEMA_SINCE_YEAR, byType: [], recent: [], all: [],
-      stale: true, source: "OpenFEMA · unavailable", fetchedAt: Date.now(),
+      total: 0,
+      sinceYear: FEMA_SINCE_YEAR,
+      byType: [],
+      recent: [],
+      all: [],
+      stale: true,
+      source: "OpenFEMA · unavailable",
+      fetchedAt: Date.now(),
     };
   }
 }
 export const ncFemaHistory = () => memoFeed("fema", _ncFemaHistory);
+
+// --------------------------------------------------------------------------- //
+// E10. Live aircraft over NC (ADS-B). Keyless; a single 250nm point query
+// centred on the state, via adsb.lol through the server's cached pass-through,
+// covers NC edge to edge. Situational awareness during a disaster: Guard
+// rotary-wing, medevac and post-storm aerial survey flights show up here same
+// as any other traffic. Same source used by github.com/bilawalsidhu/gods-eye-view,
+// credited in About.
+// --------------------------------------------------------------------------- //
+const AIRCRAFT_URL = "https://api.adsb.lol/v2/point/35.55/-79.2/250";
+
+interface AdsbAircraft {
+  hex: string;
+  flight?: string;
+  r?: string;
+  t?: string;
+  alt_baro?: number | "ground";
+  gs?: number;
+  lat?: number;
+  lon?: number;
+  dbFlags?: number;
+}
+
+async function _ncAircraft(): Promise<NCResult<NCPointFC>> {
+  const now = Date.now();
+  try {
+    const r = await feedFetch("aircraft", AIRCRAFT_URL);
+    if (!r.ok) throw new Error(String(r.status));
+    const raw = (await r.json()) as { ac?: AdsbAircraft[] };
+    const feats: NCPointFC["features"] = [];
+    for (const a of raw.ac ?? []) {
+      if (
+        typeof a.lat !== "number" ||
+        typeof a.lon !== "number" ||
+        !inNC(a.lon, a.lat)
+      )
+        continue;
+      const military = ((a.dbFlags ?? 0) & 1) === 1;
+      const alt =
+        typeof a.alt_baro === "number"
+          ? `${a.alt_baro.toLocaleString()} ft`
+          : "on ground";
+      const speed = typeof a.gs === "number" ? `${a.gs.toFixed(0)} kt` : null;
+      const title = (a.flight ?? a.r ?? a.hex).trim() || a.hex;
+      feats.push({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [a.lon, a.lat] },
+        properties: {
+          id: `adsb-${a.hex}`,
+          layer: "aircraft",
+          title,
+          detail: [military ? "Military" : a.t, alt, speed]
+            .filter(Boolean)
+            .join(" · "),
+          severity: 0,
+          value: alt,
+          category: military ? "Military" : (a.t ?? "Aircraft"),
+        },
+      });
+    }
+    return {
+      data: { type: "FeatureCollection", features: feats },
+      stale: false,
+      disabled: feats.length === 0,
+      reason:
+        feats.length === 0
+          ? "No aircraft currently broadcasting position over North Carolina."
+          : undefined,
+      source: `ADS-B · adsb.lol · ${feats.length} tracked`,
+      fetchedAt: now,
+      headline: feats.length ? `${feats.length} in flight` : undefined,
+    };
+  } catch (err) {
+    return {
+      data: emptyPts(),
+      stale: false,
+      disabled: true,
+      reason: `Live feed unavailable right now (${String(err).slice(0, 60)}).`,
+      source: "ADS-B · unavailable",
+      fetchedAt: now,
+    };
+  }
+}
+
+export const ncAircraft = () => memoFeed("aircraft", _ncAircraft);
 
 // --------------------------------------------------------------------------- //
 // helpers
@@ -792,7 +986,9 @@ function headlineFor(feats: NCPointFC["features"]): string {
 function alertHeadline(feats: NCGeomFC["features"]): string {
   if (!feats.length) return "No active NC alerts";
   const top = feats.filter((f) => f.properties.severity >= 3).length;
-  return top ? `${feats.length} active · ${top} severe` : `${feats.length} active`;
+  return top
+    ? `${feats.length} active · ${top} severe`
+    : `${feats.length} active`;
 }
 
 /** severity → palette (shared with the dashboard legend) */
@@ -803,4 +999,10 @@ export const NC_SEV_COLOR: Record<number, [number, number, number]> = {
   2: [232, 137, 74], // elevated (dmg1)
   3: [209, 73, 91], // severe (dmg2)
 };
-export const NC_SEV_LABEL = ["offline", "normal", "watch", "elevated", "severe"];
+export const NC_SEV_LABEL = [
+  "offline",
+  "normal",
+  "watch",
+  "elevated",
+  "severe",
+];

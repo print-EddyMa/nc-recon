@@ -18,13 +18,14 @@ pipeline/data/tiles/*
 pipeline/data/output/*
 !pipeline/data/output/.gitkeep
 # Node
+node_modules/
 web/node_modules/
 web/dist/
 web/.vite/
 # OS
 .DS_Store
 
-# Design tooling (Hallmark anti-slop skill, installed locally via `npx skills add`)
+# Local tooling, not part of the app
 .agents/
 .claude/
 
@@ -38,19 +39,25 @@ web/dist/
 
 # No sample assessment data is committed. Map tiles and per-area contract
 # GeoJSON are generated on demand by the pipeline (locally or the hosted
-# service) and served from web/public — never checked in.
+# service) and served from web/public, never checked in.
 web/public/tiles/
 
-# Phase H — the /demo hook sequence's self-hosted basemap (~30 MB of CARTO
+# The /demo hook sequence's self-hosted basemap (about 30 MB of CARTO
 # dark-matter vector tiles). Regenerate with `npm run demo:assets` in web/.
 # The rest of web/public/demo/ (radar frames, stitched Maxar stills, the
 # baked GeoJSON/JSON) is committed so the sequence runs without a re-fetch.
 web/public/demo/basemap/
 web/public/data/*.geojson
-# ...but the committed feeds ARE kept: the NC risk snapshots, the global live
+# ...but the committed feeds are kept: the NC risk snapshots, the global live
 # hazard snapshots, the Maxar catalogue metadata, and the (initially empty)
 # NC event registry.
 !web/public/data/events.json
 !web/public/data/maxar_catalog.json
 !web/public/data/nc/
 !web/public/data/live/
+
+# Demo-video production pipeline (Blender scene, footage, submission docs) is
+# not part of the app and is not tracked in this repo.
+video/
+docs/CAC_SUBMISSION_QA.md
+docs/CAC_VIDEO_SCRIPT.md

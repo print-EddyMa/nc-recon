@@ -22,7 +22,7 @@ CATALOG_URL = "https://raw.githubusercontent.com/opengeos/maxar-open-data/master
 # HTTP: every network read here goes through _http_stream so a stalled S3
 # connection fails fast (with retry + resume) instead of hanging the whole
 # assessment. urllib.request.urlretrieve, which this replaces, honours no
-# timeout at all — a trickling socket blocks until the caller is killed.
+# timeout at all - a trickling socket blocks until the caller is killed.
 # --------------------------------------------------------------------------- #
 HTTP_TIMEOUT = 30          # per-read socket timeout, seconds
 HTTP_RETRIES = 4
@@ -50,7 +50,7 @@ AOI_HALF_M = 1200
 
 @lru_cache(maxsize=64)
 def _tx(src_epsg, dst_epsg):
-    """Cached pyproj transformer — choose_tile calls this once per catalog row."""
+    """Cached pyproj transformer - choose_tile calls this once per catalog row."""
     from pyproj import Transformer
 
     return Transformer.from_crs(src_epsg, dst_epsg, always_xy=True)
@@ -63,7 +63,7 @@ def _have(path: str) -> bool:
 def _http_stream(url: str, dest: str, *, timeout: int = HTTP_TIMEOUT, retries: int = HTTP_RETRIES) -> str:
     """Stream `url` to `dest` with a socket timeout, retry + backoff, and
     resume-within-call from a `.part` file. Raises RuntimeError on final failure.
-    Resume never spans separate pipeline runs — callers discard a stale `.part`
+    Resume never spans separate pipeline runs - callers discard a stale `.part`
     before the first attempt."""
     os.makedirs(os.path.dirname(os.path.abspath(dest)), exist_ok=True)
     part = dest + ".part"
@@ -77,7 +77,7 @@ def _http_stream(url: str, dest: str, *, timeout: int = HTTP_TIMEOUT, retries: i
         try:
             with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310
                 if have and getattr(r, "status", 200) != 206:
-                    have, mode = 0, "wb"          # server ignored Range — restart
+                    have, mode = 0, "wb"          # server ignored Range - restart
                 started = time.monotonic()
                 with open(part, mode) as fh:
                     while True:
@@ -196,7 +196,7 @@ def choose_tile(
     by_qk = {qk: rs for qk, rs in by_qk.items() if _has_pre_post(rs, event_date)}
 
     if not by_qk:
-        # nearest-quadkey fallback — rank ALL quadkeys that straddle the event by
+        # nearest-quadkey fallback - rank ALL quadkeys that straddle the event by
         # distance to the requested point
         allq: dict[str, list[dict]] = defaultdict(list)
         for r in rows:
@@ -321,7 +321,7 @@ def _window_pair(
             wbox = _win_bounds(wa, a.transform)
             wa = from_bounds(*wbox, a.transform).round_offsets().round_lengths()
             wb = from_bounds(*wbox, b.transform).round_offsets().round_lengths()
-            # pre + post are independent network reads — overlap them
+            # pre + post are independent network reads - overlap them
             with ThreadPoolExecutor(max_workers=2) as pool:
                 fa = pool.submit(a.read, indexes=[1, 2, 3], window=wa, boundless=True, fill_value=0)
                 fb = pool.submit(b.read, indexes=[1, 2, 3], window=wb, boundless=True, fill_value=0)
@@ -331,7 +331,7 @@ def _window_pair(
                 raise RuntimeError(f"pre/post windows did not align ({pa.shape} vs {pb.shape})")
             if pa.max() == 0 or pb.max() == 0:
                 raise RuntimeError("AOI window is all nodata in one of the captures")
-            # JPEG/YCbCr to match the Maxar source — a DEFLATE re-encode of RGB
+            # JPEG/YCbCr to match the Maxar source - a DEFLATE re-encode of RGB
             # aerial imagery is both far larger on disk and CPU-bound to write
             prof = {
                 "driver": "GTiff", "height": pa.shape[1], "width": pa.shape[2],

@@ -1,4 +1,4 @@
-/* Phase H — the hook sequence. Fixed dark. App visual language: flat, solid,
+/* Phase H - the hook sequence. Fixed dark. App visual language: flat, solid,
    one accent, no gradients, no glow, no blur. Tokens mirror index.css (dark). */
 @import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;450;500;600&family=Geist+Mono:wght@400;500&display=swap");
 
@@ -15,7 +15,7 @@
 }
 
 /* author `display:` rules otherwise beat the UA [hidden] rule, so make the
-   hidden attribute authoritative — every beat layer relies on it */
+   hidden attribute authoritative - every beat layer relies on it */
 [hidden] {
   display: none !important;
 }
@@ -42,7 +42,7 @@
 .demo-map {
   background: var(--bg);
 }
-/* the demo owns the frame — hide MapLibre's own furniture */
+/* the demo owns the frame - hide MapLibre's own furniture */
 .demo-map .maplibregl-control-container {
   display: none;
 }
@@ -54,6 +54,12 @@
   left: 0;
   transform-origin: top left;
   pointer-events: none;
+  /* A hairline frame around the sensor's actual field of view. The archived
+     NEXRAD PNG is genuinely transparent (alpha 0, verified) wherever no echo
+     was detected - real "no rain here" data, not a missing asset - but a bare
+     gap read as broken/cut-off without something marking it as the edge of
+     coverage rather than the edge of the picture. */
+  border: 1px solid rgba(74, 128, 246, 0.3); /* --accent at low opacity */
 }
 .demo-radar-frame {
   position: absolute;
@@ -62,8 +68,8 @@
   height: 100%;
   object-fit: fill;
   opacity: 0;
-  /* the archived NEXRAD PNG has a faint non-transparent "no echo" fill; screen
-     blend drops it so only the reflectivity colours sit over the dark map */
+  /* screen blend: transparent (alpha 0) "no echo" pixels contribute nothing,
+     so only the real reflectivity colours ever sit over the dark map */
   mix-blend-mode: screen;
 }
 
@@ -214,13 +220,37 @@
 }
 
 /* =================================================================
-   Phase I — documentary / government-briefing treatment.
+   Phase J - god's-eye geography annotations (rain, response-vehicle
+   routes, the real aircraft/camera/flood layers in Stage.tsx). Same law
+   as everywhere else in this file: flat, solid, one accent, no
+   gradients, no glow, no blur - driven per-frame by inline style from
+   the playhead, never a CSS transition/animation.
+   ================================================================= */
+
+/* ---- B2 rain streaks ------------------------------------------------ */
+.demo-rain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.demo-rain svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.demo-rain line {
+  stroke: var(--ink-dim);
+  stroke-width: 0.22;
+}
+
+/* =================================================================
+   Phase I - documentary / government-briefing treatment.
    Every overlay here is positioned/faded by a timeline track writing
    inline style per frame (deterministic playback). NOTHING in this
    block uses `transition`, `animation`, gradient, glow or blur.
    ================================================================= */
 
-/* ---- I1: lower-third data callout — accent rule + all-caps mono,
+/* ---- I1: lower-third data callout - accent rule + all-caps mono,
    no card background. Slid in from the left by its track. ---------- */
 .demo-l3 {
   position: absolute;
@@ -252,7 +282,7 @@
   font-weight: 500;
 }
 
-/* ---- I2: persistent telemetry readout — mission-control corner
+/* ---- I2: persistent telemetry readout - mission-control corner
    stamp. Real coords / archive date, driven off the playhead. ------ */
 .demo-telemetry {
   position: absolute;
@@ -281,7 +311,7 @@
   white-space: nowrap;
 }
 
-/* ---- I3: scan-line wipe — a single crisp accent line sweeping the
+/* ---- I3: scan-line wipe - a single crisp accent line sweeping the
    frame at the cut into the analysis beat. Callback to the logo /
    radar-ring scan motif. --------------------------------------------- */
 .demo-scanline {
@@ -295,7 +325,7 @@
   will-change: transform, opacity;
   pointer-events: none;
 }
-/* the faint field it passes over — flat accent tint, no gradient */
+/* the faint field it passes over - flat accent tint, no gradient */
 .demo-scanline-field {
   position: absolute;
   inset: 0;
@@ -304,7 +334,7 @@
   pointer-events: none;
 }
 
-/* ---- I5: opening situation-report header — flat document title,
+/* ---- I5: opening situation-report header - flat document title,
    precise type + one rule line, hard cut in and out. --------------- */
 .demo-sitrep {
   position: absolute;

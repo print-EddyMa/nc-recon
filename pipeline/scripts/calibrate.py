@@ -9,7 +9,7 @@ minimum-area cutoff and reports, for each combination:
 
   - how many buildings land in the `review` tier (the human workload), and
   - if --labels is given (CSV: id,true_class), the precision of the `high` tier
-    and the recall of real damage among `high` — i.e. is it safe to auto-accept.
+    and the recall of real damage among `high` - i.e. is it safe to auto-accept.
 
 With --write it saves the best combination to pipeline/data/calibration.json,
 which fusion.py picks up on the next run (no code change).
@@ -39,7 +39,7 @@ AREA_GRID = [8.0, 12.0, 16.0, 24.0]
 def _load(area: str) -> list[dict]:
     path = os.path.join(OUT, f"{area}.geojson")
     if not os.path.exists(path):
-        sys.exit(f"no {path} — run `run.py infer --area {area}` first")
+        sys.exit(f"no {path} - run `run.py infer --area {area}` first")
     with open(path) as fh:
         fc = json.load(fh)
     rows = []
@@ -57,7 +57,7 @@ def _load(area: str) -> list[dict]:
             "cls": int(p["damage_class"]),
         })
     if not rows:
-        sys.exit(f"{area}: no per-building `sources` — re-run infer with the fusion backend")
+        sys.exit(f"{area}: no per-building `sources` - re-run infer with the fusion backend")
     return rows
 
 
@@ -146,11 +146,11 @@ def main() -> None:
         for r in sorted(results, key=lambda r: (r["decisive"], r["unsure"], r["min_area"]))
     )
     html = f"""<!doctype html><meta charset=utf-8>
-<title>{a.area} — fusion calibration</title>
+<title>{a.area} - fusion calibration</title>
 <style>body{{font:13px/1.5 system-ui;margin:2rem;color:#1a1a1a}}
 table{{border-collapse:collapse}}td,th{{border:1px solid #ccc;padding:3px 8px;text-align:right}}
 .k{{background:#eef}}</style>
-<h1>{a.area} — fusion tier calibration</h1>
+<h1>{a.area} - fusion tier calibration</h1>
 <p>{len(rows)} buildings with fused sources{'' if labels is None else f', {len(labels)} hand labels'}.</p>
 <p><b>Current defaults</b>: decisive={base['decisive']} unsure={base['unsure']}
 min_area={base['min_area']} → {base['review']} review ({base['review_pct']}%),
@@ -176,7 +176,7 @@ high precision {best['high_precision']}.</p>
         cpath = os.path.join(ROOT, "data", "calibration.json")
         with open(cpath, "w") as fh:
             json.dump(cfg, fh, indent=2)
-        print(f"[calibrate] wrote {cpath} — fusion.py will use it next run")
+        print(f"[calibrate] wrote {cpath} - fusion.py will use it next run")
 
 
 if __name__ == "__main__":

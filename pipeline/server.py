@@ -165,7 +165,7 @@ def _catalog_or_503():
 # --------------------------------------------------------------------------- #
 @app.get("/health")
 def health():
-    """Fast liveness probe — the web app's `serverUp()` hits this, not /catalog
+    """Fast liveness probe - the web app's `serverUp()` hits this, not /catalog
     (which can be slow on a cold catalogue cache)."""
     return {"ok": True, "version": app.version}
 
@@ -188,6 +188,10 @@ _FEEDS: dict[str, tuple[str, int]] = {
         "&parameterCd=00060,00065&siteType=ST&siteStatus=active",
         300,
     ),
+    # ADS-B snapshot centred on NC, 250nm radius (adsb.lol's max) covers the
+    # whole state from this point. Keyless, ODbL-licensed; short TTL since
+    # positions move fast. https://api.adsb.lol
+    "aircraft": ("https://api.adsb.lol/v2/point/35.55/-79.2/250", 15),
 }
 _FEED_CACHE: dict[str, tuple[float, bytes, str]] = {}
 _FEED_UA = "NCRecon/1.0 (Congressional App Challenge; +https://github.com/)"
@@ -337,7 +341,7 @@ _RATE: dict[str, deque] = {}
 
 
 def _rate_check(client: str) -> bool:
-    """True if the client is under the hourly quota. Does NOT consume a slot —
+    """True if the client is under the hourly quota. Does NOT consume a slot -
     call _rate_consume once the job is actually created."""
     now = time.time()
     dq = _RATE.setdefault(client, deque())
@@ -366,7 +370,7 @@ def _reap_jobs(ttl_sec: int = 1800) -> None:
     with _JOBS_LOCK:
         now = time.time()
         # a job still "running"/"queued" well past any plausible runtime is wedged
-        # (e.g. the worker thread died) — fail it so the slot is reusable
+        # (e.g. the worker thread died) - fail it so the slot is reusable
         for v in JOBS.values():
             if v["status"] in ("queued", "running") and now - v.get("started", now) > _STUCK_JOB_SEC:
                 v["status"] = "error"
@@ -383,7 +387,7 @@ def _reap_jobs(ttl_sec: int = 1800) -> None:
                 JOBS.pop(jid, None)
 
 
-# hard ceiling on a whole assessment, independent of the per-step caps — keeps a
+# hard ceiling on a whole assessment, independent of the per-step caps - keeps a
 # run from creeping past the browser's ~12-min poll window if several steps each
 # run long. Comfortably above the ~90s a real NC AOI takes.
 JOB_DEADLINE_SEC = 600
@@ -475,7 +479,7 @@ def assess(req: AssessReq, request: Request, authorization: str | None = Header(
         active = sum(1 for j in JOBS.values() if j["status"] in ("queued", "running"))
         if active >= MAX_ACTIVE_JOBS:
             raise HTTPException(
-                429, f"{MAX_ACTIVE_JOBS} assessments already running — try again shortly"
+                429, f"{MAX_ACTIVE_JOBS} assessments already running - try again shortly"
             )
         job_id = uuid.uuid4().hex[:12]
         JOBS[job_id] = {"status": "queued", "step": "queued", "started": time.time(), "area": area}
@@ -491,7 +495,7 @@ def assess_status(job_id: str, authorization: str | None = Header(default=None))
     job = JOBS.get(job_id)
     if not job:
         raise HTTPException(404, "unknown job")
-    # the raw subprocess log can carry filesystem paths / stack traces — only
+    # the raw subprocess log can carry filesystem paths / stack traces - only
     # expose it when auth is not configured, or a valid token is presented
     show_log = not TOKEN or authorization == f"Bearer {TOKEN}"
     return {
@@ -577,7 +581,7 @@ def delete_area(area: str, authorization: str | None = Header(default=None)):
     return {"area": area, "removed": removed}
 
 
-# 1x1 transparent PNG — handed back for missing basemap tiles at an AOI's edge
+# 1x1 transparent PNG - handed back for missing basemap tiles at an AOI's edge
 # so MapLibre's viewport grid doesn't spew 404s to the console
 _BLANK_TILE = bytes.fromhex(
     "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4"

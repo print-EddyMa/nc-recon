@@ -83,7 +83,7 @@ export default function CommandMenu({
           <Command.Input
             autoFocus
             placeholder="Jump to a screen, open or assess an NC area…"
-            className="w-full bg-transparent py-3 text-sm text-ink outline-none placeholder:text-ink-faint"
+            className="w-full bg-transparent py-3 text-sm text-ink placeholder:text-ink-faint"
           />
         </div>
 

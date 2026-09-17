@@ -4,7 +4,7 @@
  * Two products, both keyless, both standard raster tiles:
  *
  *  - LIVE loop: the current CONUS mosaic plus 11 five-minute-old snapshots
- *    (`nexrad-n0q-900913`, `-m05m` … `-m55m`) — a rolling one-hour animation.
+ *    (`nexrad-n0q-900913`, `-m05m` … `-m55m`) - a rolling one-hour animation.
  *  - ARCHIVED still: IEM's WMS-T time machine (`nexrad-n0r-wmst`), any 5-minute
  *    step from 1995-01-01 to today, consumed by MapLibre via `{bbox-epsg-3857}`.
  *    Used by the disaster-history timeline to show weather for events that
@@ -87,7 +87,7 @@ const [ncX0, ncY0] = merc(-84.55, 33.75);
 const [ncX1, ncY1] = merc(-75.4, 36.7);
 
 /**
- * A single archived NEXRAD image over North Carolina for `date` — a complete
+ * A single archived NEXRAD image over North Carolina for `date` - a complete
  * WMS GetMap URL (real bbox, not a tile template), safe to drop straight into
  * an `<img src>`. Returns null outside the 1995→now archive window.
  */

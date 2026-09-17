@@ -143,8 +143,8 @@
   main { padding: 6px 0 88px; }
   section.act { padding: 54px 0; border-bottom: 1px solid rgb(var(--line)); scroll-margin-top: 18px; }
   section.act:last-of-type { border-bottom: 0; }
-  /* number stacked ABOVE the heading, same column - the tag-left / heading-right
-     row is a templated-editorial tell (Hallmark gate 54) */
+  /* number stacked ABOVE the heading, same column, to avoid a
+     templated-editorial tag-left / heading-right layout */
   .act-head { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
   .act-n {
     font-family: "Geist Mono", monospace; font-size: 11px; color: rgb(var(--accent));
@@ -329,7 +329,7 @@
       <span><b>764</b> buildings scored</span>
       <span><b>110</b> with major damage or destroyed</span>
       <span><b>161</b> sent to a person to check</span>
-      <span><b>53 s</b> on a laptop CPU</span>
+      <span><b>67 s</b> to score, on a laptop CPU</span>
     </div>
 
     <figure class="schematic">
@@ -485,8 +485,9 @@
             <span class="big">290 / 764</span>
             land on the diagonal, a <strong style="color:rgb(var(--ink))">38.0%</strong> exact
             agreement rate. Most of the rest are off by a single level. The
-            <strong style="color:rgb(var(--ink))">161</strong> that differ by two or more,
-            destroyed against no-damage and the like, are the ones a person checks.
+            <strong style="color:rgb(var(--ink))">161</strong> sent to a person are mostly a
+            two-or-more-level split, destroyed against no-damage and the like, plus a handful
+            too small to trust or where the classifier itself was undecided.
           </div>
         </div>
         <figcaption class="fc">cnn class &times; change-detection class, Old Fort</figcaption>
@@ -550,23 +551,27 @@
       <div class="act-head"><span class="act-n">04</span><h2>The risk layer</h2></div>
       <p class="act-sub">
         The damage map is the aftermath. The risk layer is the hours before and during, when no
-        satellite has passed yet. Twelve keyless government feeds, filtered to North Carolina.
+        satellite has passed yet. Eleven feeds, most keyless, a few unlocked with a free key,
+        filtered to North Carolina.
       </p>
       <div class="feeds reveal">
         <div class="feed"><div class="src">NOAA NWPS</div><div class="name">River flood forecasts</div><div class="note">579 NC gauges, with a flood category and lead time</div></div>
         <div class="feed"><div class="src">NWS</div><div class="name">Watches &amp; warnings</div><div class="note">flood, red-flag fire, tropical, filtered to NC</div></div>
         <div class="feed"><div class="src">NHC</div><div class="name">Hurricane track &amp; cone</div><div class="note">shown only while a storm is active</div></div>
-        <div class="feed"><div class="src">NASA FIRMS</div><div class="name">Active-fire hotspots</div><div class="note">VIIRS thermal detections, past 24 to 72 hours</div></div>
+        <div class="feed"><div class="src">NASA FIRMS</div><div class="name">Active-fire hotspots</div><div class="note">VIIRS, free key, past 24 to 72 hours</div></div>
         <div class="feed"><div class="src">NCDOT DriveNC</div><div class="name">Cameras &amp; closures</div><div class="note">1,141 traffic cameras, 130 road closures</div></div>
         <div class="feed"><div class="src">USGS NWIS</div><div class="name">Streamflow</div><div class="note">289 NC stream gages, live discharge and stage</div></div>
         <div class="feed"><div class="src">IEM NEXRAD</div><div class="name">Live radar loop</div><div class="note">5-minute mosaic, archived to 1995</div></div>
         <div class="feed"><div class="src">OpenFEMA</div><div class="name">Disaster history</div><div class="note">every NC federal declaration since 1990</div></div>
+        <div class="feed"><div class="src">NC CLOUDS API</div><div class="name">Current conditions</div><div class="note">ECONet + RAWS, free key, live temp/wind/rain</div></div>
+        <div class="feed"><div class="src">ADS-B (adsb.lol)</div><div class="name">Live aircraft</div><div class="note">keyless, one 250 nm query covers the state</div></div>
+        <div class="feed"><div class="src">TomTom</div><div class="name">Traffic congestion</div><div class="note">free key, real per-segment speed vs free-flow</div></div>
       </div>
 
       <h3>Thirty years of North Carolina disasters</h3>
       <p>
-        <strong>65</strong> federal declarations since 1990: 28 hurricanes, 9 wildfires, the rest
-        ice, flood and severe storms. The app's history timeline is built from this feed. For
+        <strong>65</strong> federal declarations, 1993&ndash;2026: 33 tropical systems, 9 wildfires, the
+        rest ice, flood and severe storms. The app's history timeline is built from this feed. For
         events that predate satellite coverage, it shows the archived NWS radar for that day
         instead.
       </p>
@@ -648,8 +653,9 @@
     <div class="cap eyebrow">Sources</div>
     <p style="margin-top:10px">
       Imagery: Maxar Open Data. Footprints: OpenStreetMap. Training data: xBD / xView2.
-      Live feeds: NOAA NWPS and NWS, National Hurricane Center, USGS NWIS, NASA FIRMS,
-      NCDOT DriveNC, NC State Climate Office CLOUDS API, OpenFEMA, Iowa Environmental Mesonet.
+      Live feeds: NOAA NWPS and NWS, National Hurricane Center, USGS NWIS, USGS EPQS,
+      NASA FIRMS, NCDOT DriveNC, NC State Climate Office CLOUDS API, OpenFEMA,
+      Iowa Environmental Mesonet, ADS-B via adsb.lol, TomTom traffic.
       Damage model: the xView2 CMU baseline classifier, fused with an independent
       change-detection pass and North Carolina context priors.
     </p>

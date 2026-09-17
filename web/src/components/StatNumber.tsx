@@ -13,7 +13,7 @@ interface Props {
 const NUMERIC = /^-?\d+(\.\d+)?$/;
 
 /** A stat figure that counts up to its value on first paint. Used only for the
- * headline numbers on Home / Summary / Review — see DESIGN.md § Motion. */
+ * headline numbers on Home / Summary / Review - see DESIGN.md § Motion. */
 export default function StatNumber({ value, className, ms = 600, decimals = 0 }: Props) {
   const raw =
     typeof value === "number"

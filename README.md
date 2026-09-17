@@ -2,21 +2,35 @@
 
 A **North Carolina disaster application** with two halves:
 
-- **Risk monitor** — the "before / during": NOAA NWPS river-flood **forecasts**,
+- **Risk monitor** - the "before / during": NOAA NWPS river-flood **forecasts**,
   USGS streamflow, NWS watches & warnings, NHC active-storm tracking, NASA FIRMS
-  active fire, NCDOT DriveNC cameras & closures, OpenFEMA disaster history, and
-  (with a free key) ECONet / RAWS current conditions from the NC State Climate
-  Office CLOUDS API. This is what the app opens on.
-- **Damage assessment** — the "after": point it at an area of North Carolina,
+  active fire, NCDOT DriveNC cameras & closures, OpenFEMA disaster history,
+  live aircraft (ADS-B via adsb.lol), and (with a free key) ECONet / RAWS
+  current conditions from the NC State Climate Office CLOUDS API and TomTom
+  live traffic. This is what the app opens on.
+- **Damage assessment** - the "after": point it at an area of North Carolina,
   and it pulls the pre/post Maxar Open Data imagery for that footprint, locates
   every building, rates its damage on the four-level xView2 scale
   (**no damage → minor → major → destroyed**), fuses two independent models plus
   NC context priors into a per-building **confidence tier**, and puts the result
   on an interactive 3-D map with a **human review queue** for the uncertain calls.
 
-Nothing is pre-baked. There is no bundled sample dataset — areas appear on the
+Nothing is pre-baked. There is no bundled sample dataset - areas appear on the
 damage map only after the pipeline has assessed them (locally, or against a
 hosted assessment service).
+
+## Quick start
+
+```bash
+cd web
+npm install
+npm run refresh-nc
+npm run dev
+```
+
+Open the printed `localhost` URL. That's the full risk monitor running on
+live public data, no backend required. See "Run it locally" below to also
+run the damage-assessment pipeline.
 
 ## Layout
 
@@ -28,19 +42,19 @@ pipeline/   Python. imagery + footprints + fusion model + NC priors -> GeoJSON
               server.py       the assessment service (POST /assess, NC-gated)
               scripts/calibrate.py   tune the tier thresholds for an area
 web/        React/TS. NC risk dashboard + on-demand Assess + damage map + review
-              lib/nc.ts       NC backbone (NWPS/USGS/NWS/NHC/FIRMS/DriveNC/FEMA/CLOUDS)
+              lib/nc.ts NC backbone (NWPS/USGS/NWS/NHC/FIRMS/DriveNC/FEMA/CLOUDS/aircraft)
               screens/NCDashboard.tsx   the risk dashboard (the front door)
               screens/Assess.tsx        drop an NC AOI -> run the pipeline
-docs/       PHASE_A_STATUS.md, PHASE_CD_STATUS.md, PHASE_E_STATUS.md
+docs/       how-it-works.html, design assets
 ```
 
 The two halves meet at one file: a GeoJSON `FeatureCollection` of building
-polygons, each with a `damage_class` (0–3), lon/lat, and — schema **1.1** — a
+polygons, each with a `damage_class` (0-3), lon/lat, and - schema **1.1** - a
 `confidence_tier` (`high` / `review`), a `sources` dict (`{heuristic, cnn,
 margin}`, plus `priors`/`prior_effect` when `--nc-context` is used) and
 `footprint_source`. The schema is `pipeline/src/terratriage/contract.py`,
 mirrored in `web/src/lib/types.ts`. `web/public/data/events.json` (written by
-`run.py events registry`) is the registry of assessed NC areas — it ships as
+`run.py events registry`) is the registry of assessed NC areas - it ships as
 `[]`.
 
 ## Run it locally
@@ -54,8 +68,8 @@ npm run refresh-nc         # seed public/data/nc/*_snapshot.geojson (offline fal
 npm run dev                # http://localhost:5173
 ```
 
-The app is a static site. With no `VITE_API_URL` it runs fully — the NC risk
-dashboard is all live public feeds — and the **Assess** screen shows the CLI
+The app is a static site. With no `VITE_API_URL` it runs fully - the NC risk
+dashboard is all live public feeds - and the **Assess** screen shows the CLI
 commands to run an assessment yourself. Copy `web/.env.example` to
 `web/.env.development.local` (dev only; never read by `vite build`) to set
 `VITE_API_URL` (a running assessment service), `VITE_FIRMS_KEY` (active-fire
@@ -64,7 +78,7 @@ layer), or `VITE_BASE` (sub-path hosting).
 `refresh-nc` refreshes the committed snapshots the dashboard falls back to when
 a feed is unavailable: NWPS / USGS / NWS are also fetched live in-app
 (open, CORS-enabled); NHC and DriveNC are CORS-blocked in the browser so the
-snapshot is the only path. CLOUDS needs a free per-user hash — paste it in-app
+snapshot is the only path. CLOUDS needs a free per-user hash - paste it in-app
 (Layers → key).
 
 ### Assessment pipeline
@@ -91,11 +105,14 @@ conda run -n terratriage-tf pip install "tensorflow==2.15.1" "numpy<2" pillow
 ./.venv/bin/python scripts/calibrate.py --area old_fort --labels labels.csv --write
 ```
 
-`--source auto` uses NC OneMap building footprints when
-`TERRATRIAGE_NC_FOOTPRINTS_URL` points at an NC building-footprint ArcGIS
-FeatureServer, otherwise OpenStreetMap. `--nc-context` folds nearest-gauge flood
-stage, active FEMA declarations, and terrain slope into the confidence tiers
-(network calls; they only move borderline tiers, never the damage class).
+`--source auto` uses NC OneMap building footprints for an AOI whose centre is in
+North Carolina when `TERRATRIAGE_NC_FOOTPRINTS_URL` points at an NC
+building-footprint ArcGIS FeatureServer, otherwise OpenStreetMap. `--nc-context`
+looks up nearest-gauge flood stage, active FEMA declarations, and terrain slope
+(network calls, fusion backend only); only a real moderate+ flood stage or
+steep terrain moves a borderline confidence tier - the FEMA declaration flag is
+recorded alongside each building for reference but never moves a tier by
+itself, and none of the three ever changes the damage class.
 `--backend auto` picks **fusion** when the CNN weights + `terratriage-tf` env are
 present, else `keras`, else `heuristic`.
 
@@ -145,7 +162,7 @@ panel (OpenFEMA), and the nearest DriveNC cameras + closures to the worst
 current risk point.
 
 **Assess** (`#/assess`, or **g** then **a**): click anywhere in North Carolina
-to drop an AOI, pick the Maxar event that covers it, and run the pipeline —
+to drop an AOI, pick the Maxar event that covers it, and run the pipeline -
 one click with a service connected, or copyable commands without one. When it
 finishes, the **Damage map**, **Review** queue and **Summary** light up for
 that area (deep-linked `#/a/<area>/<screen>`).
@@ -163,7 +180,8 @@ baseline (CMU SEI, BSD-3) and 1st-place solution (V. Durnov). NC risk & context:
 [NWS](https://www.weather.gov/documentation/services-web-api),
 [NHC](https://www.nhc.noaa.gov/), [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/),
 [NCDOT DriveNC](https://drivenc.gov/), [OpenFEMA](https://www.fema.gov/about/openfema/api),
-[USGS EPQS](https://apps.nationalmap.gov/epqs/), and the NC State Climate Office
-[CLOUDS API](https://api.climate.ncsu.edu/). Multi-source-fusion + human-review
-pattern after HOT's [fAIr](https://www.hotosm.org/). Basemap: CARTO. Map:
-MapLibre GL + deck.gl.
+[USGS EPQS](https://apps.nationalmap.gov/epqs/), the NC State Climate Office
+[CLOUDS API](https://api.climate.ncsu.edu/), live aircraft via
+[adsb.lol](https://adsb.lol/), and (with a free key) [TomTom](https://www.tomtom.com/)
+traffic flow. Multi-source-fusion + human-review pattern after HOT's
+[fAIr](https://www.hotosm.org/). Basemap: CARTO. Map: MapLibre GL + deck.gl.

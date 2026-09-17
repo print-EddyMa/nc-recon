@@ -1,10 +1,30 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import type { Map as MLMap, IControl } from "maplibre-gl";
 import { MapboxOverlay } from "@deck.gl/mapbox";
-import { GeoJsonLayer, ScatterplotLayer, BitmapLayer } from "@deck.gl/layers";
-import { preload, type DemoAssets, type Sensor } from "./preload";
+import {
+  GeoJsonLayer,
+  ScatterplotLayer,
+  BitmapLayer,
+  PathLayer,
+} from "@deck.gl/layers";
+import {
+  preload,
+  type DemoAssets,
+  type Sensor,
+  type AircraftPt,
+  type CameraPt,
+} from "./preload";
 import { Timeline, easing, clamp01, lerp, type FrameCtx } from "./timeline";
-import { BEATS, TOTAL, cameraAt, beatAt, within, OLDFORT, OLDFORT_IMG_BOUNDS } from "./beats";
+import {
+  BEATS,
+  TOTAL,
+  cameraAt,
+  beatAt,
+  within,
+  OLDFORT,
+  OLDFORT_IMG_BOUNDS,
+  CONVERGE_FROM,
+} from "./beats";
 import { DAMAGE } from "../lib/damage";
 import { C, SEV } from "./theme";
 
@@ -24,16 +44,22 @@ interface Props {
   onFrame?: (ctx: FrameCtx) => void;
 }
 
-// Regional box for the Beat-2 NEXRAD plate — wide enough that Helene is seen
+// Regional box for the Beat-2 NEXRAD plate - wide enough that Helene is seen
 // sweeping in and out over GA / SC / TN / VA / the Atlantic, with NC still the
 // framed focus. MUST match BBOX4326 in scripts/demo_fetch.mjs `radar()` and
 // public/demo/radar/manifest.json.
 const RADAR_BBOX: [number, number, number, number] = [-88, 30, -74, 39.5];
+// Phase J - same palette as NCDashboard's live "god's-eye" layers (aircraft,
+// cameras): this beat is a stylized preview of that real feature, not an
+// invented graphic, so it borrows the app's own colors for it.
+const AIRCRAFT_RGB: [number, number, number] = [90, 150, 200];
+const AIRCRAFT_MIL_RGB: [number, number, number] = [163, 116, 217];
+const CAMERA_RGB: [number, number, number] = [139, 148, 163];
 const HIST_PX_PER_YEAR = 118;
 const HIST_X = (year: number) => (year - 1990) * HIST_PX_PER_YEAR;
 
 /**
- * Phase I — lower-third callouts (I1). All-caps; every figure is a real number
+ * Phase I - lower-third callouts (I1). All-caps; every figure is a real number
  * from the baked pipeline output (764 = old_fort.geojson feature count, 868 =
  * sensors.json length) or a plain label where there is no confirmed figure.
  * `{n}` marks the digits that get the brief "analyzing" settle (I4).
@@ -44,12 +70,12 @@ const LOWER_THIRD: Record<string, string> = {
   snap: "Old Fort · McDowell County, NC",
   reveal: "Maxar Open Data · 2022 / 2024",
   extrude: "{764} buildings assessed",
-  network: "{868} live sensors",
+  network: "{868} sensors · live aircraft · DOT cameras",
   flood: "National Water Model · flood forecast",
   history: "",
 };
 
-/** deterministic 0..1 hash — used for the I4 digit scramble so playback stays
+/** deterministic 0..1 hash - used for the I4 digit scramble so playback stays
  *  frame-identical (no Math.random). Quantised so it is stable within a step. */
 const hash01 = (seed: number) => {
   const x = Math.sin(seed * 12.9898) * 43758.5453;
@@ -57,7 +83,7 @@ const hash01 = (seed: number) => {
 };
 
 /**
- * I4 — render a number with a sub-0.5s "system is computing" settle: each digit
+ * I4 - render a number with a sub-0.5s "system is computing" settle: each digit
  * scrambles, then locks left-to-right. `t` is ms since the number appeared.
  */
 function analyzingDigits(value: number, t: number): string {
@@ -73,13 +99,26 @@ function analyzingDigits(value: number, t: number): string {
     .join("");
 }
 
-/** I2 — format a camera centre as a mission-style coordinate stamp. */
+/** I2 - format a camera centre as a mission-style coordinate stamp. */
 const fmtCoord = (lon: number, lat: number) =>
   `${Math.abs(lat).toFixed(4)}°${lat >= 0 ? "N" : "S"}  ${Math.abs(lon).toFixed(4)}°${lon >= 0 ? "E" : "W"}`;
 
-const MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+const MON = [
+  "JAN",
+  "FEB",
+  "MAR",
+  "APR",
+  "MAY",
+  "JUN",
+  "JUL",
+  "AUG",
+  "SEP",
+  "OCT",
+  "NOV",
+  "DEC",
+];
 /**
- * I2 — during the radar timelapse the telemetry shows the ACTUAL archive time
+ * I2 - during the radar timelapse the telemetry shows the ACTUAL archive time
  * of the frame on screen (Sept 2024), not now. Derived from the manifest epoch
  * in UTC, so it is identical on every playback.
  */
@@ -90,31 +129,83 @@ const radarStampAt = (epochMs: number) => {
   return `${String(d.getUTCDate()).padStart(2, "0")} ${MON[d.getUTCMonth()]} ${d.getUTCFullYear()} · ${hh}${mm}Z`;
 };
 
-/** I6 — a 1° lat/long graticule across the wider region, as GeoJSON lines. */
+/** I6 - a 1° lat/long graticule across the wider region, as GeoJSON lines. */
 function makeGraticule(): GeoJSON.FeatureCollection {
   const lines: GeoJSON.Feature[] = [];
   for (let lon = -92; lon <= -68; lon += 1) {
     lines.push({
       type: "Feature",
       properties: {},
-      geometry: { type: "LineString", coordinates: [[lon, 26], [lon, 42]] },
+      geometry: {
+        type: "LineString",
+        coordinates: [
+          [lon, 26],
+          [lon, 42],
+        ],
+      },
     });
   }
   for (let lat = 26; lat <= 42; lat += 1) {
     lines.push({
       type: "Feature",
       properties: {},
-      geometry: { type: "LineString", coordinates: [[-92, lat], [-68, lat]] },
+      geometry: {
+        type: "LineString",
+        coordinates: [
+          [-92, lat],
+          [-68, lat],
+        ],
+      },
     });
   }
   return { type: "FeatureCollection", features: lines };
 }
 
+/**
+ * Phase J - approximate a dashed line as alternating short PathLayer segments
+ * (deck.gl ships no line-dash without the PathStyleExtension, which isn't a
+ * dependency here). `t` truncates the dashing at a fraction along a→b so a
+ * trailing path can grow with playhead progress; routes that are always fully
+ * drawn just pass `t=1`.
+ */
+function dashPath(
+  a: [number, number],
+  b: [number, number],
+  t: number,
+  n = 10,
+): [number, number][][] {
+  const segs: [number, number][][] = [];
+  const end = clamp01(t);
+  for (let i = 0; i < n; i++) {
+    const s0 = i / n;
+    if (s0 >= end) break;
+    const s1 = Math.min(s0 + 0.5 / n, end);
+    segs.push([
+      [lerp(a[0], b[0], s0), lerp(a[1], b[1], s0)],
+      [lerp(a[0], b[0], s1), lerp(a[1], b[1], s1)],
+    ]);
+  }
+  return segs;
+}
+
+/** Phase J - deterministic rain-streak positions (reuses I4's hash01, no
+ * Math.random so capture stays frame-identical). Two tiled rows for a
+ * seamless vertical loop; the group transform does the falling. */
+const RAIN_LINES = Array.from({ length: 16 }, (_, i) => ({
+  x: hash01(i * 7.31) * 100,
+  y0: hash01(i * 3.17 + 1) * 50,
+  len: 10 + hash01(i * 5.09 + 2) * 10,
+  op: 0.1 + hash01(i * 2.63 + 3) * 0.16,
+}));
+
 const cleanStorm = (s: string) =>
   s
     .replace(/\s*(major disaster|emergency)\s+declarations?/i, "")
     .replace(/^remnants of\s+/i, "")
-    .replace(/\b(hurricane|tropical storm|tropical depression|severe|winter|ice|snow)\b/gi, "")
+    .replace(
+      /\b(hurricane|tropical storm|tropical depression|severe|winter|ice|snow)\b/gi,
+      "",
+    )
     .replace(/\bstorm\b/gi, "")
     .trim()
     .replace(/\s+/g, " ")
@@ -149,16 +240,30 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
   const scanFieldRef = useRef<HTMLDivElement | null>(null);
   const sitrepRef = useRef<HTMLDivElement | null>(null);
   const sitrepRuleRef = useRef<HTMLDivElement | null>(null);
+  // Phase J - god's-eye geography annotations (see beats.ts)
+  const rainRef = useRef<HTMLDivElement | null>(null);
 
   const mapRef = useRef<MLMap | null>(null);
   const overlayRef = useRef<MapboxOverlay | null>(null);
   const assetsRef = useRef<DemoAssets | null>(null);
   const tlRef = useRef<Timeline | null>(null);
 
-  const anim = useRef({ ext: 0, bldgA: 0, bmpA: 0, sweep: 0, sensorA: 0, floodFocus: 0 });
+  const anim = useRef({
+    ext: 0,
+    bldgA: 0,
+    bmpA: 0,
+    sweep: 0,
+    sensorA: 0,
+    floodFocus: 0,
+    floodRise: 0,
+    carsT: 0,
+    carsA: 0,
+  });
   const sensorsRef = useRef<(Sensor & { act: number })[]>([]);
   const floodSensorRef = useRef<Sensor | null>(null);
-  const histMarksRef = useRef<{ year: number; landmark: boolean; label: HTMLDivElement }[]>([]);
+  const histMarksRef = useRef<
+    { year: number; landmark: boolean; label: HTMLDivElement }[]
+  >([]);
 
   useImperativeHandle(ref, () => ({
     play: () => tlRef.current?.play(),
@@ -168,7 +273,17 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
       const tl = tlRef.current;
       if (!tl) return;
       tl.pause();
-      anim.current = { ext: 0, bldgA: 0, bmpA: 0, sweep: 0, sensorA: 0, floodFocus: 0 };
+      anim.current = {
+        ext: 0,
+        bldgA: 0,
+        bmpA: 0,
+        sweep: 0,
+        sensorA: 0,
+        floodFocus: 0,
+        floodRise: 0,
+        carsT: 0,
+        carsA: 0,
+      };
       overlayRef.current?.setProps({ layers: [] });
       tl.seek(0);
     },
@@ -181,8 +296,60 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
   function buildLayers() {
     const a = assetsRef.current;
     if (!a) return [];
-    const { ext, bldgA, bmpA, sweep, sensorA, floodFocus } = anim.current;
-    const layers: (GeoJsonLayer | ScatterplotLayer | BitmapLayer)[] = [];
+    const {
+      ext,
+      bldgA,
+      bmpA,
+      sweep,
+      sensorA,
+      floodFocus,
+      floodRise,
+      carsT,
+      carsA,
+    } = anim.current;
+    const layers: (
+      GeoJsonLayer | ScatterplotLayer | BitmapLayer | PathLayer
+    )[] = [];
+
+    // B6 - response-vehicle routes converging on Old Fort from staging cities
+    if (carsA > 0.001) {
+      layers.push(
+        new PathLayer({
+          id: "cars-routes",
+          data: CONVERGE_FROM.map((c) =>
+            dashPath(c.pos, OLDFORT, 1, 16),
+          ).flat(),
+          getPath: (d: [number, number][]) => d,
+          getWidth: 1.5,
+          widthUnits: "pixels",
+          getColor: [...C.accentRGB, Math.round(110 * carsA)] as [
+            number,
+            number,
+            number,
+            number,
+          ],
+          updateTriggers: { getColor: carsA },
+        }),
+        new ScatterplotLayer({
+          id: "cars-dots",
+          data: CONVERGE_FROM,
+          radiusUnits: "pixels",
+          radiusMinPixels: 2.4,
+          stroked: false,
+          getPosition: (d: { pos: [number, number] }) => [
+            lerp(d.pos[0], OLDFORT[0], carsT),
+            lerp(d.pos[1], OLDFORT[1], carsT),
+          ],
+          getFillColor: [...C.accentRGB, Math.round(235 * carsA)] as [
+            number,
+            number,
+            number,
+            number,
+          ],
+          updateTriggers: { getPosition: carsT, getFillColor: carsA },
+        }),
+      );
+    }
 
     if (bmpA > 0.001) {
       layers.push(
@@ -209,11 +376,54 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
             DAMAGE[f.properties.damage_class].height * (0.02 + 0.98 * ext),
           getFillColor: (f: { properties: { damage_class: number } }) => {
             const [r, g, b] = DAMAGE[f.properties.damage_class].rgb;
-            return [r, g, b, Math.round((150 + 90 * ext) * bldgA)] as [number, number, number, number];
+            return [r, g, b, Math.round((150 + 90 * ext) * bldgA)] as [
+              number,
+              number,
+              number,
+              number,
+            ];
           },
-          getLineColor: [12, 16, 22, Math.round(140 * bldgA)] as [number, number, number, number],
-          material: { ambient: 0.6, diffuse: 0.6, shininess: 20, specularColor: [40, 55, 70] },
-          updateTriggers: { getElevation: ext, getFillColor: [ext, bldgA], getLineColor: bldgA },
+          getLineColor: [12, 16, 22, Math.round(140 * bldgA)] as [
+            number,
+            number,
+            number,
+            number,
+          ],
+          material: {
+            ambient: 0.6,
+            diffuse: 0.6,
+            shininess: 20,
+            specularColor: [40, 55, 70],
+          },
+          updateTriggers: {
+            getElevation: ext,
+            getFillColor: [ext, bldgA],
+            getLineColor: bldgA,
+          },
+        }),
+      );
+    }
+
+    // B6 - real NCDOT DriveNC camera locations: a quiet background texture,
+    // not the star of the beat (see the aircraft layer below, painted after
+    // sensors so it reads on top). Static, real, same palette as the live
+    // NCDashboard layer this previews.
+    if (sensorA > 0.001 && a.cameras.length) {
+      layers.push(
+        new ScatterplotLayer({
+          id: "cameras",
+          data: a.cameras,
+          radiusUnits: "pixels",
+          radiusMinPixels: 0.9,
+          stroked: false,
+          getPosition: (d: CameraPt) => d,
+          getFillColor: [...CAMERA_RGB, Math.round(90 * sensorA)] as [
+            number,
+            number,
+            number,
+            number,
+          ],
+          updateTriggers: { getFillColor: sensorA },
         }),
       );
     }
@@ -226,21 +436,25 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
           radiusUnits: "pixels",
           radiusMinPixels: 0.4,
           stroked: false,
-          getPosition: (d: Sensor & { act: number }) => [d.lon, d.lat] as [number, number],
+          getPosition: (d: Sensor & { act: number }) =>
+            [d.lon, d.lat] as [number, number],
           getRadius: (d: Sensor & { act: number }) => {
             const lit = clamp01((sweep - d.act) / 0.12);
             return (0.6 + easing.out(lit) * 3.4) * (0.4 + 0.6 * sensorA);
           },
           getFillColor: (d: Sensor & { act: number }) => {
             const lit = clamp01((sweep - d.act) / 0.12);
-            const base = d.kind === "flood" ? SEV[Math.min(3, Math.max(0, d.sev))] : C.accentRGB;
+            const base =
+              d.kind === "flood"
+                ? SEV[Math.min(3, Math.max(0, d.sev))]
+                : C.accentRGB;
             const a2 = sensorA * (1 - 0.55 * floodFocus);
-            return [base[0], base[1], base[2], Math.round((40 + 200 * easing.out(lit)) * a2)] as [
-              number,
-              number,
-              number,
-              number,
-            ];
+            return [
+              base[0],
+              base[1],
+              base[2],
+              Math.round((40 + 200 * easing.out(lit)) * a2),
+            ] as [number, number, number, number];
           },
           updateTriggers: {
             getRadius: [sweep, sensorA],
@@ -249,9 +463,95 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
         }),
       );
     }
+
+    // B6 - live ADS-B aircraft over NC: a real point-in-time snapshot (see
+    // scripts/demo_fetch.mjs `aircraft()`), drifted along each one's actual
+    // reported heading for the beat - a stylized dramatization of real
+    // motion, not a live feed. Painted AFTER sensors/cameras (deck.gl layer
+    // order = paint order) and sized/outlined to read as a distinct, bright
+    // "tracked target" layer rather than melting into the sensor field -
+    // this is the beat's headline: the same live layer NCDashboard runs,
+    // previewed here as a real snapshot.
+    if (sensorA > 0.001 && a.aircraft.length) {
+      layers.push(
+        new ScatterplotLayer({
+          id: "aircraft",
+          data: a.aircraft,
+          radiusUnits: "pixels",
+          radiusMinPixels: 4,
+          stroked: true,
+          lineWidthUnits: "pixels",
+          getLineWidth: 1.5,
+          getPosition: (d: AircraftPt) => {
+            const [lon, lat, track] = d;
+            const rad = (track * Math.PI) / 180;
+            const dist = 35000 * sweep; // meters - a stylized drift, not real flight physics
+            const dLat = (Math.cos(rad) * dist) / 110540;
+            const dLon =
+              (Math.sin(rad) * dist) /
+              (111320 * Math.cos((lat * Math.PI) / 180));
+            return [lon + dLon, lat + dLat] as [number, number];
+          },
+          getRadius: 4.5,
+          getFillColor: (d: AircraftPt) => {
+            const [r, g, b] = d[3] === 1 ? AIRCRAFT_MIL_RGB : AIRCRAFT_RGB;
+            return [r, g, b, Math.round(235 * sensorA)] as [
+              number,
+              number,
+              number,
+              number,
+            ];
+          },
+          getLineColor: [233, 234, 232, 235] as [
+            number,
+            number,
+            number,
+            number,
+          ], // C.ink - a bright ring
+          updateTriggers: { getPosition: sweep, getFillColor: sensorA },
+        }),
+      );
+    }
+
+    // B7 - real geographic flood extent (a growing flat disc at the nearest
+    // western-NC gauge), replacing a purely diagrammatic gauge with an actual
+    // map read: this is what "rising" looks like on the ground.
+    const fs = floodSensorRef.current;
+    if (fs && floodRise > 0.001) {
+      layers.push(
+        new ScatterplotLayer({
+          id: "flood-extent",
+          data: [fs],
+          radiusUnits: "meters",
+          getPosition: (d: Sensor) => [d.lon, d.lat] as [number, number],
+          getRadius: 500 + floodRise * 2600,
+          stroked: true,
+          getLineColor: [...C.accentRGB, Math.round(160 * floodRise)] as [
+            number,
+            number,
+            number,
+            number,
+          ],
+          lineWidthUnits: "pixels",
+          getLineWidth: 1.5,
+          getFillColor: [...C.accentRGB, Math.round(46 * floodRise)] as [
+            number,
+            number,
+            number,
+            number,
+          ],
+          updateTriggers: {
+            getRadius: floodRise,
+            getFillColor: floodRise,
+            getLineColor: floodRise,
+          },
+        }),
+      );
+    }
     return layers;
   }
-  const pushLayers = () => overlayRef.current?.setProps({ layers: buildLayers() });
+  const pushLayers = () =>
+    overlayRef.current?.setProps({ layers: buildLayers() });
 
   // ---- mount ----------------------------------------------------------
   useEffect(() => {
@@ -260,7 +560,10 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
     if (!host) return;
 
     (async () => {
-      const { assets, map, tilesWarmed, verifyLaps } = await preload(host, onProgress);
+      const { assets, map, tilesWarmed, verifyLaps } = await preload(
+        host,
+        onProgress,
+      );
       if (disposed) {
         map.remove();
         return;
@@ -277,14 +580,17 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
       });
       withAct.forEach((s) => (s.act /= maxD));
       sensorsRef.current = withAct;
-      // the flood-risk beat lands best on a western-NC river reach — the Helene
+      // the flood-risk beat lands best on a western-NC river reach - the Helene
       // flood country. Prefer a named western river gauge; fall back to the
       // flood gauge nearest Old Fort.
       const west = assets.sensors.filter(
-        (s) => s.kind === "flood" && s.lon < -80.5 && s.lat > 34.8 && s.lat < 36.4,
+        (s) =>
+          s.kind === "flood" && s.lon < -80.5 && s.lat > 34.8 && s.lat < 36.4,
       );
       floodSensorRef.current =
-        west.find((s) => /french broad|swannanoa|catawba|broad|pigeon/i.test(s.title)) ??
+        west.find((s) =>
+          /french broad|swannanoa|catawba|broad|pigeon/i.test(s.title),
+        ) ??
         west.find((s) => /river|creek/i.test(s.title)) ??
         west.sort(
           (a2, b2) =>
@@ -294,7 +600,7 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
         assets.sensors.find((s) => s.kind === "flood") ??
         null;
 
-      // I6 — situation-map graticule. Added FIRST so it sits under nc-fill /
+      // I6 - situation-map graticule. Added FIRST so it sits under nc-fill /
       // nc-line and under the deck overlay; a track fades line-opacity per beat.
       try {
         if (map.getStyle() && !map.getSource("graticule")) {
@@ -306,14 +612,21 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
             id: "graticule",
             type: "line",
             source: "graticule",
-            paint: { "line-color": C.inkFaint, "line-width": 0.6, "line-opacity": 0 },
+            paint: {
+              "line-color": C.inkFaint,
+              "line-width": 0.6,
+              "line-opacity": 0,
+            },
           });
         }
       } catch {
-        /* teardown race — safe to skip */
+        /* teardown race - safe to skip */
       }
 
-      map.addSource("nc", { type: "geojson", data: assets.ncOutline as unknown as string });
+      map.addSource("nc", {
+        type: "geojson",
+        data: assets.ncOutline as unknown as string,
+      });
       map.addLayer({
         id: "nc-fill",
         type: "fill",
@@ -328,7 +641,7 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
       });
 
       // interleaved: deck draws into maplibre's own GL context on every map
-      // render tick — no separate canvas, no separate render loop to keep in
+      // render tick - no separate canvas, no separate render loop to keep in
       // sync, and `preserveDrawingBuffer` on the map covers deck too. (v5 only;
       // we're pinned to maplibre-gl v5.)
       overlayRef.current = new MapboxOverlay({ interleaved: true, layers: [] });
@@ -343,7 +656,8 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
         return im;
       });
       if (beforeRef.current) beforeRef.current.src = assets.beforeImg.src;
-      if (afterRef.current) afterRef.current.style.backgroundImage = `url(${assets.afterImg.src})`;
+      if (afterRef.current)
+        afterRef.current.style.backgroundImage = `url(${assets.afterImg.src})`;
       if (titleLogoRef.current) titleLogoRef.current.src = assets.logo.src;
       buildHistoryStrip(assets);
 
@@ -381,7 +695,12 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
     const inTitle = ms >= BEATS[8].t0;
     if (!inTitle) {
       const cam = cameraAt(ms);
-      map.jumpTo({ center: cam.center, zoom: cam.zoom, pitch: cam.pitch, bearing: cam.bearing });
+      map.jumpTo({
+        center: cam.center,
+        zoom: cam.zoom,
+        pitch: cam.pitch,
+        bearing: cam.bearing,
+      });
     }
     const rw = radarWrapRef.current;
     if (rw && !rw.hidden) {
@@ -417,7 +736,7 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
       },
     });
 
-    // I6 — graticule opacity. Visible on the two WIDE establishing beats (the
+    // I6 - graticule opacity. Visible on the two WIDE establishing beats (the
     // descent, and the pull-back to the statewide sensor view); hidden through
     // the radar plate and the Old Fort close-ups where a 1° grid is meaningless.
     tl.add({
@@ -428,8 +747,13 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
         if (!map || !map.getLayer("graticule")) return;
         const descent = clamp01(ms / 700) * (1 - clamp01((ms - B[1].t0) / 500));
         const wide =
-          clamp01((ms - (B[4].t1 - 300)) / 800) * (1 - clamp01((ms - (B[8].t0 - 220)) / 200));
-        map.setPaintProperty("graticule", "line-opacity", 0.16 * Math.max(descent, wide));
+          clamp01((ms - (B[4].t1 - 300)) / 800) *
+          (1 - clamp01((ms - (B[8].t0 - 220)) / 200));
+        map.setPaintProperty(
+          "graticule",
+          "line-opacity",
+          0.16 * Math.max(descent, wide),
+        );
       },
     });
 
@@ -446,10 +770,31 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
         if (!active) return;
         const local = within(ms, B[1]);
         const fade =
-          clamp01((ms - (B[1].t0 - 150)) / 300) * (1 - clamp01((ms - (B[1].t1 - 250)) / 450));
+          clamp01((ms - (B[1].t0 - 150)) / 300) *
+          (1 - clamp01((ms - (B[1].t1 - 250)) / 450));
         wrap.style.opacity = String(0.92 * fade);
         const f = Math.min(imgs.length - 1, Math.floor(local * imgs.length));
-        for (let i = 0; i < imgs.length; i++) imgs[i].style.opacity = i === f ? "1" : "0";
+        for (let i = 0; i < imgs.length; i++)
+          imgs[i].style.opacity = i === f ? "1" : "0";
+      },
+    });
+
+    // Phase J - B2 rain streaks over the NEXRAD plate, sharing the radar
+    // plate's own fade envelope.
+    tl.add({
+      start: B[1].t0 - 150,
+      end: B[2].t0 + 200,
+      update: (_p, { ms }) => {
+        const rEl = rainRef.current;
+        const active = ms >= B[1].t0 - 150 && ms <= B[2].t0 + 200;
+        if (rEl) show(rEl, active);
+        if (!active || !rEl) return;
+        const fade =
+          clamp01((ms - (B[1].t0 - 150)) / 300) *
+          (1 - clamp01((ms - (B[1].t1 - 250)) / 450));
+        rEl.style.opacity = String(0.8 * fade);
+        const fall = (ms * 0.09) % 50;
+        rEl.style.transform = `translateY(${fall}%)`;
       },
     });
 
@@ -460,15 +805,16 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
       end: B[5].t1,
       update: (_p, { ms }) => {
         anim.current.bmpA =
-          clamp01((ms - (B[4].t0 - 150)) / 400) * (1 - clamp01((ms - (B[5].t0 + 250)) / 850));
+          clamp01((ms - (B[4].t0 - 150)) / 400) *
+          (1 - clamp01((ms - (B[5].t0 + 250)) / 850));
         anim.current.ext = easing.out(within(ms, B[4]));
-        anim.current.bldgA =
-          clamp01((ms - (B[4].t0 + 120)) / 420) * (1 - clamp01((ms - (B[5].t0 + 400)) / 850));
+        const tail = 1 - clamp01((ms - (B[5].t0 + 400)) / 850);
+        anim.current.bldgA = clamp01((ms - (B[4].t0 + 120)) / 420) * tail;
         pushLayers();
       },
     });
 
-    // before / after wipe (B4) — DOM <img> clip wipe. The "before" plate fades
+    // before / after wipe (B4) - DOM <img> clip wipe. The "before" plate fades
     // in over the dark Old Fort basemap right after the snap lands (~6650),
     // then the wipe reveals "after" across B4.
     tl.add({
@@ -484,10 +830,12 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
         const outA = 1 - clamp01((ms - B[4].t0) / 360); // fade to the deck post-bitmap
         wipe.style.opacity = String(Math.min(inA, outA));
         const wp = easing.inOut(within(ms, B[3]));
-        if (afterRef.current) afterRef.current.style.clipPath = `inset(0 ${(1 - wp) * 100}% 0 0)`;
+        if (afterRef.current)
+          afterRef.current.style.clipPath = `inset(0 ${(1 - wp) * 100}% 0 0)`;
         if (dividerRef.current) {
           dividerRef.current.style.left = `${wp * 100}%`;
-          dividerRef.current.style.opacity = wp > 0.002 && wp < 0.998 ? "1" : "0";
+          dividerRef.current.style.opacity =
+            wp > 0.002 && wp < 0.998 ? "1" : "0";
         }
       },
     });
@@ -507,7 +855,31 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
         }
         anim.current.sweep = easing.out(within(ms, B[5]));
         anim.current.sensorA =
-          clamp01((ms - (B[5].t0 - 100)) / 500) * (1 - clamp01((ms - (B[6].t1 - 250)) / 400));
+          clamp01((ms - (B[5].t0 - 100)) / 500) *
+          (1 - clamp01((ms - (B[6].t1 - 250)) / 400));
+        pushLayers();
+      },
+    });
+
+    // Phase J - B6 response vehicles converging on Old Fort from staging
+    // cities (Asheville / Hickory / Charlotte). Runs only through the network
+    // beat itself - gone before the flood flash so the frame doesn't crowd.
+    tl.add({
+      start: B[5].t0 - 100,
+      end: B[6].t0 + 150,
+      update: (_p, { ms }) => {
+        const active = ms >= B[5].t0 - 100 && ms < B[6].t0 + 150;
+        if (!active) {
+          if (anim.current.carsA !== 0) {
+            anim.current.carsA = 0;
+            pushLayers();
+          }
+          return;
+        }
+        anim.current.carsT = easing.out(within(ms, B[5]));
+        anim.current.carsA =
+          clamp01((ms - (B[5].t0 - 100)) / 400) *
+          (1 - clamp01((ms - (B[6].t0 - 100)) / 350));
         pushLayers();
       },
     });
@@ -524,9 +896,16 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
         show(el, active);
         // focus factor also dims the wider sensor field (read in buildLayers)
         anim.current.floodFocus = active
-          ? clamp01((ms - (B[6].t0 - 120)) / 300) * (1 - clamp01((ms - (B[6].t1 - 220)) / 260))
+          ? clamp01((ms - (B[6].t0 - 120)) / 300) *
+            (1 - clamp01((ms - (B[6].t1 - 220)) / 260))
           : 0;
-        if (!active) return;
+        if (!active) {
+          if (anim.current.floodRise !== 0) {
+            anim.current.floodRise = 0;
+            pushLayers();
+          }
+          return;
+        }
         const fs = floodSensorRef.current;
         if (fs) {
           const pt = map.project([fs.lon, fs.lat]);
@@ -535,9 +914,12 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
         const appear = clamp01((ms - (B[6].t0 - 120)) / 260);
         const leave = 1 - clamp01((ms - (B[6].t1 - 200)) / 200);
         el.style.opacity = String(Math.min(appear, leave));
-        // rise fills across the beat and is still climbing when it cuts away
+        // rise fills across the beat and is still climbing when it cuts away -
+        // also drives the real geographic flood-extent deck layer (buildLayers)
         const rise = easing.out(clamp01((ms - (B[6].t0 - 60)) / 1150));
-        if (floodFillRef.current) floodFillRef.current.style.height = `${16 + rise * 62}%`;
+        if (floodFillRef.current)
+          floodFillRef.current.style.height = `${16 + rise * 62}%`;
+        anim.current.floodRise = rise;
         pushLayers();
       },
     });
@@ -567,9 +949,9 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
 
     // -------- Phase I overlays (all playhead-driven; no CSS transitions) -----
 
-    // I1 + I4 — lower-third data callout. Sharp slide-in from the left, hard
+    // I1 + I4 - lower-third data callout. Sharp slide-in from the left, hard
     // cut out; the {digits} in LOWER_THIRD get a brief "analyzing" settle.
-    let lastL3 = " ";
+    let lastL3 = " ";
     tl.add({
       start: 0,
       end: TOTAL,
@@ -579,7 +961,7 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
         const text = l3TextRef.current;
         if (!wrap || !rule || !text) return;
         const b = beatAt(ms);
-        const raw = ms >= B[8].t0 ? "" : LOWER_THIRD[b.id] ?? "";
+        const raw = ms >= B[8].t0 ? "" : (LOWER_THIRD[b.id] ?? "");
         if (!raw) {
           wrap.style.opacity = "0";
           lastL3 = "";
@@ -594,7 +976,7 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
         wrap.style.transform = `translateX(${(1 - slide) * -44}px)`;
         rule.style.transform = `scaleX(${easing.out(clamp01(local / 150))})`;
 
-        // I4 — digit settle. Rebuild innerHTML only when the rendered string
+        // I4 - digit settle. Rebuild innerHTML only when the rendered string
         // actually changes (keeps playback cheap and deterministic).
         const m = raw.match(/^\{(\d+)\}(.*)$/);
         let str: string;
@@ -611,7 +993,7 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
       },
     });
 
-    // I2 — persistent telemetry readout. Real coordinates on live beats; the
+    // I2 - persistent telemetry readout. Real coordinates on live beats; the
     // real Sept-2024 archive time during the radar timelapse; the scrubbed
     // year during the history beat. Never `Date.now()`.
     tl.add({
@@ -626,13 +1008,20 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
           wrap.style.opacity = "0";
           return;
         }
-        wrap.style.opacity = String(clamp01(ms / 400) * (1 - clamp01((ms - (B[8].t0 - 220)) / 200)) * 0.92);
+        wrap.style.opacity = String(
+          clamp01(ms / 400) *
+            (1 - clamp01((ms - (B[8].t0 - 220)) / 200)) *
+            0.92,
+        );
 
         const b = beatAt(ms);
         if (b.id === "radar") {
           const frames = assetsRef.current?.radar.manifest.frames ?? [];
           if (frames.length) {
-            const f = Math.min(frames.length - 1, Math.floor(within(ms, b) * frames.length));
+            const f = Math.min(
+              frames.length - 1,
+              Math.floor(within(ms, b) * frames.length),
+            );
             coord.textContent = radarStampAt(frames[f].at);
           }
           tag.textContent = "NEXRAD Level III";
@@ -657,7 +1046,7 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
       },
     });
 
-    // I3 — scan-line wipe on the cut INTO the analysis beat (extrude). One
+    // I3 - scan-line wipe on the cut INTO the analysis beat (extrude). One
     // crisp accent line sweeping top→bottom; a flat, faint accent field as it
     // passes. Callback to the logo / radar-ring scan motif.
     tl.add({
@@ -680,7 +1069,7 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
       },
     });
 
-    // I5 — opening situation-report header. Flat document title, hard cut in
+    // I5 - opening situation-report header. Flat document title, hard cut in
     // and out, does not slow the descent.
     tl.add({
       start: 0,
@@ -698,7 +1087,7 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
       },
     });
 
-    // title card (B9) — hard cut, then held dead still (I5 close)
+    // title card (B9) - hard cut, then held dead still (I5 close)
     tl.add({
       start: B[8].t0,
       end: TOTAL,
@@ -706,7 +1095,12 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
         const active = ms >= B[8].t0;
         show(titleRef.current, active);
         if (!active) return;
-        for (const el of [radarWrapRef.current, wipeRef.current, floodRef.current, histWrapRef.current])
+        for (const el of [
+          radarWrapRef.current,
+          wipeRef.current,
+          floodRef.current,
+          histWrapRef.current,
+        ])
           show(el, false);
         if (l3Ref.current) l3Ref.current.style.opacity = "0";
         if (telRef.current) telRef.current.style.opacity = "0";
@@ -726,7 +1120,8 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
     if (!track) return;
     track.innerHTML = "";
     histMarksRef.current = [];
-    const LM = /helene|florence|matthew|michael|floyd|fran|hugo|isabel|dorian|isaias|fred|frances/i;
+    const LM =
+      /helene|florence|matthew|michael|floyd|fran|hugo|isabel|dorian|isaias|fred|frances/i;
     for (const row of a.history) {
       const dt = new Date(row.date);
       const year = dt.getUTCFullYear() + dt.getUTCMonth() / 12;
@@ -762,6 +1157,36 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
 
       <div ref={radarWrapRef} className="demo-radar" hidden />
 
+      {/* Phase J - B2 rain streaks over the NEXRAD plate */}
+      <div ref={rainRef} className="demo-rain" hidden>
+        <svg
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          {RAIN_LINES.map((r, i) => (
+            <line
+              key={i}
+              x1={r.x}
+              y1={r.y0}
+              x2={r.x + 2.4}
+              y2={r.y0 + r.len}
+              opacity={r.op}
+            />
+          ))}
+          {RAIN_LINES.map((r, i) => (
+            <line
+              key={`b${i}`}
+              x1={r.x}
+              y1={r.y0 + 50}
+              x2={r.x + 2.4}
+              y2={r.y0 + 50 + r.len}
+              opacity={r.op}
+            />
+          ))}
+        </svg>
+      </div>
+
       <div ref={wipeRef} className="demo-wipe" hidden>
         <img ref={beforeRef} className="demo-wipe-img" alt="" />
         <div ref={afterRef} className="demo-wipe-img demo-wipe-after" />
@@ -784,27 +1209,29 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
       <div ref={histWrapRef} className="demo-hist" hidden>
         <div className="demo-hist-centre" />
         <div ref={histTrackRef} className="demo-hist-track" />
-        <div className="demo-hist-cap">North Carolina · federally declared disasters</div>
+        <div className="demo-hist-cap">
+          North Carolina · federally declared disasters
+        </div>
       </div>
 
-      {/* I3 — scan-line wipe */}
+      {/* I3 - scan-line wipe */}
       <div ref={scanFieldRef} className="demo-scanline-field" hidden />
       <div ref={scanRef} className="demo-scanline" hidden />
 
-      {/* I5 — opening situation-report header */}
+      {/* I5 - opening situation-report header */}
       <div ref={sitrepRef} className="demo-sitrep" hidden>
         <div className="demo-sitrep-kicker">Situation report</div>
         <div ref={sitrepRuleRef} className="demo-sitrep-rule" />
         <div className="demo-sitrep-place">North Carolina</div>
       </div>
 
-      {/* I2 — persistent telemetry readout */}
+      {/* I2 - persistent telemetry readout */}
       <div ref={telRef} className="demo-telemetry">
         <div ref={telCoordRef} className="demo-telemetry-coord" />
         <div ref={telTagRef} className="demo-telemetry-tag" />
       </div>
 
-      {/* I1 — lower-third data callout */}
+      {/* I1 - lower-third data callout */}
       <div ref={l3Ref} className="demo-l3">
         <div ref={l3RuleRef} className="demo-l3-rule" />
         <div ref={l3TextRef} className="demo-l3-text" />

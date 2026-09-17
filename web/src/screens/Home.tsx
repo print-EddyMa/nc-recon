@@ -64,13 +64,18 @@ const centroid = (geom: GeoJSON.Geometry): [number, number] | null => {
   const acc: [number, number] = [0, 0];
   let n = 0;
   const walk = (c: unknown): void => {
-    if (Array.isArray(c) && typeof c[0] === "number" && typeof c[1] === "number") {
+    if (
+      Array.isArray(c) &&
+      typeof c[0] === "number" &&
+      typeof c[1] === "number"
+    ) {
       acc[0] += c[0];
       acc[1] += c[1];
       n++;
     } else if (Array.isArray(c)) c.forEach(walk);
   };
-  if ("coordinates" in geom) walk((geom as { coordinates: unknown }).coordinates);
+  if ("coordinates" in geom)
+    walk((geom as { coordinates: unknown }).coordinates);
   return n ? [acc[0] / n, acc[1] / n] : null;
 };
 
@@ -99,11 +104,13 @@ export default function Home({
   }, []);
 
   const floodElevated = useMemo(
-    () => (flood?.data.features ?? []).filter((f) => f.properties.severity >= 1),
+    () =>
+      (flood?.data.features ?? []).filter((f) => f.properties.severity >= 1),
     [flood],
   );
   const severeAlerts = useMemo(
-    () => (alerts?.data.features ?? []).filter((f) => f.properties.severity >= 3),
+    () =>
+      (alerts?.data.features ?? []).filter((f) => f.properties.severity >= 3),
     [alerts],
   );
   const activeStorms = storm && !storm.disabled ? storm.data.features : [];
@@ -113,10 +120,12 @@ export default function Home({
     ...(severeAlerts.length ? [3] : []),
     ...(activeStorms.length ? [3] : []),
   );
-  const anyStale = [flood, alerts, flow].some((r) => r && !r.disabled && r.stale);
+  const anyStale = [flood, alerts, flow].some(
+    (r) => r && !r.disabled && r.stale,
+  );
 
   // ---- hero map ---------------------------------------------------------- //
-  // framed so North Carolina — and its gauge field — fills the band rather than
+  // framed so North Carolina - and its gauge field - fills the band rather than
   // sitting in a wash of pale neighbouring states.
   const { containerRef, mapRef, ready, styleEpoch } = useMapLibre({
     center: [-79.1, 35.3],
@@ -125,8 +134,8 @@ export default function Home({
   });
 
   // points to plot on the hero. The normal/offline gauges (~800 on a calm day)
-  // are drawn as faint texture; anything carrying a signal — a gauge at or above
-  // action stage, an active fire, a real weather alert — is drawn bold so the
+  // are drawn as faint texture; anything carrying a signal - a gauge at or above
+  // action stage, an active fire, a real weather alert - is drawn bold so the
   // hero stays quiet when NC is quiet and lights up during an event.
   const heroPoints = useMemo<GeoJSON.FeatureCollection>(() => {
     const feats: GeoJSON.Feature[] = [];
@@ -135,13 +144,22 @@ export default function Home({
       feats.push({
         type: "Feature",
         geometry: f.geometry,
-        properties: sev >= 1 ? { sev, r: 4.5, hot: 1 } : { sev: 0, r: 2.4, hot: 0 },
+        properties:
+          sev >= 1 ? { sev, r: 4.5, hot: 1 } : { sev: 0, r: 2.4, hot: 0 },
       });
     }
     for (const f of flow?.data.features ?? [])
-      feats.push({ type: "Feature", geometry: f.geometry, properties: { sev: 0, r: 2, hot: 0 } });
+      feats.push({
+        type: "Feature",
+        geometry: f.geometry,
+        properties: { sev: 0, r: 2, hot: 0 },
+      });
     for (const f of fire && !fire.disabled ? fire.data.features : [])
-      feats.push({ type: "Feature", geometry: f.geometry, properties: { sev: 3, r: 4, hot: 1 } });
+      feats.push({
+        type: "Feature",
+        geometry: f.geometry,
+        properties: { sev: 3, r: 4, hot: 1 },
+      });
     for (const f of alerts?.data.features ?? []) {
       const c = centroid(f.geometry);
       if (c)
@@ -178,7 +196,14 @@ export default function Home({
         "circle-color": [
           "match",
           ["get", "sev"],
-          3, rgb(3), 2, rgb(2), 1, rgb(1), 0, rgb(0),
+          3,
+          rgb(3),
+          2,
+          rgb(2),
+          1,
+          rgb(1),
+          0,
+          rgb(0),
           /* default */ rgb(-1),
         ],
       },
@@ -193,7 +218,14 @@ export default function Home({
         "circle-color": [
           "match",
           ["get", "sev"],
-          3, rgb(3), 2, rgb(2), 1, rgb(1), 0, rgb(0),
+          3,
+          rgb(3),
+          2,
+          rgb(2),
+          1,
+          rgb(1),
+          0,
+          rgb(0),
           rgb(-1),
         ],
         "circle-stroke-width": ["case", ["==", ["get", "hot"], 1], 0.75, 0],
@@ -203,7 +235,7 @@ export default function Home({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, mapRef, heroPoints, styleEpoch]);
 
-  // a slow, quiet NEXRAD radar loop behind the hero — real weather, barely there
+  // a slow, quiet NEXRAD radar loop behind the hero - real weather, barely there
   const heroRadar = useRef(liveRadarFrames());
   useEffect(() => {
     const map = mapRef.current;
@@ -214,7 +246,8 @@ export default function Home({
     const paint = () => {
       try {
         if (!mapRef.current || !map.getStyle()) return;
-        const src = map.getSource(SRC) as maplibregl.RasterTileSource | undefined;
+        const src = map.getSource(SRC) as
+          maplibregl.RasterTileSource | undefined;
         if (src?.setTiles) src.setTiles([frames[i].tileUrl]);
         else if (!src) {
           map.addSource(SRC, {
@@ -223,9 +256,16 @@ export default function Home({
             tileSize: 256,
             attribution: RADAR_ATTRIBUTION,
           });
-          const below = map.getLayer("hero-hz-glow") ? "hero-hz-glow" : undefined;
+          const below = map.getLayer("hero-hz-glow")
+            ? "hero-hz-glow"
+            : undefined;
           map.addLayer(
-            { id: SRC, type: "raster", source: SRC, paint: { "raster-opacity": 0.2, "raster-fade-duration": 300 } },
+            {
+              id: SRC,
+              type: "raster",
+              source: SRC,
+              paint: { "raster-opacity": 0.2, "raster-fade-duration": 300 },
+            },
             below,
           );
         }
@@ -261,7 +301,9 @@ export default function Home({
     {
       label: "River flood forecast",
       value: flood ? `${floodElevated.length}` : "…",
-      sev: floodElevated.length ? Math.max(...floodElevated.map((f) => f.properties.severity)) : 0,
+      sev: floodElevated.length
+        ? Math.max(...floodElevated.map((f) => f.properties.severity))
+        : 0,
       sub: flood
         ? floodElevated.length
           ? `of ${flood.data.features.length} NWPS gauges above action stage`
@@ -297,7 +339,10 @@ export default function Home({
     {
       label: "Active fire",
       value: fire && !fire.disabled ? `${fire.data.features.length}` : "off",
-      sev: fire && !fire.disabled ? Math.max(0, ...fire.data.features.map((f) => f.properties.severity)) : 0,
+      sev:
+        fire && !fire.disabled
+          ? Math.max(0, ...fire.data.features.map((f) => f.properties.severity))
+          : 0,
       sub: fire?.disabled
         ? "add a free NASA FIRMS key to turn on"
         : fire
@@ -317,11 +362,9 @@ export default function Home({
         <div
           ref={containerRef}
           aria-hidden
-          className={`absolute inset-x-0 -bottom-10 top-0 transition-opacity duration-700 ${
-            ready ? "opacity-100" : "opacity-0"
-          }`}
+          className={`absolute inset-x-0 -bottom-10 top-0 transition-opacity duration-700 ${ready ? "opacity-100" : "opacity-0"}`}
         />
-        {/* scrim — only the lower half, so the live map stays readable up top */}
+        {/* scrim - only the lower half, so the live map stays readable up top */}
         <div
           className="pointer-events-none absolute inset-0"
           style={{
@@ -340,7 +383,10 @@ export default function Home({
           <p className="mt-3 flex items-start gap-2 text-sm text-ink-dim">
             <span
               className="mt-1 h-2 w-2 shrink-0 rounded-full"
-              style={{ background: rgb(worst), boxShadow: `0 0 0 4px ${rgb(worst)}22` }}
+              style={{
+                background: rgb(worst),
+                boxShadow: `0 0 0 4px ${rgb(worst)}22`,
+              }}
             />
             <span className="max-w-[60ch]">{priority}</span>
           </p>
@@ -358,7 +404,9 @@ export default function Home({
               Assess an area
             </button>
             <span className="ml-1 flex items-center gap-1.5 text-2xs text-ink-faint">
-              <span className={`h-1.5 w-1.5 rounded-full ${anyStale ? "bg-dmg1" : "bg-accent"}`} />
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${anyStale ? "bg-dmg1" : "bg-accent"}`}
+              />
               {anyStale ? "feeds cached" : "feeds live"}
             </span>
           </div>
@@ -367,7 +415,7 @@ export default function Home({
 
       {/* -------- content -------- */}
       <div className="mx-auto w-full max-w-6xl px-5 pb-14 md:px-10">
-        {/* status band — one row, the whole state's posture at a glance */}
+        {/* status band - one row, the whole state's posture at a glance */}
         <div className="reveal -mt-6 card overflow-hidden">
           <div className="grid grid-cols-2 divide-x divide-y divide-line sm:grid-cols-3 lg:grid-cols-5 lg:divide-y-0">
             {tiles.map((t) => (
@@ -377,14 +425,21 @@ export default function Home({
                 className="pressable group px-4 py-3 text-left transition-colors hover:bg-surface-2"
               >
                 <div className="flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: rgb(t.sev) }} />
-                  <span className="text-2xs font-medium text-ink-dim">{t.label}</span>
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ background: rgb(t.sev) }}
+                  />
+                  <span className="text-2xs font-medium text-ink-dim">
+                    {t.label}
+                  </span>
                 </div>
                 <StatNumber
                   value={t.value}
                   className="tnum mt-1 block text-2xl font-semibold leading-none text-ink"
                 />
-                <div className="mt-1 text-2xs leading-snug text-ink-faint">{t.sub}</div>
+                <div className="mt-1 text-2xs leading-snug text-ink-faint">
+                  {t.sub}
+                </div>
               </button>
             ))}
           </div>
@@ -392,7 +447,9 @@ export default function Home({
 
         {/* damage assessments */}
         <div className="mt-11 flex items-baseline justify-between">
-          <h2 className="font-display text-base font-semibold text-ink">Damage assessments</h2>
+          <h2 className="font-display text-base font-semibold text-ink">
+            Damage assessments
+          </h2>
           <span className="text-2xs text-ink-faint">
             {online === false
               ? "assessment service offline"
@@ -400,8 +457,9 @@ export default function Home({
           </span>
         </div>
         <p className="measure mt-1 text-sm text-ink-dim">
-          Point the pipeline at a North Carolina area with post-event Maxar imagery. It locates every
-          building, rates the damage, and flags the uncertain calls for a person to check.{" "}
+          Point the pipeline at a North Carolina area with post-event Maxar
+          imagery. It locates every building, rates the damage, and flags the
+          uncertain calls for a person to check.{" "}
           <button
             onClick={onOpenAssess}
             className="pressable text-accent underline underline-offset-2 hover:text-ink"
@@ -410,6 +468,13 @@ export default function Home({
           </button>
           .
         </p>
+
+        {areas.length === 0 && (
+          <p className="mt-5 rounded-md border border-dashed border-line px-4 py-3 text-2xs leading-relaxed text-ink-faint">
+            None yet. Assessed areas show up here and on the damage map once the
+            pipeline has run for a North Carolina area.
+          </p>
+        )}
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {areas.map(({ event, area }) => {
@@ -427,10 +492,12 @@ export default function Home({
                   <span className="font-display text-[1.05rem] font-semibold leading-tight text-ink">
                     {area.name}
                   </span>
-                  <span className="shrink-0 text-2xs text-ink-faint">{event.name}</span>
+                  <span className="shrink-0 text-2xs text-ink-faint">
+                    {event.name}
+                  </span>
                 </div>
 
-                {/* damage distribution — the point of the card, so give it height + labels */}
+                {/* damage distribution - the point of the card, so give it height + labels */}
                 <div>
                   <div className="bar-track flex h-2.5">
                     {(["0", "1", "2", "3"] as const).map((k) =>
@@ -449,16 +516,23 @@ export default function Home({
                   </div>
                   <div className="tnum mt-1.5 flex items-baseline gap-x-3 text-2xs text-ink-faint">
                     <span>
-                      <span className="font-semibold text-ink">{total.toLocaleString()}</span> buildings
+                      <span className="font-semibold text-ink">
+                        {total.toLocaleString()}
+                      </span>{" "}
+                      buildings
                     </span>
                     <span>
-                      <span className="font-semibold text-dmg2">{severe.toLocaleString()}</span>{" "}
+                      <span className="font-semibold text-dmg2">
+                        {severe.toLocaleString()}
+                      </span>{" "}
                       major/destroyed · {pct}%
                     </span>
                     {area.review && (
                       <span>
-                        <span className="font-semibold text-dmg1">{area.review.total_review}</span> in
-                        review
+                        <span className="font-semibold text-dmg1">
+                          {area.review.total_review}
+                        </span>{" "}
+                        in review
                       </span>
                     )}
                   </div>
@@ -479,8 +553,9 @@ export default function Home({
               What has happened here before
             </h2>
             <p className="mt-1.5 text-sm text-ink-dim">
-              <span className="font-semibold text-ink">{history.total}</span> federally-declared
-              disasters in North Carolina since {history.sinceYear}:{" "}
+              <span className="font-semibold text-ink">{history.total}</span>{" "}
+              federally-declared disasters in North Carolina since{" "}
+              {history.sinceYear}:{" "}
               {history.byType
                 .slice(0, 4)
                 .map((t) => `${t.count} ${t.type.toLowerCase()}`)
@@ -490,7 +565,9 @@ export default function Home({
             <ul className="mt-2.5 flex flex-wrap gap-x-6 gap-y-1.5">
               {history.recent.map((d) => (
                 <li key={d.disasterNumber} className="text-2xs text-ink-faint">
-                  <span className="font-medium text-ink-dim">{d.declarationDate.slice(0, 4)}</span>{" "}
+                  <span className="font-medium text-ink-dim">
+                    {d.declarationDate.slice(0, 4)}
+                  </span>{" "}
                   {d.declarationTitle}
                 </li>
               ))}
@@ -499,12 +576,15 @@ export default function Home({
         )}
 
         <div className="mt-12 border-t border-line pt-5 text-2xs leading-relaxed text-ink-faint">
-          Live feeds from NOAA NWPS and the National Weather Service, the National Hurricane
-          Center, USGS NWIS, NASA FIRMS, NCDOT DriveNC, the NC State Climate Office, IEM
-          NEXRAD radar, and OpenFEMA. Imagery from Maxar Open Data, building footprints from
-          OpenStreetMap. Damage model: the xView2 CMU baseline classifier fused with a
-          change-detection pass.{" "}
-          <button onClick={onOpenAbout} className="pressable text-accent hover:underline">
+          Live feeds from NOAA NWPS and the National Weather Service, the
+          National Hurricane Center, USGS NWIS, NASA FIRMS, NCDOT DriveNC, the
+          NC State Climate Office, IEM NEXRAD radar, and OpenFEMA. Imagery from
+          Maxar Open Data, building footprints from OpenStreetMap. Damage model:
+          the xView2 CMU baseline classifier fused with a change-detection pass.{" "}
+          <button
+            onClick={onOpenAbout}
+            className="pressable text-accent hover:underline"
+          >
             About NC Recon
           </button>
         </div>

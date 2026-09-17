@@ -5,7 +5,7 @@ import { defineConfig, type Plugin } from 'vite'
 
 const here = new URL('.', import.meta.url).pathname
 
-// Phase H — the self-hosted demo basemap (public/demo/basemap/) is a partial
+// Phase H - the self-hosted demo basemap (public/demo/basemap/) is a partial
 // tile pyramid: the camera path is covered, but a stray edge tile the enum
 // missed must 404/204 cleanly, not fall through to the SPA index.html (which
 // MapLibre would try to parse as a vector tile). Also stamp a content-type on
@@ -14,7 +14,7 @@ const here = new URL('.', import.meta.url).pathname
 // Every file under public/demo/basemap/ is content-baked (regenerated only by
 // `npm run demo:assets`), so serve it `immutable` with a long max-age. Vite's
 // static handler otherwise sends `Cache-Control: no-cache`, which makes MapLibre
-// issue a conditional GET for every tile each time it re-enters the viewport —
+// issue a conditional GET for every tile each time it re-enters the viewport -
 // on the fast B3 snap / B6 pull-back those revalidation round-trips stack up
 // behind the camera and the frame flies over un-painted ground. `immutable`
 // turns each of those into a pure in-memory cache hit (the preload primes it).
@@ -63,7 +63,7 @@ export default defineConfig({
       input: {
         // the interactive app
         main: `${here}index.html`,
-        // Phase H — the isolated scripted hook sequence (/demo.html)
+        // Phase H - the isolated scripted hook sequence (/demo.html)
         demo: `${here}demo.html`,
       },
     },

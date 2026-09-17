@@ -2,11 +2,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { GeoJsonLayer } from "@deck.gl/layers";
 import type { PickingInfo } from "@deck.gl/core";
-import { useMapLibre, type IControl, type RasterTileSource } from "../lib/useMapLibre";
+import {
+  useMapLibre,
+  type IControl,
+  type RasterTileSource,
+} from "../lib/useMapLibre";
 import { DAMAGE } from "../lib/damage";
 import { tilesBase } from "../lib/data";
 import { prefersReducedMotion } from "../lib/motion";
-import type { AreaConfig, BuildingFeature, DamageCollection } from "../lib/types";
+import type {
+  AreaConfig,
+  BuildingFeature,
+  DamageCollection,
+} from "../lib/types";
 
 interface Props {
   area: AreaConfig;
@@ -50,21 +58,54 @@ export default function DeckMap({
   const reduced = prefersReducedMotion();
 
   // --- imagery sources: add once, then just repoint tiles on area change ------
+  // `bounds` (derived from the building footprints, padded) keeps MapLibre from
+  // even requesting tiles well outside the captured raster extent - without it,
+  // every tile the pipeline's make_tiles.py never wrote (no committed static
+  // server implements the `?empty=1` blank-tile fallback the query string
+  // hints at) 404s and spams "source image could not be decoded".
   useEffect(() => {
     const map = mapRef.current;
-    if (!ready || !map) return;
+    if (!ready || !map || !fc?.features.length) return;
+    let w = Infinity,
+      s = Infinity,
+      e = -Infinity,
+      n = -Infinity;
+    for (const f of fc.features) {
+      for (const [lon, lat] of f.geometry.coordinates[0]) {
+        if (lon < w) w = lon;
+        if (lon > e) e = lon;
+        if (lat < s) s = lat;
+        if (lat > n) n = lat;
+      }
+    }
+    const PAD = 0.01; // ~1km - the Maxar chip extends past the footprint bbox
+    const bounds: [number, number, number, number] = [
+      w - PAD,
+      s - PAD,
+      e + PAD,
+      n + PAD,
+    ];
     for (const kind of ["pre", "post"] as const) {
       const sid = `imagery-${kind}`;
       // ?empty=1 → the server returns a blank tile (not a 404) past the AOI edge
-      const tiles = [`${tilesBase()}${area.id}/${kind}/{z}/{x}/{y}.jpg?empty=1`];
+      const tiles = [
+        `${tilesBase()}${area.id}/${kind}/{z}/{x}/{y}.jpg?empty=1`,
+      ];
       const src = map.getSource(sid) as RasterTileSource | undefined;
       if (!src) {
         map.addSource(sid, {
-          type: "raster", tiles, tileSize: 256, minzoom: 13, maxzoom: 17,
+          type: "raster",
+          tiles,
+          tileSize: 256,
+          minzoom: 13,
+          maxzoom: 17,
+          bounds,
           attribution: "Maxar Open Data",
         });
         map.addLayer({
-          id: sid, type: "raster", source: sid,
+          id: sid,
+          type: "raster",
+          source: sid,
           paint: { "raster-opacity": 0, "raster-fade-duration": 200 },
         });
       } else if (typeof src.setTiles === "function") {
@@ -72,7 +113,7 @@ export default function DeckMap({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, area.id, styleEpoch]);
+  }, [ready, area.id, styleEpoch, fc]);
 
   // --- imagery opacity follows the slider ------------------------------------
   useEffect(() => {
@@ -82,7 +123,11 @@ export default function DeckMap({
     for (const kind of ["pre", "post"] as const) {
       const id = `imagery-${kind}`;
       if (map.getLayer(id)) {
-        map.setPaintProperty(id, "raster-opacity", kind === imagery ? Math.max(0, Math.min(1, vis)) : 0);
+        map.setPaintProperty(
+          id,
+          "raster-opacity",
+          kind === imagery ? Math.max(0, Math.min(1, vis)) : 0,
+        );
       }
     }
   }, [ready, assessment, imagery, mapRef]);
@@ -106,8 +151,12 @@ export default function DeckMap({
     prevArea.current = area.id;
     setHover(null);
     map.flyTo({
-      center: area.center, zoom: area.zoom, bearing: 0, pitch: map.getPitch(),
-      duration: reduced ? 0 : 1200, essential: true,
+      center: area.center,
+      zoom: area.zoom,
+      bearing: 0,
+      pitch: map.getPitch(),
+      duration: reduced ? 0 : 1200,
+      essential: true,
     });
   }, [area.id, ready, mapRef, area.center, area.zoom, reduced]);
 
@@ -152,15 +201,24 @@ export default function DeckMap({
           const c = effClass(f);
           if (!filter.has(c)) return EMPTY_RGBA;
           const [r, g, b] = DAMAGE[c].rgb;
-          const a = f.properties.id === selectedId ? 255 : 175 + Math.round(45 * t);
+          const a =
+            f.properties.id === selectedId ? 255 : 175 + Math.round(45 * t);
           return [r, g, b, a];
         },
         getLineColor: (f) =>
           f.properties.id === selectedId ? [...ACCENT, 255] : [12, 16, 22, 140],
-        material: { ambient: 0.55, diffuse: 0.6, shininess: 24, specularColor: [40, 55, 70] },
+        material: {
+          ambient: 0.55,
+          diffuse: 0.6,
+          shininess: 24,
+          specularColor: [40, 55, 70],
+        },
         transitions: reduced
           ? {}
-          : { getElevation: { duration: 450 }, getFillColor: { duration: 250 } },
+          : {
+              getElevation: { duration: 450 },
+              getFillColor: { duration: 250 },
+            },
         updateTriggers: {
           getFillColor: [selectedId, t, [...filter].join(), overrides],
           getElevation: [selectedId, t, overrides],
@@ -174,7 +232,16 @@ export default function DeckMap({
       }),
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fc, overrides, assessment, selectedId, filter, onSelect, onHover, reduced]);
+  }, [
+    fc,
+    overrides,
+    assessment,
+    selectedId,
+    filter,
+    onSelect,
+    onHover,
+    reduced,
+  ]);
 
   useEffect(() => {
     if (!ready || !mapRef.current) return;
@@ -207,7 +274,11 @@ export default function DeckMap({
   return (
     <div className="absolute inset-0">
       {/* maplibre-gl.css forces position:relative on this node, so size it explicitly */}
-      <div ref={containerRef} className="h-full w-full" aria-label={`Damage map for ${area.name}`} />
+      <div
+        ref={containerRef}
+        className="h-full w-full"
+        aria-label={`Damage map for ${area.name}`}
+      />
       {hover && <HoverChip hover={hover} cls={effClass(hover.f)} />}
     </div>
   );
@@ -218,12 +289,19 @@ function HoverChip({ hover, cls }: { hover: NonNullable<Hover>; cls: number }) {
   const tier = hover.f.properties.confidence_tier;
   return (
     <div
-      className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-[calc(100%+12px)] whitespace-nowrap rounded-sm border border-line bg-surface/95 px-2.5 py-1.5 text-xs shadow-lg backdrop-blur"
+      className="panel pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-[calc(100%+12px)] whitespace-nowrap px-2.5 py-1.5 text-xs"
       style={{ left: hover.x, top: hover.y }}
     >
-      <span className="mr-1.5 inline-block h-2 w-2 rounded-[2px] align-middle" style={{ background: d.hex }} />
-      <span className="font-medium" style={{ color: d.hex }}>{d.label}</span>
-      {tier === "review" && <span className="ml-2 text-2xs text-dmg1">needs review</span>}
+      <span
+        className="mr-1.5 inline-block h-2 w-2 rounded-[2px] align-middle"
+        style={{ background: d.hex }}
+      />
+      <span className="font-medium" style={{ color: d.hex }}>
+        {d.label}
+      </span>
+      {tier === "review" && (
+        <span className="ml-2 text-2xs text-dmg1">needs review</span>
+      )}
       <span className="tnum ml-2 text-ink-faint">{hover.f.properties.id}</span>
     </div>
   );
