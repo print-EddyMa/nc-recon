@@ -360,3 +360,19 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* operational warning banner (disclaimer, stale data). AA contrast both themes. */
+:root {
+  --warn-bg: 255 244 214;
+  --warn-ink: 58 42 0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --warn-bg: 58 42 0;
+    --warn-ink: 255 233 173;
+  }
+}
+:root[data-theme="dark"] {
+  --warn-bg: 58 42 0;
+  --warn-ink: 255 233 173;
+}

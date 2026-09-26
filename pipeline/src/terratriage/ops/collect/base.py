@@ -79,7 +79,12 @@ def http_json(
         try:
             req = urllib.request.Request(url, headers=hdrs, data=data)
             with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310
-                return json.loads(r.read())
+                body = r.read()
+            if body[:2] == b"\x1f\x8b":  # some servers gzip regardless of Accept-Encoding
+                import gzip
+
+                body = gzip.decompress(body)
+            return json.loads(body)
         except urllib.error.HTTPError as ex:
             last = ex
             if ex.code in (400, 401, 403, 404):

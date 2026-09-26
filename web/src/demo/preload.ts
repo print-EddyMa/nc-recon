@@ -216,13 +216,12 @@ export async function preload(
 
   // count every tile that finishes parsing into MapLibre's own cache
   const seen = new Set<string>();
-  map.on(
-    "data",
-    (e: { tile?: { tileID?: { key?: unknown } }; sourceId?: string }) => {
-      if (e.tile?.tileID?.key != null)
-        seen.add(`${e.sourceId}:${e.tile.tileID.key}`);
-    },
-  );
+  map.on("data", (ev) => {
+    // maplibre 6 types "data" as source|style events; only source tile events
+    // carry a tile id
+    const e = ev as unknown as { tile?: { tileID?: { key?: unknown } }; sourceId?: string };
+    if (e.tile?.tileID?.key != null) seen.add(`${e.sourceId}:${e.tile.tileID.key}`);
+  });
 
   // The playback camera path, sampled every 60ms across the whole map-visible
   // span (0 → end of the flood beat; B7/B8 only hold statewide, B9 hides the

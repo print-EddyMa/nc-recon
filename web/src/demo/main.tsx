@@ -4,6 +4,7 @@
 // tool, not part of the interactive app.
 import { createRoot } from "react-dom/client";
 import "./demo.css";
+import "../lib/maplibreWorker";
 import Demo from "./Demo";
 
 createRoot(document.getElementById("demo")!).render(<Demo />);

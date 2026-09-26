@@ -9,9 +9,6 @@
  */
 import { API_URL } from "./catalog";
 
-export const OPS_ENABLED =
-  import.meta.env.VITE_NCR_OPS_MODE === "1" || !!API_URL;
-
 export const DISCLAIMER =
   "Decision-support tool. Not an official FEMA or NC Emergency Management damage assessment. Verify on the ground.";
 
@@ -311,4 +308,98 @@ export function fmtAge(s: number | null): string {
   if (s < 3600) return `${Math.round(s / 60)} min old`;
   if (s < 172800) return `${(s / 3600).toFixed(1)} h old`;
   return `${Math.round(s / 86400)} d old`;
+}
+
+
+// --------------------------------------------------------------------------- //
+// events + new assessments
+// --------------------------------------------------------------------------- //
+export interface OpsEvent {
+  id: string;
+  name: string;
+  state: string;
+  declarations: string[];
+  incident_begin: string;
+  provisional: boolean;
+  pre_window: [string, string];
+  post_window: [string, string];
+  post_sources: string[];
+  aois: { id: string; role: string; county: string; center: [number, number] }[];
+}
+
+export const loadEvents = () => getJSON<OpsEvent[]>("/ops/events");
+
+export const checkCoverage = (event: string, lon: number, lat: number) =>
+  getJSON<{ covered: boolean; post_source?: string; reason?: string }>(
+    `/ops/coverage?event=${encodeURIComponent(event)}&lon=${lon}&lat=${lat}`,
+  );
+
+export interface Job {
+  id: string;
+  area: string;
+  event: string;
+  name: string;
+  status: "queued" | "running" | "done" | "failed";
+  step: string;
+  post_source: string | null;
+  error: string | null;
+  log: string[];
+  created: number;
+  finished: number | null;
+}
+
+async function postJSON<T>(path: string, body: unknown): Promise<T> {
+  const r = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...authHeaders() },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    let msg = `${r.status}`;
+    try {
+      const j = (await r.json()) as { detail?: unknown };
+      msg = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail);
+    } catch {
+      /* not json */
+    }
+    if (r.status === 401 || r.status === 403) msg = "Responder token required";
+    throw new Error(msg);
+  }
+  return (await r.json()) as T;
+}
+
+export const submitAssessment = (body: {
+  event: string;
+  name: string;
+  lon: number;
+  lat: number;
+  half_m: number;
+}) => postJSON<Job>("/ops/assess", body);
+
+export const jobStatus = (id: string) => getJSON<Job>(`/ops/assess/${id}`, true);
+
+export const createEvent = (body: {
+  id: string;
+  name: string;
+  incident_begin: string;
+  disaster_numbers: number[];
+  eri_prefix?: string;
+}) => postJSON<OpsEvent>("/ops/events", body);
+
+export const POST_SOURCE_LABEL: Record<string, string> = {
+  nc_helene_2025: "NC OneMap post-Helene aerial orthos (leaf-off, 6 in)",
+  eri: "NOAA NGS emergency response aerials",
+  maxar: "Maxar Open Data satellite",
+};
+
+/** "12 min ago" / "3 h ago" / date, for data-as-of labels. */
+export function ago(iso: string | number | null | undefined): string {
+  if (!iso) return "unknown";
+  const t = typeof iso === "number" ? iso * 1000 : Date.parse(iso);
+  if (!Number.isFinite(t)) return "unknown";
+  const s = (Date.now() - t) / 1000;
+  if (s < 90) return "just now";
+  if (s < 3600) return `${Math.round(s / 60)} min ago`;
+  if (s < 48 * 3600) return `${Math.round(s / 3600)} h ago`;
+  return new Date(t).toLocaleDateString();
 }

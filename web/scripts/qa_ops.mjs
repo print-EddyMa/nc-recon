@@ -21,15 +21,18 @@ page.on("pageerror", (e) => errors.push("pageerror: " + e.message.slice(0, 300))
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 for (const theme of ["light", "dark"]) {
-  await page.goto(BASE + "/#/ops", { waitUntil: "networkidle2" });
+  await page.goto(BASE + "/#/", { waitUntil: "networkidle2" });
   await page.evaluate((t) => localStorage.setItem("terratriage:theme", t), theme);
+  await page.reload({ waitUntil: "networkidle2" });
+  await sleep(4000);
+  await page.screenshot({ path: `${OUT}/${theme}-ops-home.png` });
   await page.goto(BASE + "/#/ops/old_fort", { waitUntil: "networkidle2" });
   await page.reload({ waitUntil: "networkidle2" });
   await sleep(8000);
   await page.screenshot({ path: `${OUT}/${theme}-ops-oldfort.png` });
   // open the top review-queue item
   const clicked = await page.evaluate(() => {
-    const sec = [...document.querySelectorAll("section")].find((s) => s.textContent?.startsWith("Review queue"));
+    const sec = [...document.querySelectorAll("section")].find((s) => s.querySelector("h2")?.textContent === "Review queue");
     const b = sec?.querySelector("li button");
     if (b) { b.click(); return true; }
     return false;
@@ -38,8 +41,17 @@ for (const theme of ["light", "dark"]) {
   await page.screenshot({ path: `${OUT}/${theme}-ops-card.png` });
   console.log(theme, "queue item clicked:", clicked);
 }
-await page.goto(BASE + "/#/ops/chimney_rock", { waitUntil: "networkidle2" });
-await sleep(7000);
-await page.screenshot({ path: `${OUT}/dark-ops-chimney.png` });
+for (const [name, hash] of [["conditions", "#/conditions"], ["help", "#/help"]]) {
+  await page.goto(BASE + "/" + hash, { waitUntil: "networkidle2" });
+  await sleep(6000);
+  await page.screenshot({ path: `${OUT}/dark-${name}.png` });
+}
+// tablet width: new-assessment panel open
+await page.setViewport({ width: 1024, height: 768, deviceScaleFactor: 1 });
+await page.goto(BASE + "/#/", { waitUntil: "networkidle2" });
+await sleep(3000);
+await page.evaluate(() => [...document.querySelectorAll("button")].find((b) => b.textContent === "New assessment")?.click());
+await sleep(2000);
+await page.screenshot({ path: `${OUT}/tablet-new-assessment.png` });
 console.log(errors.length ? "\nERRORS:\n" + [...new Set(errors)].join("\n") : "\nno console/page errors");
 await browser.close();

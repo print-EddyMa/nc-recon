@@ -4,7 +4,6 @@ import { ScatterplotLayer, GeoJsonLayer } from "@deck.gl/layers";
 import type { PickingInfo } from "@deck.gl/core";
 import { useMapLibre, type IControl } from "../lib/useMapLibre";
 import { prefersReducedMotion } from "../lib/motion";
-import { resolved as resolvedTheme } from "../lib/theme";
 import { useSettings } from "../lib/settings";
 import { liveRadarFrames, RADAR_ATTRIBUTION } from "../lib/radar";
 import LayerToggles, { type LayerRow } from "../components/map/LayerToggles";
@@ -23,7 +22,6 @@ import {
   ncStreamflow,
   ncFires,
   ncFemaHistory,
-  ncAircraft,
   NC_CENTER,
   NC_BBOX,
   NC_SEV_COLOR,
@@ -47,8 +45,7 @@ type LayerId =
   | "storm"
   | "fire"
   | "camera"
-  | "closure"
-  | "aircraft";
+  | "closure";
 
 const LAYER_META: Record<LayerId, { label: string; note: string }> = {
   climate: { label: "Current conditions", note: "ECONet + RAWS (CLOUDS API)" },
@@ -62,7 +59,6 @@ const LAYER_META: Record<LayerId, { label: string; note: string }> = {
   fire: { label: "Active fire", note: "NASA FIRMS VIIRS" },
   camera: { label: "DOT cameras", note: "NCDOT DriveNC" },
   closure: { label: "Road closures", note: "NCDOT DriveNC" },
-  aircraft: { label: "Live aircraft", note: "ADS-B via adsb.lol" },
 };
 const LAYER_ORDER: LayerId[] = [
   "gauge",
@@ -73,7 +69,6 @@ const LAYER_ORDER: LayerId[] = [
   "storm",
   "closure",
   "camera",
-  "aircraft",
 ];
 
 const DEFAULT_ON: Record<LayerId, boolean> = {
@@ -87,16 +82,12 @@ const DEFAULT_ON: Record<LayerId, boolean> = {
   // marks, they read as an emergency on an otherwise-calm map
   closure: false,
   camera: false,
-  // off by default: hundreds of routine flights read as clutter on a calm day
-  aircraft: false,
 };
 
-// cameras + closures + aircraft sit off the flood-severity ramp, so the
+// cameras + closures sit off the flood-severity ramp, so the
 // legend names them individually
 const CAMERA_RGB: [number, number, number] = [139, 148, 163];
 const CLOSURE_RGB: [number, number, number] = [232, 137, 74];
-const AIRCRAFT_RGB: [number, number, number] = [90, 150, 200];
-const AIRCRAFT_MIL_RGB: [number, number, number] = [163, 116, 217];
 
 const sevRGB = (s: number): [number, number, number] =>
   NC_SEV_COLOR[Math.max(-1, Math.min(3, s))];
@@ -108,7 +99,6 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
   const { containerRef, mapRef, ready, styleEpoch } = useMapLibre({
     center: [-78.7, 35.4],
     zoom: 6.7,
-    autoTilt: true,
   });
   const overlayRef = useRef<MapboxOverlay | null>(null);
   const reduced = prefersReducedMotion();
@@ -122,7 +112,6 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
   const [closure, setClosure] = useState<NCResult<NCPointFC> | null>(null);
   const [flow, setFlow] = useState<NCResult<NCPointFC> | null>(null);
   const [fire, setFire] = useState<NCResult<NCPointFC> | null>(null);
-  const [aircraft, setAircraft] = useState<NCResult<NCPointFC> | null>(null);
   const [history, setHistory] = useState<NCHistory | null>(null);
   const [selected, setSelected] = useState<{
     title: string;
@@ -263,67 +252,6 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
     }
   }, [radarIdx, radarOn, ready, mapRef, radarFrames]);
 
-  // --- real traffic congestion (TomTom flow tiles) ------------------------ //
-  // Road colour = live speed vs free-flow speed, per road segment. This is
-  // genuinely real per-segment data (not the synthetic "moving car" dots some
-  // open-source globe demos animate from aggregate flow when no traffic
-  // provider is configured) - deliberately declined here for that reason.
-  const [trafficOn, setTrafficOn] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem("terratriage:nc-traffic") === "1";
-    } catch {
-      return false;
-    }
-  });
-  useEffect(() => {
-    try {
-      localStorage.setItem("terratriage:nc-traffic", trafficOn ? "1" : "0");
-    } catch {
-      /* private window */
-    }
-  }, [trafficOn]);
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!ready || !map) return;
-    const id = "nc-traffic";
-    const safe = (fn: () => void) => {
-      try {
-        if (mapRef.current && map.getStyle()) fn();
-      } catch {
-        /* map style not ready / torn down */
-      }
-    };
-    const teardown = () =>
-      safe(() => {
-        if (map.getLayer(id)) map.removeLayer(id);
-        if (map.getSource(id)) map.removeSource(id);
-      });
-    const key = settings.tomtomKey;
-    if (!trafficOn || !key) {
-      teardown();
-      return;
-    }
-    safe(() => {
-      const style = resolvedTheme() === "dark" ? "relative0-dark" : "relative0";
-      const firstSymbol = map
-        .getStyle()
-        ?.layers?.find((l) => l.type === "symbol")?.id;
-      map.addSource(id, {
-        type: "raster",
-        tiles: [
-          `https://api.tomtom.com/traffic/map/4/tile/flow/${style}/{z}/{x}/{y}.png?key=${key}&thickness=10`,
-        ],
-        tileSize: 256,
-        attribution: "© TomTom",
-      });
-      map.addLayer(
-        { id, type: "raster", source: id, paint: { "raster-opacity": 0.85 } },
-        firstSymbol,
-      );
-    });
-    return teardown;
-  }, [ready, mapRef, trafficOn, settings.tomtomKey, styleEpoch]);
-
   // frame the map on North Carolina once it's ready, leaving room for the side
   // panels, so the state fills the view rather than the whole Southeast
   useEffect(() => {
@@ -381,17 +309,6 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
     setFire(null);
     ncFires().then(setFire);
   }, [settings.firmsKey]);
-  // fetch once on mount so the layer row shows a real count before it's ever
-  // switched on; positions move fast, so re-poll on a much shorter cadence
-  // than the other feeds, but only while the layer is actually visible
-  useEffect(() => {
-    ncAircraft().then(setAircraft);
-  }, []);
-  useEffect(() => {
-    if (!on.aircraft) return;
-    const t = window.setInterval(() => ncAircraft().then(setAircraft), 20_000);
-    return () => window.clearInterval(t);
-  }, [on.aircraft]);
 
   const results: Record<LayerId, NCResult<NCPointFC | NCGeomFC> | null> = {
     climate,
@@ -402,7 +319,6 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
     fire,
     camera,
     closure,
-    aircraft,
   };
 
   const flyTo = (coord: [number, number], zoom = 9) =>
@@ -459,7 +375,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
       );
     }
 
-    // point layers. cameras + closures + aircraft aren't on the hazard-severity // ramp, they get their own fixed marks so the ramp still means "flood risk".
+    // point layers. cameras + closures aren't on the hazard-severity // ramp, they get their own fixed marks so the ramp still means "flood risk".
     const FLOW_RGB: [number, number, number] = [90, 150, 200];
     for (const id of [
       "gauge",
@@ -468,14 +384,12 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
       "fire",
       "closure",
       "camera",
-      "aircraft",
     ] as const) {
       const res = results[id];
       if (!on[id] || !res || res.disabled) continue;
       const isCam = id === "camera";
       const isClosure = id === "closure";
       const isFlow = id === "flow";
-      const isAircraft = id === "aircraft";
       out.push(
         new ScatterplotLayer({
           id: `nc-${id}`,
@@ -490,7 +404,6 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
             if (isCam) return 2.5;
             if (isClosure) return 3.5;
             if (isFlow) return 2.8;
-            if (isAircraft) return 3;
             const s = (f as PF).properties.severity;
             return s <= 0 ? 2.6 : 4 + s * 3;
           },
@@ -498,10 +411,6 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
             if (isCam) return [...CAMERA_RGB, 0];
             if (isClosure) return [...CLOSURE_RGB, 150];
             if (isFlow) return [...FLOW_RGB, 70];
-            if (isAircraft) {
-              const mil = (f as PF).properties.category === "Military";
-              return [...(mil ? AIRCRAFT_MIL_RGB : AIRCRAFT_RGB), 190];
-            }
             const s = (f as PF).properties.severity;
             const [r, g, b] = sevRGB(s);
             return [r, g, b, s <= 0 ? 45 : 70 + s * 55];
@@ -510,10 +419,6 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
             if (isCam) return [...CAMERA_RGB, 210];
             if (isClosure) return [...CLOSURE_RGB, 230];
             if (isFlow) return [...FLOW_RGB, 190];
-            if (isAircraft) {
-              const mil = (f as PF).properties.category === "Military";
-              return [...(mil ? AIRCRAFT_MIL_RGB : AIRCRAFT_RGB), 230];
-            }
             const s = (f as PF).properties.severity;
             const [r, g, b] = sevRGB(s);
             return [r, g, b, s <= 0 ? 120 : 230];
@@ -544,7 +449,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [climate, gauge, flow, alert, storm, fire, camera, closure, aircraft, on]);
+  }, [climate, gauge, flow, alert, storm, fire, camera, closure, on]);
 
   useEffect(() => {
     if (!ready || !mapRef.current) return;
@@ -694,10 +599,6 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
       else if (id === "climate" || id === "fire")
         metaLine = "optional, add a free key";
       else if (id === "storm") metaLine = "none active";
-      else if (id === "aircraft")
-        metaLine = res.reason?.includes("unavailable")
-          ? "unavailable"
-          : "none in view";
       else metaLine = "unavailable";
     }
     return {
@@ -717,19 +618,6 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
     checked: radarOn,
     disabled: false,
     onToggle: () => setRadarOn((v) => !v),
-  });
-  layerRows.push({
-    id: "traffic",
-    label: "Traffic congestion",
-    meta: settings.tomtomKey
-      ? "TomTom · live road-segment speeds"
-      : "optional, add a free key",
-    checked: trafficOn,
-    disabled: !settings.tomtomKey,
-    reason: !settings.tomtomKey
-      ? "Add a free TomTom traffic key to colour every road by its real live speed vs free-flow. Real per-segment data, not a simulation."
-      : undefined,
-    onToggle: () => setTrafficOn((v) => !v),
   });
 
   const floodItems: RankedItem[] = floodRanked.map((f) => ({
@@ -1002,13 +890,6 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
                 onRemove={() => set("cloudsKey", undefined)}
               />
             )}
-            <KeyForm
-              hasKey={!!settings.tomtomKey}
-              placeholder="TomTom traffic key"
-              removeLabel="remove TomTom key"
-              onAdd={(v) => set("tomtomKey", v)}
-              onRemove={() => set("tomtomKey", undefined)}
-            />
 
             <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 border-t border-line pt-2.5">
               {[-1, 0, 1, 2, 3].map((s) => (
@@ -1038,13 +919,6 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
                   }}
                 />
                 camera
-              </span>
-              <span className="flex items-center gap-1.5 text-2xs text-ink-faint">
-                <span
-                  className="h-2 w-2 rounded-full"
-                  style={{ background: `rgb(${AIRCRAFT_RGB.join(",")})` }}
-                />
-                aircraft
               </span>
             </div>
 

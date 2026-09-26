@@ -185,10 +185,6 @@ _FEEDS: dict[str, tuple[str, int]] = {
         300,
     ),
     "nws": ("https://api.weather.gov/alerts/active?area=NC", 180),
-    # ADS-B snapshot centred on NC, 250nm radius (adsb.lol's max) covers the
-    # whole state from this point. Keyless, ODbL-licensed; short TTL since
-    # positions move fast. https://api.adsb.lol
-    "aircraft": ("https://api.adsb.lol/v2/point/35.55/-79.2/250", 15),
 }
 _FEED_CACHE: dict[str, tuple[float, bytes, str]] = {}
 _FEED_UA = "NCRecon/1.0 (Congressional App Challenge; +https://github.com/)"
@@ -198,7 +194,7 @@ _FEED_UA = "NCRecon/1.0 (Congressional App Challenge; +https://github.com/)"
 # GeoJSON), rather than passing one URL through. USGS streamflow moved off the
 # legacy NWIS WaterServices (503 since Aug 2026, decommission Q1 2027) onto the
 # api.waterdata.usgs.gov OGC API, whose NC query needs a site-list join.
-_COMPOSED_TTL = {"usgs_water": 300}
+_COMPOSED_TTL = {"usgs_water": 300, "drivenc_closures": 300, "drivenc_cameras": 3600, "nhc": 600}
 
 
 def _composed(name: str) -> bytes:
@@ -210,6 +206,12 @@ def _composed(name: str) -> bytes:
         fc["provenance"] = layer.provenance.to_dict()
         fc["warnings"] = layer.warnings
         return json.dumps(fc).encode()
+    if name in ("drivenc_closures", "drivenc_cameras", "nhc"):
+        from terratriage.ops.collect import nc_feeds
+
+        fn = {"drivenc_closures": nc_feeds.drivenc_closures, "drivenc_cameras": nc_feeds.drivenc_cameras,
+              "nhc": nc_feeds.nhc_storms}[name]
+        return json.dumps(fn()).encode()
     raise KeyError(name)
 
 

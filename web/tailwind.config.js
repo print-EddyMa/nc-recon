@@ -21,6 +21,8 @@ export default {
         "accent-soft": v("accent-soft"),
         "accent-ink": v("accent-ink"),
         meter: v("meter"),
+        warn: v("warn-bg"),
+        "warn-ink": v("warn-ink"),
         // xView2 four-level damage ramp (semantic, theme-independent).
         // Keep in sync with DAMAGE[] in src/lib/damage.ts.
         dmg0: "#3fa06d",

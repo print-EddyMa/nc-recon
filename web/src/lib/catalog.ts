@@ -28,7 +28,10 @@ export interface CatalogEvent {
  * app runs as a pure static site: the NC risk monitor is fully live, and the
  * Assess screen shows the exact commands to run the pipeline yourself.
  */
-export const API_URL: string = import.meta.env.VITE_API_URL || "";
+export const API_URL: string =
+  import.meta.env.VITE_API_URL ||
+  // single-container deployment: the web app is served by the API itself
+  (import.meta.env.VITE_SAME_ORIGIN === "1" ? window.location.origin : "");
 
 /** North Carolina bounding box [w, s, e, n], the only AOIs this app assesses. */
 export const NC_BBOX: [number, number, number, number] = [-84.55, 33.75, -75.4, 36.7];

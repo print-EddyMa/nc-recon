@@ -1,15 +1,21 @@
-# NC Recon pipeline - Python 3.13, macOS/Linux, CPU-only
-numpy
-Pillow
-requests
-rasterio>=1.4
-shapely>=2.0
-pyproj>=3.6
-mercantile
-geopandas
-folium
-# server.py (optional API + on-demand /assess)
-fastapi
-uvicorn[standard]
-# torch/torchvision are used by the model wrapper; install separately to match your platform:
-#   pip install torch torchvision
+# NC Recon pipeline + ops service runtime (pinned from the tested venv, Python 3.13).
+# Dev/test extras: requirements-dev.txt. Legacy segmentation path (torch) and the
+# TF conda env are NOT needed to run ops mode.
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+pydantic==2.13.5
+numpy==2.5.2
+rasterio==1.5.1
+shapely==2.1.2
+pyproj==3.7.2
+geopandas==1.1.4
+pyogrio==0.13.0
+pandas==3.0.5
+mercantile==1.2.1
+Pillow==12.3.0
+PyYAML==6.0.3
+mgrs==1.5.4
+scipy==1.18.1
+scikit-image==0.26.0
+onnxruntime==1.30.0
+requests==2.34.2

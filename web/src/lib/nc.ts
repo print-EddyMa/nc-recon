@@ -66,8 +66,7 @@ export interface NCPointProps {
     | "camera"
     | "closure"
     | "fire"
-    | "flow"
-    | "aircraft";
+    | "flow";
   title: string;
   detail?: string;
   /** -1 = offline/no-data, 0 = normal, 1 = watch, 2 = elevated, 3 = severe */
@@ -102,6 +101,32 @@ export interface NCResult<T = NCPointFC> {
 const BASE = import.meta.env.BASE_URL;
 const emptyPts = (): NCPointFC => ({ type: "FeatureCollection", features: [] });
 const emptyGeom = (): NCGeomFC => ({ type: "FeatureCollection", features: [] });
+
+/** Live server feed first (the pipeline service fetches the CORS-blocked
+ * sources itself), else the committed snapshot. `live` says which; `asOf` is
+ * when the data was produced, for "data as of" labels. */
+async function liveOrSnapshot<T extends { features: unknown[]; generated?: number }>(
+  feed: string,
+  snap: string,
+  fallback: () => T,
+): Promise<{ data: T; live: boolean; asOf: number | null }> {
+  if (API_URL) {
+    try {
+      const r = await fetch(`${API_URL}/feed/${feed}`, { signal: AbortSignal.timeout(30000) });
+      if (r.ok && !r.headers.get("X-Stale")) {
+        const d = (await r.json()) as T;
+        if (Array.isArray(d.features)) return { data: d, live: true, asOf: d.generated ?? Date.now() };
+      }
+    } catch {
+      /* fall through to the snapshot */
+    }
+  }
+  const d = await snapshot<T>(snap, fallback);
+  return { data: d, live: false, asOf: d.generated ?? null };
+}
+
+const snapLabel = (asOf: number | null) =>
+  asOf ? `snapshot from ${new Date(asOf).toLocaleDateString()}` : "offline snapshot";
 
 async function snapshot<T>(name: string, fallback: () => T): Promise<T> {
   try {
@@ -343,16 +368,16 @@ export const ncAlerts = () => memoFeed("alerts", _ncAlerts);
 
 async function _ncStormTracks(): Promise<NCResult<NCGeomFC>> {
   const now = Date.now();
-  const data = await snapshot<NCGeomFC>("nhc_snapshot.geojson", emptyGeom);
+  const { data, live, asOf } = await liveOrSnapshot<NCGeomFC>("nhc", "nhc_snapshot.geojson", emptyGeom);
   const active = data.features.length > 0;
   return {
     data,
-    stale: true, // always snapshot-served
+    stale: !live,
     disabled: !active,
     reason: active
       ? undefined
       : "No active Atlantic storms. NHC forecast cone, track line and watch/warning zones appear here during a storm.",
-    source: active ? "NHC · committed snapshot" : "NHC · no active storms",
+    source: active ? `NHC · ${live ? "live" : snapLabel(asOf)}` : "NHC · no active storms",
     fetchedAt: now,
     headline: active ? `${data.features.length} active` : undefined,
   };
@@ -365,16 +390,16 @@ export const ncStormTracks = () => memoFeed("storm", _ncStormTracks);
 
 async function _ncCameras(): Promise<NCResult<NCPointFC>> {
   const now = Date.now();
-  const data = await snapshot("ncdot_cameras_snapshot.geojson", emptyPts);
+  const { data, live, asOf } = await liveOrSnapshot("drivenc_cameras", "ncdot_cameras_snapshot.geojson", emptyPts);
   return {
     data,
-    stale: true,
+    stale: !live,
     disabled: data.features.length === 0,
     reason:
       data.features.length === 0
         ? "Run `npm run refresh-nc` to pull the DriveNC camera set. Cameras give a literal ground-truth view next to a flood or fire risk area."
         : undefined,
-    source: "NCDOT DriveNC · committed snapshot",
+    source: `NCDOT DriveNC · ${live ? "live" : snapLabel(asOf)}`,
     fetchedAt: now,
     headline: data.features.length
       ? `${data.features.length} statewide`
@@ -386,16 +411,31 @@ export const ncCameras = () => memoFeed("cameras", _ncCameras);
 
 async function _ncClosures(): Promise<NCResult<NCPointFC>> {
   const now = Date.now();
-  const data = await snapshot("drivenc_closures_snapshot.geojson", emptyPts);
+  const { data: raw, live, asOf } = await liveOrSnapshot(
+    "drivenc_closures",
+    "drivenc_closures_snapshot.geojson",
+    emptyPts,
+  );
+  // DriveNC lists some events under both "Closures" and "Incidents"
+  const seen = new Set<string>();
+  const data: NCPointFC = {
+    type: "FeatureCollection",
+    features: raw.features.filter((f) => {
+      const id = String(f.properties.id);
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    }),
+  };
   return {
     data,
-    stale: true,
+    stale: !live,
     disabled: data.features.length === 0,
     reason:
       data.features.length === 0
         ? "Run `npm run refresh-nc` to pull DriveNC road closures + incidents."
         : undefined,
-    source: "NCDOT DriveNC · committed snapshot",
+    source: `NCDOT DriveNC · ${live ? "live" : snapLabel(asOf)}`,
     fetchedAt: now,
     headline: data.features.length
       ? `${data.features.length} on the network`
@@ -939,90 +979,7 @@ async function _ncFemaHistory(): Promise<NCHistory> {
 }
 export const ncFemaHistory = () => memoFeed("fema", _ncFemaHistory);
 
-// --------------------------------------------------------------------------- //
-// E10. Live aircraft over NC (ADS-B). Keyless; a single 250nm point query
-// centred on the state, via adsb.lol through the server's cached pass-through,
-// covers NC edge to edge. Situational awareness during a disaster: Guard
-// rotary-wing, medevac and post-storm aerial survey flights show up here same
-// as any other traffic. Same source used by github.com/bilawalsidhu/gods-eye-view,
-// credited in About.
-// --------------------------------------------------------------------------- //
-const AIRCRAFT_URL = "https://api.adsb.lol/v2/point/35.55/-79.2/250";
 
-interface AdsbAircraft {
-  hex: string;
-  flight?: string;
-  r?: string;
-  t?: string;
-  alt_baro?: number | "ground";
-  gs?: number;
-  lat?: number;
-  lon?: number;
-  dbFlags?: number;
-}
-
-async function _ncAircraft(): Promise<NCResult<NCPointFC>> {
-  const now = Date.now();
-  try {
-    const r = await feedFetch("aircraft", AIRCRAFT_URL);
-    if (!r.ok) throw new Error(String(r.status));
-    const raw = (await r.json()) as { ac?: AdsbAircraft[] };
-    const feats: NCPointFC["features"] = [];
-    for (const a of raw.ac ?? []) {
-      if (
-        typeof a.lat !== "number" ||
-        typeof a.lon !== "number" ||
-        !inNC(a.lon, a.lat)
-      )
-        continue;
-      const military = ((a.dbFlags ?? 0) & 1) === 1;
-      const alt =
-        typeof a.alt_baro === "number"
-          ? `${a.alt_baro.toLocaleString()} ft`
-          : "on ground";
-      const speed = typeof a.gs === "number" ? `${a.gs.toFixed(0)} kt` : null;
-      const title = (a.flight ?? a.r ?? a.hex).trim() || a.hex;
-      feats.push({
-        type: "Feature",
-        geometry: { type: "Point", coordinates: [a.lon, a.lat] },
-        properties: {
-          id: `adsb-${a.hex}`,
-          layer: "aircraft",
-          title,
-          detail: [military ? "Military" : a.t, alt, speed]
-            .filter(Boolean)
-            .join(" · "),
-          severity: 0,
-          value: alt,
-          category: military ? "Military" : (a.t ?? "Aircraft"),
-        },
-      });
-    }
-    return {
-      data: { type: "FeatureCollection", features: feats },
-      stale: false,
-      disabled: feats.length === 0,
-      reason:
-        feats.length === 0
-          ? "No aircraft currently broadcasting position over North Carolina."
-          : undefined,
-      source: `ADS-B · adsb.lol · ${feats.length} tracked`,
-      fetchedAt: now,
-      headline: feats.length ? `${feats.length} in flight` : undefined,
-    };
-  } catch (err) {
-    return {
-      data: emptyPts(),
-      stale: false,
-      disabled: true,
-      reason: `Live feed unavailable right now (${String(err).slice(0, 60)}).`,
-      source: "ADS-B · unavailable",
-      fetchedAt: now,
-    };
-  }
-}
-
-export const ncAircraft = () => memoFeed("aircraft", _ncAircraft);
 
 // --------------------------------------------------------------------------- //
 // helpers
