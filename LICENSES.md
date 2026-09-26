@@ -15,4 +15,5 @@
 | CDC/ATSDR SVI 2022 | US Government work | Credit CDC/ATSDR; cache a versioned snapshot. |
 | xView2 baseline weights / xBD | xView2 challenge terms (non-commercial) | Note in model outputs. |
 | CARTO basemaps (web) | CARTO attribution terms | Attribution shown on map. |
-| adsb.lol (live aircraft, web) | ODbL | Attribution. |
+| MapLibre GL JS, deck.gl, React (web) | BSD-3 / MIT | Bundled; notices in the built assets. |
+| onnxruntime | MIT | Runtime for the exported damage model. |

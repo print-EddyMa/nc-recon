@@ -1,219 +1,101 @@
 # NC Recon
 
-A **North Carolina disaster application** with two halves:
+Disaster damage decision support for North Carolina emergency management.
 
-- **Risk monitor** - the "before / during": NOAA NWPS river-flood **forecasts**,
-  USGS streamflow, NWS watches & warnings, NHC active-storm tracking, NASA FIRMS
-  active fire, NCDOT DriveNC cameras & closures, OpenFEMA disaster history,
-  live aircraft (ADS-B via adsb.lol), and (with a free key) ECONet / RAWS
-  current conditions from the NC State Climate Office CLOUDS API and TomTom
-  live traffic. This is what the app opens on.
-- **Damage assessment** - the "after": point it at an area of North Carolina,
-  and it pulls the pre/post Maxar Open Data imagery for that footprint, locates
-  every building, rates its damage on the four-level xView2 scale
-  (**no damage → minor → major → destroyed**), fuses two independent models plus
-  NC context priors into a per-building **confidence tier**, and puts the result
-  on an interactive 3-D map with a **human review queue** for the uncertain calls.
-
-Nothing is pre-baked. There is no bundled sample dataset - areas appear on the
-damage map only after the pipeline has assessed them (locally, or against a
-hosted assessment service).
-
-## Operations mode (for emergency-management analysts)
-
-Ops mode is the decision-support path built for NC emergency offices. It runs
-next to the demo and doesn't change it. It works anywhere in western NC (NC
-OneMap orthos + NOAA ERI), not only where Maxar published imagery. It reports
-**five FEMA damage levels with probabilities**, routes uncertain structures to
-a human review queue, records **why** (reason codes, per-channel evidence,
-what could not be checked), carries provenance on every output, and exports
-GeoJSON / CSV (USNG) / KML / GeoPackage / File Geodatabase / Survey123.
-
-```bash
-cd pipeline
-.venv/bin/python scripts/run.py ops-health                      # data-source status
-.venv/bin/python scripts/run.py ops-fetch  --area swannanoa --lon -82.399 --lat 35.598
-.venv/bin/python scripts/run.py ops-assess --area swannanoa      # area must be in config/events.yaml
-.venv/bin/python scripts/run.py ops-impact --area swannanoa
-.venv/bin/python scripts/run.py ops-export --area swannanoa     # responder GIS bundle
-.venv/bin/python scripts/run.py ops-brief  --area swannanoa     # one-page situation brief
-.venv/bin/python scripts/run.py ops-aggregate --area swannanoa  # public tract summary
-.venv/bin/python scripts/run.py ops-eval                        # accuracy from human labels
-.venv/bin/python server.py                                      # /ops API; web: Operations tab
-```
+After a declared (or provisional) event, point NC Recon at a town in North
+Carolina. It pulls before- and after-event imagery (NC OneMap orthos, NOAA
+emergency aerials or Maxar Open Data), finds every structure (FEMA USA
+Structures, OpenStreetMap, USACE National Structure Inventory), and estimates
+each structure's **FEMA damage level with a probability**. Uncertain and
+severe calls go to a **human review queue**, and every call carries its reasons
+and the evidence it could not check. It estimates **people likely displaced**
+and ranks census tracts by need. Outputs are GeoJSON, CSV with US National
+Grid, KML, GeoPackage, File Geodatabase, a Survey123 field sheet, and a
+one-page situation brief. A **Conditions** map shows live river gauges and
+flood forecasts, NWS alerts, road closures, DOT cameras and active storms.
 
 > Decision-support tool. Not an official FEMA or NC Emergency Management
 > damage assessment. Verify on the ground. **Accuracy is not yet validated**:
-> see `reports/ACCURACY_REPORT.md` and `docs/ops/LABELING_PROTOCOL.md`.
+> no public structure-level ground truth exists for Helene in NC, so the
+> system measures itself only from analyst labels
+> (`docs/ops/LABELING_PROTOCOL.md`, `reports/ACCURACY_REPORT.md`).
 
-Docs: `docs/ops/OPERATIONS.md` (playbook), `docs/ops/DATA_SOURCES.md`,
-`docs/ops/PHASE_J_STATUS.md`, `MODEL_CARD.md`, `BIAS_AUDIT.md`, `LICENSES.md`.
-Set `TERRATRIAGE_TOKEN` before serving beyond localhost: it gates addresses,
-labels and building-level exports.
+No paid services or keys are used. Optional free keys add layers (see Help).
 
-## Quick start
+## Deploy (one container + HTTPS)
 
 ```bash
-cd web
-npm install
-npm run refresh-nc
-npm run dev
+cp /path/to/xview2_cmu_classifier.onnx pipeline/weights/   # damage model, not in git
+cp .env.example .env        # set TERRATRIAGE_TOKEN (long random) and NCR_DOMAIN
+docker compose up -d --build
 ```
 
-Open the printed `localhost` URL. That's the full risk monitor running on
-live public data, no backend required. See "Run it locally" below to also
-run the damage-assessment pipeline.
+Open `https://<NCR_DOMAIN>/`, paste the token under Operations → Responder
+access. Full guide, security model, backups: [`docs/ops/DEPLOYMENT.md`](docs/ops/DEPLOYMENT.md).
+
+## Use
+
+* **Operations** (home): assessed areas, **New assessment** (pick a point,
+  check imagery, run), map, structure cards, review queue with keyboard
+  labeling, situation brief, GIS export, public tract summary, data-source
+  status, accuracy.
+* **Conditions**: statewide live hazards.
+* **Help**: how to read every number, what the system cannot see.
+
+Event playbook: [`docs/ops/OPERATIONS.md`](docs/ops/OPERATIONS.md).
+
+## Develop locally
+
+```bash
+# API + worker (Python 3.13)
+cd pipeline
+python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+NCR_DEV_OPEN=1 .venv/bin/python server.py          # :8000, auth off (dev only)
+.venv/bin/python -m pytest tests -q                 # offline suite; -m live hits upstreams
+
+# web (Node 22)
+cd web
+npm install
+echo "VITE_API_URL=http://127.0.0.1:8000" > .env.development.local
+npm run dev                                         # :5173
+```
+
+Pipeline CLI (`pipeline/scripts/run.py`): `ops-health`, `ops-fetch`,
+`ops-assess`, `ops-impact`, `ops-export`, `ops-brief`, `ops-aggregate`,
+`ops-eval`, `ops-calibrate`, `ops-backup`.
 
 ## Layout
 
 ```
-pipeline/   Python. imagery + footprints + fusion model + NC priors -> GeoJSON
-              footprints.py   OSM / NC OneMap building polygons for an AOI
-              fusion.py       dual-model + calibration.json -> confidence tier
-              context.py      NC flood-stage / FEMA / terrain priors
-              server.py       the assessment service (POST /assess, NC-gated)
-              scripts/calibrate.py   tune the tier thresholds for an area
-web/        React/TS. NC risk dashboard + on-demand Assess + damage map + review
-              lib/nc.ts NC backbone (NWPS/USGS/NWS/NHC/FIRMS/DriveNC/FEMA/CLOUDS/aircraft)
-              screens/NCDashboard.tsx   the risk dashboard (the front door)
-              screens/Assess.tsx        drop an NC AOI -> run the pipeline
-docs/       how-it-works.html, design assets
+pipeline/
+  server.py                 FastAPI: /ops API, live feeds, serves the built web app
+  src/terratriage/ops/      operational pipeline (GEOINT cycle)
+    plan/                   events (OpenFEMA), windows, TUNE/TEST/OPS areas
+    collect/                connectors with health checks
+    process/                geodesy-aware imagery, co-registration, alignment, structures
+    analyze/                evidence channels, fusion, calibration, evaluation, impact
+    disseminate/            exports, brief, public aggregates
+    api.py jobs.py auth.py  HTTP API, assessment queue, access control
+  config/                   events, context rules, crosswalks, FEMA damage matrix
+  tests/                    pytest
+web/
+  src/screens/              Ops, NCDashboard (Conditions), Help
+  src/demo/, demo-deps/     offline pitch demo (separate build: npm run demo:build)
+docs/ops/                   deployment, operations, data sources, labeling, status
+MODEL_CARD.md BIAS_AUDIT.md LICENSES.md
 ```
 
-The two halves meet at one file: a GeoJSON `FeatureCollection` of building
-polygons, each with a `damage_class` (0-3), lon/lat, and - schema **1.1** - a
-`confidence_tier` (`high` / `review`), a `sources` dict (`{heuristic, cnn,
-margin}`, plus `priors`/`prior_effect` when `--nc-context` is used) and
-`footprint_source`. The schema is `pipeline/src/terratriage/contract.py`,
-mirrored in `web/src/lib/types.ts`. `web/public/data/events.json` (written by
-`run.py events registry`) is the registry of assessed NC areas - it ships as
-`[]`.
+## Pitch demo
 
-## Run it locally
+The scripted demo from the Congressional App Challenge is kept as an offline
+recording tool with its own pinned map stack: `npm run demo:dev`,
+`npm run demo:build`, `npm run demo:validate`. It is not part of the deployed
+app. The pre-operational build is tagged `cac-v2-demo-stable`.
 
-### Web app
+## Credits and licenses
 
-```bash
-cd web
-npm install
-npm run refresh-nc         # seed public/data/nc/*_snapshot.geojson (offline fallback)
-npm run dev                # http://localhost:5173
-```
-
-The app is a static site. With no `VITE_API_URL` it runs fully - the NC risk
-dashboard is all live public feeds - and the **Assess** screen shows the CLI
-commands to run an assessment yourself. Copy `web/.env.example` to
-`web/.env.development.local` (dev only; never read by `vite build`) to set
-`VITE_API_URL` (a running assessment service), `VITE_FIRMS_KEY` (active-fire
-layer), or `VITE_BASE` (sub-path hosting).
-
-`refresh-nc` refreshes the committed snapshots the dashboard falls back to when
-a feed is unavailable: NWPS / USGS / NWS are also fetched live in-app
-(open, CORS-enabled); NHC and DriveNC are CORS-blocked in the browser so the
-snapshot is the only path. CLOUDS needs a free per-user hash - paste it in-app
-(Layers → key).
-
-### Assessment pipeline
-
-```bash
-cd pipeline
-python -m venv .venv && ./.venv/bin/pip install -r requirements.txt
-./.venv/bin/pip install torch torchvision      # optional: segmentation backend
-
-# optional: the real xView2 CMU baseline classifier (local only, needs conda)
-conda create -y -n terratriage-tf python=3.11
-conda run -n terratriage-tf pip install "tensorflow==2.15.1" "numpy<2" pillow
-
-# assess one NC area (Old Fort, McDowell County)
-./.venv/bin/python scripts/run.py fetch --event HurricaneHelene-Oct24 \
-    --area old_fort --lat 35.6293 --lon -82.1804 --event-date 2024-09-26 \
-    --name "Old Fort" --subtitle "McDowell County, NC"
-./.venv/bin/python scripts/run.py infer --area old_fort --source auto --nc-context
-./.venv/bin/python scripts/make_tiles.py --area old_fort
-./.venv/bin/python scripts/run.py events registry     # -> web/public/data/events.json
-./.venv/bin/python scripts/run.py events catalog      # -> web/public/data/maxar_catalog.json
-
-# tune the confidence-tier thresholds for that area (optional)
-./.venv/bin/python scripts/calibrate.py --area old_fort --labels labels.csv --write
-```
-
-`--source auto` uses NC OneMap building footprints for an AOI whose centre is in
-North Carolina when `TERRATRIAGE_NC_FOOTPRINTS_URL` points at an NC
-building-footprint ArcGIS FeatureServer, otherwise OpenStreetMap. `--nc-context`
-looks up nearest-gauge flood stage, active FEMA declarations, and terrain slope
-(network calls, fusion backend only); only a real moderate+ flood stage or
-steep terrain moves a borderline confidence tier - the FEMA declaration flag is
-recorded alongside each building for reference but never moves a tier by
-itself, and none of the three ever changes the damage class.
-`--backend auto` picks **fusion** when the CNN weights + `terratriage-tf` env are
-present, else `keras`, else `heuristic`.
-
-### Assessment service
-
-```bash
-cd pipeline
-./.venv/bin/python server.py                  # http://127.0.0.1:8000
-```
-
-Then set `VITE_API_URL=http://127.0.0.1:8000` for the web app and the Assess
-screen gains a one-click **Assess this area** button. The service only accepts
-AOIs inside North Carolina.
-
-## Deploy
-
-**Web**: `npm run build` → static `dist/`. Host anywhere (Netlify / Vercel /
-Pages / S3). Set `VITE_API_URL` at build time to wire in a hosted assessment
-service; without it the site is the live NC risk monitor plus the manual Assess
-instructions.
-
-**Assessment service** (optional):
-
-```bash
-docker build -t terratriage-api pipeline
-docker run -p 8000:8000 \
-  -e HOST=0.0.0.0 \
-  -e CORS_ORIGINS=https://your-web-host.example \
-  -e TERRATRIAGE_TOKEN=change-me \
-  -v terratriage-data:/app/data -v terratriage-served:/app/served \
-  terratriage-api
-```
-
-Config (all optional, env): `TERRATRIAGE_TOKEN` (bearer auth on `/assess` +
-`DELETE`), `CORS_ORIGINS`, `ALLOWED_BBOX` (`w,s,e,n`, default NC),
-`MAX_ACTIVE_JOBS`, `MAX_ASSESS_PER_HOUR`, `MAX_DATA_GB`, `HOST`, `PORT`,
-`TERRATRIAGE_NC_FOOTPRINTS_URL`, `TERRATRIAGE_TILES_DIR`,
-`TERRATRIAGE_WEB_DATA_DIR`. The hosted image runs the heuristic + torch
-segmentation backends; the Keras/TF CMU classifier is local-only.
-
-## Using it
-
-The app **opens on the NC risk monitor** (`#/`, or **g** then **n**). Toggle
-layers on the left; the right panel ranks the flood forecast, lists active NWS
-alerts, shows current conditions and fire weather, an **NC disaster history**
-panel (OpenFEMA), and the nearest DriveNC cameras + closures to the worst
-current risk point.
-
-**Assess** (`#/assess`, or **g** then **a**): click anywhere in North Carolina
-to drop an AOI, pick the Maxar event that covers it, and run the pipeline -
-one click with a service connected, or copyable commands without one. When it
-finishes, the **Damage map**, **Review** queue and **Summary** light up for
-that area (deep-linked `#/a/<area>/<screen>`).
-
-Keyboard: **⌘K** command menu, **?** shortcut list, **g** then
-`n`/`a`/`m`/`r`/`s`.
-
-## Credits & data
-
-Imagery: [Maxar Open Data](https://www.maxar.com/open-data) via the
-[opengeos/maxar-open-data](https://github.com/opengeos/maxar-open-data) STAC
-mirror. Footprints: OpenStreetMap (ODbL), NC OneMap. Model & code: xView2
-baseline (CMU SEI, BSD-3) and 1st-place solution (V. Durnov). NC risk & context:
-[NOAA NWPS](https://water.noaa.gov/), [USGS NWIS](https://waterservices.usgs.gov/),
-[NWS](https://www.weather.gov/documentation/services-web-api),
-[NHC](https://www.nhc.noaa.gov/), [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/),
-[NCDOT DriveNC](https://drivenc.gov/), [OpenFEMA](https://www.fema.gov/about/openfema/api),
-[USGS EPQS](https://apps.nationalmap.gov/epqs/), the NC State Climate Office
-[CLOUDS API](https://api.climate.ncsu.edu/), live aircraft via
-[adsb.lol](https://adsb.lol/), and (with a free key) [TomTom](https://www.tomtom.com/)
-traffic flow. Multi-source-fusion + human-review pattern after HOT's
-[fAIr](https://www.hotosm.org/). Basemap: CARTO. Map: MapLibre GL + deck.gl.
+Data: USGS, NOAA (NWPS, NWS, NHC, NGS ERI), NCDOT DriveNC, OpenFEMA, FEMA USA
+Structures, USACE NSI, NC OneMap / NC Collaboratory, Maxar Open Data
+(CC BY-NC 4.0), OpenStreetMap contributors (ODbL), CDC/ATSDR SVI, CARTO
+basemaps. Model: xView2 baseline classifier (non-commercial terms). See
+[`LICENSES.md`](LICENSES.md).

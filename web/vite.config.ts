@@ -18,7 +18,7 @@ const here = new URL('.', import.meta.url).pathname
 // on the fast B3 snap / B6 pull-back those revalidation round-trips stack up
 // behind the camera and the frame flies over un-painted ground. `immutable`
 // turns each of those into a pure in-memory cache hit (the preload primes it).
-function demoBasemapTiles(): Plugin {
+export function demoBasemapTiles(): Plugin {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mw = (req: any, res: any, next: any) => {
     const url: string = (req && req.url) || ''
@@ -56,15 +56,16 @@ function demoBasemapTiles(): Plugin {
 // project sites). Defaults to '/'.
 export default defineConfig({
   base: process.env.VITE_BASE ?? '/',
-  plugins: [react(), demoBasemapTiles()],
+  plugins: [react()],
+  // maplibre's worker is an ES module (started with { type: "module" })
+  worker: { format: 'es' },
   build: {
     chunkSizeWarningLimit: 2600, // deck.gl + maplibre are large and expected
     rollupOptions: {
       input: {
         // the interactive app
         main: `${here}index.html`,
-        // Phase H - the isolated scripted hook sequence (/demo.html)
-        demo: `${here}demo.html`,
+        // the pitch demo (demo.html) has its own build: vite.demo.config.ts
       },
     },
   },

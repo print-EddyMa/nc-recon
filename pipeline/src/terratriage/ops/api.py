@@ -39,7 +39,8 @@ from .analyze.classes import FEMA, FEMA_LABEL
 OPS_OUT = os.path.join(DATA_DIR, "output", "ops")
 LABELS = os.path.join(DATA_DIR, "labels")
 RAW = os.path.join(DATA_DIR, "raw")
-REPORT = os.path.join(PIPELINE_ROOT, "..", "reports", "ACCURACY_REPORT.json")
+REPORT = os.path.join(os.environ.get("NCR_REPORTS_DIR") or os.path.join(PIPELINE_ROOT, "..", "reports"),
+                      "ACCURACY_REPORT.json")
 _AREA = re.compile(r"[a-z0-9_]{1,40}")
 _UUID = re.compile(r"[0-9a-f-]{36}")
 PROTOCOL = "ncr-label-v1"
@@ -401,3 +402,19 @@ def job_list(request: Request, authorization: str | None = Header(default=None))
 
     _responder(request, authorization)
     return [j.to_dict() for j in jobs.recent()]
+
+
+@router.delete("/areas/{area}")
+def delete_area(area: str, request: Request, authorization: str | None = Header(default=None)):
+    from . import jobs
+
+    _responder(request, authorization)
+    _area(area)
+    try:
+        removed = jobs.delete_area(area)
+    except PermissionError as ex:
+        raise HTTPException(403, str(ex)) from ex
+    if not removed:
+        raise HTTPException(404, "no such operational area")
+    _cache.pop(os.path.join(OPS_OUT, f"{area}.geojson"), None)
+    return {"area": area, "removed": removed}

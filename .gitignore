@@ -65,3 +65,4 @@ docs/CAC_VIDEO_SCRIPT.md
 # ops-mode run manifests and generated outputs
 pipeline/runs/
 reports/*.json
+web/dist-demo/

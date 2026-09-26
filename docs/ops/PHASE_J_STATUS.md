@@ -9,6 +9,27 @@ demo path (`run.py infer`, the Damage map / Review / Summary screens, the
 scripted hook) is unchanged. Re-running `infer` on Old Fort reproduces v2's
 features exactly (764 buildings, 305/349/45/65, 161 review).
 
+## Final operational version (2026-09-26)
+
+Built for use by NC emergency offices, no paid services:
+
+* **One container** (`Dockerfile`, `docker-compose.yml` with Caddy HTTPS):
+  web app + API + assessment worker, same origin. Verified from a clean
+  image: health board all green incl. the damage model; a new assessment
+  (Lake Lure) ran end to end inside the container in 53 s; export
+  (FileGDB/GPKG/CSV/KML/Survey123), brief and public summary served through
+  the proxy; building-level data 401 without the token.
+* **Access fails closed** (`ops/auth.py`): token required, no localhost trust,
+  refuses to start exposed without a token.
+* **Damage model on ONNX Runtime**: no TensorFlow at deploy time.
+* **UI**: Operations (home) / Conditions / Help. New assessments from the UI
+  (point, imagery check, queued job with progress), provisional events,
+  delete for operational areas, "as of" times, larger type, no animation.
+  The xView2-vocabulary demo screens and the TomTom / aircraft layers are
+  gone; the pitch demo is a separate offline build with pinned libraries.
+* **Security**: maplibre-gl 6 / deck.gl 9.4 in the product, `npm audit` 0.
+* **CI**: `.github/workflows/ci.yml` (tests, typecheck, lint, build, image).
+
 ## What exists now
 
 | Area | Built | Where |
@@ -27,6 +48,7 @@ features exactly (764 buildings, 305/349/45/65, 161 review).
 | Impact | expected displaced (Monte Carlo), SVI tract need index, public tract product with small-count suppression | `run.py ops-impact`, `ops-aggregate` |
 | Dissemination | GeoJSON (RFC 7946), CSV with USNG, KML, GeoPackage, File Geodatabase, Survey123 sheet, provenance sidecar, license README; addresses only in a responder sidecar | `run.py ops-export`, `/ops/*` |
 | Brief | One-page printable situation brief (BLUF, map, ranges, tracts, gaps, sources) + text twin | `run.py ops-brief`, `/ops/areas/<id>/brief.html` |
+| Deployment | Dockerfile (Node build + Python 3.13 slim), compose + Caddy, fail-closed auth, backups | `docs/ops/DEPLOYMENT.md` |
 | Web | Operations screen: FEMA 5-class map (YlOrRd, opacity = confidence), review queue by P(≥Major) × occupants, keyboard labeling, evidence card with pre/post chips, collection board, accuracy panel, people panel, disclaimer | `web/src/screens/Ops.tsx` |
 | Docs | DATA_SOURCES, OPERATIONS, LABELING_PROTOCOL, MODEL_CARD, BIAS_AUDIT, LICENSES, ACCURACY_REPORT | `docs/ops/`, repo root, `reports/` |
 

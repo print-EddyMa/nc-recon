@@ -7,6 +7,10 @@
  * tiles/) or from the CARTO basemap CDN the app already depends on. During
  * playback there are zero further requests - see scripts/validate_demo.mjs.
  */
+// The recording demo is built by vite.demo.config.ts, which resolves
+// maplibre-gl / @deck.gl/* to the pinned copies in demo-deps/ (maplibre 5 +
+// deck.gl 9.3): deck.gl's interleaved overlay, needed on this non-interactive
+// map, does not work with the maplibre 6 / deck.gl 9.4 the product ships.
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { BEATS, OLDFORT, cameraAt, type Cam } from "./beats";

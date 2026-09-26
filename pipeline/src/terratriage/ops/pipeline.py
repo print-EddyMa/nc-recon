@@ -36,7 +36,7 @@ from .provenance import Provenance, utc_now
 RAW = os.path.join(DATA_DIR, "raw")
 CACHE = os.path.join(DATA_DIR, "cache")
 OUT = os.path.join(DATA_DIR, "output", "ops")
-RUNS = os.path.join(PIPELINE_ROOT, "runs")
+RUNS = os.environ.get("NCR_RUNS_DIR") or os.path.join(PIPELINE_ROOT, "runs")
 MODEL_ID = "xview2_cmu_baseline"
 WEIGHTS = os.path.join(PIPELINE_ROOT, "weights", "classification.hdf5")
 SCHEMA = "ops-1.0"
@@ -411,7 +411,7 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
             "event": {"id": ev.id, "name": ev.name,
                       "declarations": [d.fema_id for d in ev.declarations],
                       "incident_begin": ev.incident_begin.isoformat()},
-            "aoi": {"id": area, "role": aoi.role, "county": aoi.county},
+            "aoi": {"id": area, "role": aoi.role, "county": aoi.county, "center": list(aoi.center)},
             "pair_context": pair, "coregistration": cr, "footprint_alignment": align_info,
             "e2_baseline": None if e2_base is None else {"median": round(e2_base[0], 3),
                                                          "scaled_mad": round(e2_base[1], 3)},

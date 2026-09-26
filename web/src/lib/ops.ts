@@ -96,7 +96,7 @@ export interface OpsRunProps {
   generated_utc: string;
   disclaimer: string;
   event: { id: string; name: string; declarations: string[]; incident_begin: string };
-  aoi: { id: string; role: "TUNE" | "TEST" | string; county: string };
+  aoi: { id: string; role: "TUNE" | "TEST" | "OPS" | string; county: string; center?: [number, number] };
   pair_context: Record<string, unknown> & { reasons: string[] };
   counts: Record<FemaClass, number>;
   expected_counts: Record<FemaClass, number>;
@@ -402,4 +402,12 @@ export function ago(iso: string | number | null | undefined): string {
   if (s < 3600) return `${Math.round(s / 60)} min ago`;
   if (s < 48 * 3600) return `${Math.round(s / 3600)} h ago`;
   return new Date(t).toLocaleDateString();
+}
+
+export async function deleteArea(area: string): Promise<void> {
+  const r = await fetch(`${API_URL}/ops/areas/${encodeURIComponent(area)}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? "Responder token required" : `delete failed (${r.status})`);
 }

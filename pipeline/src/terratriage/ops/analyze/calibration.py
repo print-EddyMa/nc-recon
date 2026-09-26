@@ -16,7 +16,7 @@ import numpy as np
 
 from .. import CONFIG_DIR
 
-CAL_DIR = os.path.join(CONFIG_DIR, "calibration")
+CAL_DIR = os.environ.get("NCR_CALIBRATION_DIR") or os.path.join(CONFIG_DIR, "calibration")
 
 
 def softmax(z: np.ndarray, T: float = 1.0) -> np.ndarray:

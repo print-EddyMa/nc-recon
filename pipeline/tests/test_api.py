@@ -139,3 +139,13 @@ def test_assess_requires_auth_and_validates(client, monkeypatch):
     assert client.post("/ops/assess", json=bad).status_code == 422
     unknown = dict(body, event="nope")
     assert client.post("/ops/assess", json=unknown).status_code == 400
+
+
+def test_delete_refuses_tune_test_and_removes_ops(tmp_path, monkeypatch, client):
+    from terratriage.ops.plan import events as ev
+    monkeypatch.setenv("NCR_OPS_REGISTRY", str(tmp_path / "reg.yaml"))
+    assert client.delete("/ops/areas/old_fort").status_code == 403       # TUNE area
+    ev.add_ops_area("scratch_ab12", "helene-2024-nc", "Scratch", -82.2, 35.6)
+    r = client.delete("/ops/areas/scratch_ab12")
+    assert r.status_code == 200 and "registry entry" in r.json()["removed"]
+    assert ev.event_for_area("scratch_ab12") is None

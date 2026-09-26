@@ -143,7 +143,41 @@ def _loop() -> None:
         except Exception as ex:  # noqa: BLE001
             job.status, job.error = "failed", str(ex)[:500]
             job.log.append(f"FAILED: {job.error}")
+            # never leave a half-finished assessment looking like a real one
+            try:
+                delete_area(job.area)
+            except Exception as ex2:  # noqa: BLE001
+                job.log.append(f"cleanup failed: {ex2}")
         job.finished = time.time()
+
+
+def delete_area(area: str) -> list[str]:
+    """Remove an OPS area's outputs, imagery and registry entry. Labels are
+    kept (they are truth, and cheap) - they just stop matching anything."""
+    import shutil
+
+    from .plan.events import event_for_area, remove_ops_area
+
+    found = event_for_area(area)
+    if found and found[1].role != "OPS":
+        raise PermissionError(f"{area} is a {found[1].role} area; edit config/events.yaml instead")
+    from . import DATA_DIR
+
+    data = DATA_DIR
+    out = os.path.join(data, "output", "ops")
+    removed = []
+    for p in (os.path.join(out, f"{area}.geojson"), os.path.join(out, f"{area}.responder.json"),
+              os.path.join(out, f"{area}.impact.json")):
+        if os.path.exists(p):
+            os.remove(p)
+            removed.append(os.path.basename(p))
+    for d in (os.path.join(out, "exports", area), os.path.join(data, "raw", area)):
+        if os.path.realpath(d).startswith(os.path.realpath(data) + os.sep) and os.path.isdir(d):
+            shutil.rmtree(d, ignore_errors=True)
+            removed.append(os.path.relpath(d, data))
+    if remove_ops_area(area):
+        removed.append("registry entry")
+    return removed
 
 
 def submit(event: str, name: str, lon: float, lat: float, half_m: float = 800.0) -> Job:

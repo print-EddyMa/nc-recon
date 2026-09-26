@@ -11,7 +11,9 @@ mkdirSync(OUT, { recursive: true });
 const browser = await puppeteer.launch({
   executablePath: CHROME,
   headless: false,
-  args: ["--no-sandbox", "--window-size=1560,1000", "--hide-crash-restore-bubble"],
+  args: ["--no-sandbox", "--window-size=1560,1000", "--hide-crash-restore-bubble",
+    ...(process.env.QA_INSECURE ? ["--ignore-certificate-errors"] : [])],
+  acceptInsecureCerts: !!process.env.QA_INSECURE,
   defaultViewport: { width: 1512, height: 950, deviceScaleFactor: 1 },
 });
 const page = await browser.newPage();
@@ -22,11 +24,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 for (const theme of ["light", "dark"]) {
   await page.goto(BASE + "/#/", { waitUntil: "networkidle2" });
-  await page.evaluate((t) => localStorage.setItem("terratriage:theme", t), theme);
+  await page.evaluate((t, tok) => {
+    localStorage.setItem("terratriage:theme", t);
+    if (tok) localStorage.setItem("terratriage:responderToken", tok);
+  }, theme, process.env.QA_TOKEN || "");
   await page.reload({ waitUntil: "networkidle2" });
   await sleep(4000);
   await page.screenshot({ path: `${OUT}/${theme}-ops-home.png` });
-  await page.goto(BASE + "/#/ops/old_fort", { waitUntil: "networkidle2" });
+  await page.goto(BASE + "/#/ops/" + (process.env.QA_AREA || "old_fort"), { waitUntil: "networkidle2" });
   await page.reload({ waitUntil: "networkidle2" });
   await sleep(8000);
   await page.screenshot({ path: `${OUT}/${theme}-ops-oldfort.png` });

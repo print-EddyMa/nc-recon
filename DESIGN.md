@@ -1,5 +1,15 @@
 # Design - NC Recon
 
+> **Operational build (2026-09-26) supersedes the demo-era parts of this file.**
+> The product is now three screens (Operations, Conditions, Help) built for
+> emergency use: the damage vocabulary is the 5-level FEMA scale on ColorBrewer
+> YlOrRd (grey = no damage, dark grey = not assessed, blue outline = needs
+> review, fill opacity = confidence); body text is 14 px; there is no hero,
+> count-up, 3-D extrusion, auto-tilt or command palette; the live-aircraft
+> and TomTom traffic layers described below were removed (the latter is a paid
+> service beyond its free tier). The tokens, fonts and light/dark system below
+> still apply. The xView2 4-class ramp survives only in the offline pitch demo.
+
 Locked design system. This file is transcribed from the shipped implementation
 (`web/src/index.css`, `web/tailwind.config.js`, `web/src/lib/damage.ts`,
 `web/src/lib/nc.ts`) - it is a record of the system, not a redesign of it.

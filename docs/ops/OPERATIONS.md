@@ -12,41 +12,42 @@ cd pipeline
 ```
 
 ## T−72 h to landfall
-1. `ops-health`: fix red sources before you need them.
-2. Register a **provisional** event in `config/events.yaml` (no disaster
-   number yet: add it at declaration; windows are derived from OpenFEMA's
-   `incidentBeginDate` and asserted: `pre.end < incident.begin <= post.start`).
-3. Add AOIs with a TUNE/TEST role. Keep at least one TEST AOI per event.
-4. Pre-cache pre-event imagery and structures: `ops-fetch` can't run without a
-   post source yet, so warm the NSI / USA Structures caches by running
-   `ops-assess` on a prior event's AOI near each town, or wait for T0.
+1. Operations → Data sources: every source green (or know which are red).
+2. Operations → New assessment → "Event not listed? Register one": name +
+   expected incident start date. Add the FEMA disaster number(s) and the NOAA
+   emergency-imagery folder once they exist (re-register with the number; the
+   event id is derived from name + year). Windows are derived from the start
+   date and enforced: no image from before the incident can be used as "after".
+3. Conditions: watch river forecasts (NWPS), NWS alerts, NHC storms.
 
 ## T0 to T+48 h
-1. River gauges: the Live map (NWPS flood categories + USGS streamflow).
-2. Road closures: DriveNC layer.
-3. Label every brief "exposure / early evidence": no damage layer exists yet.
+1. Conditions: gauges, closures (DriveNC), alerts. Label anything shared as
+   "exposure / early evidence": no damage layer exists yet.
 
 ## T+2 to T+10 days (imagery arrives)
-1. Maxar Open Data event: `run.py fetch` (existing path).
-2. NOAA ERI flights: `run.py ops-fetch --area <id> --lon .. --lat .. --post eri`
-   (post-only aerials; pairs with NC OneMap pre-event orthos).
-3. `run.py ops-assess --area <id>`, then `ops-impact --area <id>`.
-4. Work the review queue on the Operations screen. Every label is truth for
-   calibration (TUNE) or measurement (TEST).
-5. `ops-export --area <id>` (or the Export button) for GIS / Survey123 teams.
-6. `ops-brief --area <id>` (or the Brief button): one-page HTML brief to print
-   or save as PDF, plus a plain-text twin for radio / SMS relay.
-7. `ops-aggregate --area <id>`: tract-level public product (no addresses,
-   counts under 5 withheld) for public maps and elected officials.
+1. Operations → New assessment for each town: pick the point, **Check
+   imagery** (NC OneMap post-event orthos, NOAA emergency aerials, or Maxar
+   satellite, in the event's order of preference), **Run assessment**. One
+   runs at a time; the rest queue.
+2. Open the area: brief the numbers from the expected counts with ranges, not
+   from coloured-building counts. Read "Data caveats".
+3. Work the review queue (most severe × most occupied first). Every label is
+   ground truth.
+4. **GIS export** for GIS / field teams (Survey123 sheet included);
+   **Situation brief** for leadership; **Public summary** (tract level, no
+   addresses) for public maps.
 
 ## T+2 to T+6 weeks
-1. `run.py ops-eval` → `reports/ACCURACY_REPORT.md`.
-2. `run.py ops-calibrate` (TUNE labels only) → temperature + conformal sets.
-3. Re-run `ops-assess` so outputs carry calibrated probabilities.
+1. `run.py ops-eval` → accuracy report (TUNE and TEST separately).
+2. `run.py ops-calibrate` (TUNE labels only) → calibrated probabilities and
+   conformal sets; re-run assessments.
+3. `run.py ops-backup` and keep the labels safe.
 4. Update `BIAS_AUDIT.md` with stratified results.
 
 ## Reading the output
-* Headline totals: use **expected counts with the 80% range**, not argmax counts.
-* `needs_review` + `review_reasons`: why a human must look.
-* `evidence_unavailable`: what could not be checked (e.g. `E5: NO_WSE_SOURCE_ON_REACH`).
-* "Not assessed" points: inventory structures with no footprint, so imagery was never read for them.
+* Headline totals: **expected counts with the 80% range**.
+* `needs_review` + reasons: why a human must look. Until calibration every
+  Major/Destroyed call is reviewed.
+* "Evidence unavailable": what could not be checked (e.g. no water-surface
+  source on this reach).
+* "Not assessed": inventory structures without a building outline.

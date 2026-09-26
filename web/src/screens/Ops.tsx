@@ -13,6 +13,7 @@ import {
   ago,
   checkCoverage,
   createEvent,
+  deleteArea,
   downloadExport,
   fmtAge,
   jobStatus,
@@ -287,7 +288,16 @@ export default function Ops({
       {/* ---------------------------- right --------------------------- */}
       <aside className="min-h-0 border-t border-line bg-surface p-4 md:col-span-2 xl:col-span-1 xl:overflow-y-auto xl:border-l xl:border-t-0">
         {!areaId && <Welcome />}
-        {fc && areaId && <RunSummary fc={fc} areaId={areaId} />}
+        {fc && areaId && (
+          <RunSummary
+            fc={fc}
+            areaId={areaId}
+            onDeleted={() => {
+              refreshAreas();
+              onPickArea(null);
+            }}
+          />
+        )}
         {fc && areaId && <ImpactPanel areaId={areaId} />}
         {fc &&
           areaId &&
@@ -681,7 +691,11 @@ function AreaList({
                   </span>
                 </div>
                 <div className="text-xs text-ink-dim">
-                  {a.aoi.county ? `${a.aoi.county} Co. · ` : ""}
+                  {a.aoi.county
+                    ? `${a.aoi.county} Co. · `
+                    : a.aoi.center
+                      ? `${a.aoi.center[1].toFixed(3)}, ${a.aoi.center[0].toFixed(3)} · `
+                      : ""}
                   {a.n_structures.toLocaleString()} structures · {a.n_needs_review.toLocaleString()} to review
                 </div>
                 <div className="tnum text-sm text-ink">
@@ -1039,7 +1053,15 @@ function OpsMap({
 // --------------------------------------------------------------------------- //
 // right panels
 // --------------------------------------------------------------------------- //
-function RunSummary({ fc, areaId }: { fc: OpsCollection; areaId: string }) {
+function RunSummary({
+  fc,
+  areaId,
+  onDeleted,
+}: {
+  fc: OpsCollection;
+  areaId: string;
+  onDeleted: () => void;
+}) {
   const p = fc.properties;
   const [busy, setBusy] = useState(false);
   const reasons = p.pair_context.reasons ?? [];
@@ -1077,6 +1099,23 @@ function RunSummary({ fc, areaId }: { fc: OpsCollection; areaId: string }) {
         <a className={btn} href={publicUrl(areaId)} download>
           Public summary
         </a>
+        {p.aoi.role === "OPS" && (
+          <button
+            className={`${btn} text-dmg3`}
+            onClick={async () => {
+              if (!window.confirm(`Delete the assessment "${areaTitle(areaId)}"? Labels are kept.`)) return;
+              try {
+                await deleteArea(areaId);
+                toast.success("Assessment deleted");
+                onDeleted();
+              } catch (e) {
+                toast.error((e as Error).message);
+              }
+            }}
+          >
+            Delete
+          </button>
+        )}
       </div>
       <table className="tnum mt-3 w-full text-sm">
         <caption className="sr-only">Expected structures by damage level</caption>

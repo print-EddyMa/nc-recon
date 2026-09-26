@@ -1,0 +1,36 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: pipeline } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13" }
+      - run: sudo apt-get update && sudo apt-get install -y libexpat1
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest tests -q        # offline; `-m live` hits upstreams
+
+  web:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: npm ci --ignore-scripts
+      - run: npx tsc -b
+      - run: npm run lint
+      - run: npx vite build
+      - run: npm audit --audit-level=high
+
+  image:
+    runs-on: ubuntu-latest
+    needs: [pipeline, web]
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t ncrecon:ci .   # the damage model is not in git; the image builds without it

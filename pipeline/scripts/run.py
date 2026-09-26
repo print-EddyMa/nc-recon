@@ -283,6 +283,27 @@ def cmd_ops_brief(a):
     print(brief(a.area))
 
 
+def cmd_ops_backup(a):
+    """Archive what cannot be re-derived: truth labels, the ops registry,
+    assessment outputs + run manifests. Imagery and caches are re-fetchable."""
+    import tarfile
+    import time as _t
+
+    out = a.out or os.path.join(ROOT, "data", f"ncrecon-backup-{_t.strftime('%Y%m%dT%H%M%SZ', _t.gmtime())}.tar.gz")
+    items = [("data/labels", "labels"), ("data/ops_registry.yaml", "ops_registry.yaml"),
+             ("data/output/ops", "output_ops"),
+             (os.environ.get("NCR_RUNS_DIR") or "runs", "runs"),
+             (os.environ.get("NCR_CALIBRATION_DIR") or "config/calibration", "calibration")]
+    n = 0
+    with tarfile.open(out, "w:gz") as tar:
+        for rel, arc in items:
+            p = rel if os.path.isabs(rel) else os.path.join(ROOT, rel)
+            if os.path.exists(p):
+                tar.add(p, arcname=arc)
+                n += 1
+    print(f"[backup] {n} item(s) -> {out}")
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -369,6 +390,9 @@ def main():
     ob = sub.add_parser("ops-brief", help="ops mode: one-page situation brief (HTML + text)")
     ob.add_argument("--area", required=True)
     ob.set_defaults(fn=cmd_ops_brief)
+    obk = sub.add_parser("ops-backup", help="ops mode: archive labels, registry, outputs")
+    obk.add_argument("--out", default=None)
+    obk.set_defaults(fn=cmd_ops_backup)
     sub.add_parser("ops-eval", help="ops mode: accuracy report from data/labels").set_defaults(fn=cmd_ops_eval)
     sub.add_parser("ops-calibrate", help="ops mode: fit temperature + conformal on TUNE labels").set_defaults(fn=cmd_ops_calibrate)
 

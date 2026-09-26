@@ -30,7 +30,7 @@ from . import metrics
 from .classes import FEMA, K
 
 LABELS = os.path.join(DATA_DIR, "labels")
-REPORTS = os.path.join(PIPELINE_ROOT, "..", "reports")
+REPORTS = os.environ.get("NCR_REPORTS_DIR") or os.path.join(PIPELINE_ROOT, "..", "reports")
 OPS_OUT = os.path.join(DATA_DIR, "output", "ops")
 
 

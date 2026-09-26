@@ -314,6 +314,27 @@ def add_ops_area(area_id: str, event_id: str, name: str, lon: float, lat: float,
     return load_events()[event_id].aois[area_id]
 
 
+def remove_ops_area(area_id: str) -> bool:
+    """Drop an operational (OPS) area from the writable registry. TUNE/TEST
+    areas live in config/events.yaml and are never removed this way."""
+    import fcntl
+
+    path = registry_path()
+    if not os.path.exists(path):
+        return False
+    with open(path + ".lock", "w") as lk:
+        fcntl.flock(lk, fcntl.LOCK_EX)
+        reg = _read_yaml(path)
+        if area_id not in (reg.get("aois") or {}):
+            return False
+        del reg["aois"][area_id]
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            yaml.safe_dump(reg, fh, sort_keys=False)
+        os.replace(tmp, path)
+    return True
+
+
 def add_provisional_event(event_id: str, name: str, incident_begin: str, *, state: str = "NC",
                           hazards: list[str] | None = None, eri_prefix: str | None = None,
                           post_sources: list[str] | None = None, pre_days=(-1500, -1),

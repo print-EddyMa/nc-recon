@@ -654,6 +654,25 @@ def tile(area: str, kind: str, z: int, x: int, y: int, empty: int = 0):
     )
 
 
+# --------------------------------------------------------------------------- #
+# single-container deployment: serve the built web app from the same origin
+# (NCR_WEB_DIST=/app/web). Mounted last so every API route above wins.
+# --------------------------------------------------------------------------- #
+_WEB_DIST = os.environ.get("NCR_WEB_DIST", "").strip()
+if _WEB_DIST and os.path.isdir(_WEB_DIST):
+    from fastapi.staticfiles import StaticFiles
+
+    @app.middleware("http")
+    async def _security_headers(request: Request, call_next):
+        resp = await call_next(request)
+        resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+        resp.headers.setdefault("Referrer-Policy", "no-referrer")
+        resp.headers.setdefault("X-Frame-Options", "DENY")
+        return resp
+
+    app.mount("/", StaticFiles(directory=_WEB_DIST, html=True), name="web")
+
+
 if __name__ == "__main__":
     import uvicorn
 

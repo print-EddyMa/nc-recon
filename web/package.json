@@ -15,7 +15,10 @@
     "shoot": "node scripts/shoot.mjs",
     "demo:assets": "node scripts/demo_fetch.mjs",
     "demo:validate": "node scripts/validate_demo.mjs",
-    "demo:shots": "node scripts/demo_shoot.mjs"
+    "demo:shots": "node scripts/demo_shoot.mjs",
+    "demo:dev": "vite --config vite.demo.config.ts",
+    "demo:build": "vite build --config vite.demo.config.ts",
+    "demo:preview": "vite preview --config vite.demo.config.ts"
   },
   "dependencies": {
     "@deck.gl/core": "~9.4.0",
