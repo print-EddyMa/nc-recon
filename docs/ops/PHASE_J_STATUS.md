@@ -36,7 +36,7 @@ features exactly (764 buildings, 305/349/45/65, 161 review).
 |---|---|---|---|---|---|---|
 | Old Fort | TUNE | Maxar 2022-01 → 2024-10 | 2,206 (513) | 244 (222–266) | 1,160 | ~318 (291–346) |
 | Spruce Pine | TUNE | Maxar 2024-02 → 2024-10 | 1,982 (390) | 233 (208–257) | 1,267 | ~369 (337–405) |
-| Swannanoa | TEST | NC orthos 2020–23 → 2025 | 893 (70) | 119 (105–133) | 298 | ~144 (131–157) |
+| Swannanoa | TUNE (was TEST) | NC orthos 2020–23 → 2025 | 893 (70) | 119 (105–133) | 298 | ~144 (131–157) |
 | Chimney Rock | TEST | NC orthos 2020–23 → 2025 | 216 (23) | 49 (40–57) | 85 | ~26 (22–30) |
 
 The Maxar areas send 69% and 80% of assessed structures to review, the NC-ortho areas
@@ -50,6 +50,28 @@ Demo check: `npm run demo:validate` passes 10/10 runs, 0 external calls, 0
 console errors. Its frame-identical check fails, and fails identically when
 the `cac-v2-demo-stable` tag itself is built and validated, so this is
 pre-existing, not a Phase J regression.
+
+## Hold-out hygiene (2026-09-26)
+
+Swannanoa was registered TEST, but its imagery was inspected and drove three
+rule changes (E2 robust z-score, the haze thresholds, and the severe-call
+review rule) before any labels existed. It is therefore **re-roled TUNE**.
+Fresh TEST areas: **Canton** (Haywood) and **Burnsville** (Yancey), both in
+the Helene 2025 ortho collection and away from existing AOIs, plus
+**Marshall** (Madison; ERI post-only). Their chips have not been viewed and
+must not be before labels exist. Chimney Rock stays TEST (nothing was tuned on it).
+
+## Dates and access (2026-09-26)
+
+* NC OneMap pre-event dates now come from the tile names (e.g. Swannanoa
+  2023-02-18); the service's own `date` field is only a year placeholder.
+  The Helene 2025 tiles carry no date, so post dates are the range the
+  service description supports (2025-01-01..2025-05-31). Window checks use
+  the whole range, reason codes say `POST_IMAGE_98-248D_AFTER_INCIDENT`, and
+  FEMA `IMG_DATE` stays empty unless the date is exact (`IMG_DATE_RANGE`
+  carries the range). No invented days.
+* Building-level data (area GeoJSON, chips, brief) is responder-only. Public
+  users get area summaries, tract products and impact.
 
 ## What we learned (where the brief was wrong or out of date)
 

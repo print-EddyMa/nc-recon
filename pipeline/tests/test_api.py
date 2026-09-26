@@ -71,3 +71,13 @@ def test_public_tracts_suppress_small_counts(client):
         for k in ("no_damage", "affected", "minor", "major", "destroyed", "structures"):
             v = p[k]
             assert v is None or v == 0 or v >= 5
+
+
+@pytest.mark.skipif(not _have("old_fort"), reason="no ops output for old_fort")
+def test_building_level_is_responder_only(client, monkeypatch):
+    monkeypatch.setenv("TERRATRIAGE_TOKEN", "s3cret")
+    assert client.get("/ops/areas/old_fort").status_code == 401
+    assert client.get("/ops/areas/old_fort/brief.html").status_code == 401
+    assert client.get("/ops/areas/old_fort/public.geojson").status_code == 200
+    ok = client.get("/ops/areas/old_fort", headers={"Authorization": "Bearer s3cret"})
+    assert ok.status_code == 200

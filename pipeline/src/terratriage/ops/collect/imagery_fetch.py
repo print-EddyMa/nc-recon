@@ -84,6 +84,18 @@ def _eri_mosaic(bounds_xy, epsg: int, flight_pref: list[str] | None = None) -> t
                  "tiles": [t["key"] for t in used]}
 
 
+def _span(lo: str, hi: str) -> str:
+    return lo if lo == hi else f"{lo}_{hi}"
+
+
+def _probe_points(bounds_xy, epsg: int) -> list[tuple[float, float]]:
+    """Centre + four inset corners, lon/lat, for catalog date lookups."""
+    x0, y0, x1, y1 = bounds_xy
+    tr = transformer(epsg, "storage")
+    fx = [(0.5, 0.5), (0.15, 0.15), (0.85, 0.15), (0.15, 0.85), (0.85, 0.85)]
+    return [tr.transform(x0 + a * (x1 - x0), y0 + b * (y1 - y0)) for a, b in fx]
+
+
 def _write(path: str, arr: np.ndarray, epsg: int, bounds_xy) -> None:
     x0, _, _, y1 = bounds_xy
     prof = {"driver": "GTiff", "height": arr.shape[1], "width": arr.shape[2], "count": 3,
@@ -109,15 +121,19 @@ def fetch_pair(area: str, lon: float, lat: float, *, half_m: float = 800.0,
     if pre_arr.max() == 0:
         raise LookupError(f"{pre} has no imagery at {lon},{lat}")
     spec = nc_orthos.SERVICES[pre]
-    pre_path = os.path.join(d, f"pre_{spec['nominal_date']}.tif")
+    probe = _probe_points(b, epsg)
+    lo, hi, how = nc_orthos.tile_dates(pre, probe)
+    pre_path = os.path.join(d, f"pre_{_span(lo, hi)}.tif")
     _write(pre_path, pre_arr, epsg, b)
-    meta["pre"] = {"source": pre, "date": spec["nominal_date"], "date_label": spec["date_label"],
+    meta["pre"] = {"source": pre, "date": lo if lo == hi else None, "date_min": lo, "date_max": hi,
+                   "date_source": how, "date_label": spec["date_label"],
                    "season": spec["season"], "provenance": nc_orthos.provenance(pre).to_dict(), "path": pre_path}
 
     if post == "eri":
         post_arr, info = _eri_mosaic(b, epsg)
-        pdate = info["dates"][-1]
-        meta["post"] = {"source": "eri", "date": pdate, "date_label": f"ERI flights {', '.join(info['flights'])}",
+        plo, phi = info["dates"][0], info["dates"][-1]
+        meta["post"] = {"source": "eri", "date": plo if plo == phi else None, "date_min": plo, "date_max": phi,
+                        "date_source": "ERI flight ids", "date_label": f"ERI flights {', '.join(info['flights'])}",
                         "season": "transition", "eri": info,
                         "provenance": {"source": "NOAA NGS Emergency Response Imagery",
                                        "source_url": "https://noaa-eri-pds.s3.amazonaws.com/2024_Hurricane_Helene/",
@@ -125,13 +141,14 @@ def fetch_pair(area: str, lon: float, lat: float, *, half_m: float = 800.0,
                                        "horizontal_datum": "per NOAA ERI metadata"}}
     else:
         post_arr = nc_orthos.export_window(post, b, epsg, RES)
-        pdate = nc_orthos.SERVICES[post]["nominal_date"]
         s2 = nc_orthos.SERVICES[post]
-        meta["post"] = {"source": post, "date": pdate, "date_label": s2["date_label"], "season": s2["season"],
+        plo, phi, how = nc_orthos.tile_dates(post, _probe_points(b, epsg))
+        meta["post"] = {"source": post, "date": plo if plo == phi else None, "date_min": plo, "date_max": phi,
+                        "date_source": how, "date_label": s2["date_label"], "season": s2["season"],
                         "provenance": nc_orthos.provenance(post).to_dict()}
     if post_arr.max() == 0:
         raise LookupError(f"{post} has no imagery at {lon},{lat}")
-    post_path = os.path.join(d, f"post_{pdate}.tif")
+    post_path = os.path.join(d, f"post_{_span(plo, phi)}.tif")
     _write(post_path, post_arr, epsg, b)
     meta["post"]["path"] = post_path
     valid = float(((pre_arr.max(axis=0) > 0) & (post_arr.max(axis=0) > 0)).mean())
@@ -142,7 +159,7 @@ def fetch_pair(area: str, lon: float, lat: float, *, half_m: float = 800.0,
     with open(os.path.join(d, "meta.json"), "w", encoding="utf-8") as fh:
         json.dump({"event": "HurricaneHelene-Oct24", "area": area, "name": area.replace("_", " ").title(),
                    "center": [lon, lat], "zoom": 15.2, "pre_date": meta["pre"]["date"],
-                   "post_date": pdate, "imagery_source": f"{pre} -> {post}"}, fh, indent=2)
+                   "post_date": _span(plo, phi), "imagery_source": f"{pre} -> {post}"}, fh, indent=2)
     print(f"[ops-fetch] {area}: {pre} -> {post}, grid EPSG:{epsg} {post_arr.shape[2]}x{post_arr.shape[1]} "
           f"@ {RES} m, valid overlap {valid:.0%}")
     return meta

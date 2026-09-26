@@ -19,7 +19,9 @@ pre and post land on the identical pixel grid.
 """
 from __future__ import annotations
 
+import json
 import os
+import re
 import time
 import urllib.parse
 import urllib.request
@@ -33,15 +35,20 @@ ROOT = "https://services.nconemap.gov/secure/rest/services/Imagery"
 SERVICES = {
     "nc_2020_2023": {
         "path": "Orthoimagery_2020_2023_4band_analysis", "bands": [1, 2, 3], "nir_band": 4,
-        "date_label": "2020-2023 program cycle (leaf-off); per-tile date not exposed by the service",
-        "nominal_date": "2023-02-15", "season": "leaf-off",
+        "date_label": "NC Orthoimagery Program 2020-2023 cycle (leaf-off)",
+        # acquisition date is encoded in each full-resolution tile name
+        # (OF6i0_37_000_<tile>_<YYYYMMDD>_...); the catalog `date` field is a
+        # year placeholder, so it is not used
+        "range_if_undated": ["2020-01-01", "2023-12-31"], "season": "leaf-off",
         "license": "NC OneMap / NC CGIA / NC 911 Board; public",
         "radiometric": True,
     },
     "nc_helene_2025": {
         "path": "Orthoimagery_Helene_2025", "bands": [1, 2, 3], "nir_band": None,
         "date_label": "spring 2025 (leaf-off), NC Collaboratory post-Helene collection",
-        "nominal_date": "2025-03-15", "season": "leaf-off",
+        # tile names carry no date and the service publishes only "spring
+        # 2025"; Jan 1 - May 31 2025 is the widest range that statement allows
+        "range_if_undated": ["2025-01-01", "2025-05-31"], "season": "leaf-off",
         "license": "NC Collaboratory at UNC Chapel Hill; public via NC OneMap",
         "radiometric": True,
     },
@@ -93,6 +100,38 @@ def export_window(service: str, bounds_xy: tuple[float, float, float, float], ep
             out[:, r0:r0 + h, c0:c0 + w] = arr[:nb]
     _ = rasterio
     return out
+
+
+_TILE_DATE = re.compile(r"_(20\d{2})(\d{2})(\d{2})_")
+
+
+def tile_dates(service: str, points_lonlat: list[tuple[float, float]]) -> tuple[str, str, str]:
+    """(date_min, date_max, how) for the full-resolution tiles under the points.
+
+    Dates come from tile names where the service encodes them; otherwise the
+    documented collection range, labelled as a range, never a single made-up day.
+    """
+    spec = SERVICES[service]
+    found: set[str] = set()
+    for lon, lat in points_lonlat:
+        try:
+            d = http_json(f"{ROOT}/{spec['path']}/ImageServer/identify", params={
+                "geometry": json.dumps({"x": lon, "y": lat, "spatialReference": {"wkid": 4326}}),
+                "geometryType": "esriGeometryPoint", "returnGeometry": "false",
+                "returnCatalogItems": "true", "f": "json"}, timeout=60)
+        except Exception:  # noqa: BLE001
+            continue
+        for f in ((d.get("catalogItems") or {}).get("features") or []):
+            a = f.get("attributes") or {}
+            if a.get("minps") not in (0, 0.0):
+                continue  # overview levels, not the source tile
+            m = _TILE_DATE.search(a.get("name") or "")
+            if m:
+                found.add(f"{m.group(1)}-{m.group(2)}-{m.group(3)}")
+    if found:
+        return min(found), max(found), "tile names"
+    lo, hi = spec["range_if_undated"]
+    return lo, hi, "service description (tiles undated)"
 
 
 def covered(service: str, lon: float, lat: float) -> bool:

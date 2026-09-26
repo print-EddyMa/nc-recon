@@ -10,14 +10,14 @@ import {
   FEMA_HEX,
   FEMA_LABEL,
   NOT_ASSESSED_HEX,
-  chipUrl,
+  loadChip,
   downloadExport,
   fmtAge,
   labelerName,
   loadHealth,
   loadImpact,
   publicUrl,
-  briefUrl,
+  openBrief,
   loadLabels,
   loadOpsArea,
   loadOpsAreas,
@@ -58,6 +58,7 @@ export default function Ops({
   const [areas, setAreas] = useState<OpsAreaSummary[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [fc, setFc] = useState<OpsCollection | null>(null);
+  const [areaErr, setAreaErr] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [reviewOnly, setReviewOnly] = useState(false);
   const [labels, setLabels] = useState<Record<string, string>>({});
@@ -75,7 +76,7 @@ export default function Ops({
     let live = true;
     loadOpsArea(areaId)
       .then((d) => live && setFc(d))
-      .catch((e: Error) => live && setErr(e.message));
+      .catch((e: Error) => live && setAreaErr(e.message));
     // responder-only extras: fail quietly (public viewers just don't see them)
     loadLabels(areaId)
       .then((rows) => {
@@ -187,7 +188,13 @@ export default function Ops({
             />
           ) : (
             <div className="grid h-full place-items-center p-6 text-sm text-ink-dim">
-              {areaId ? "Loading assessment…" : "Pick an assessed area on the left."}
+              {!areaId
+                ? "Pick an assessed area on the left."
+                : areaErr
+                  ? /40[13]/.test(areaErr)
+                    ? "Building-level data is responder-only. Enter the service token on the left, then reopen the area. The public tract summary needs no token."
+                    : `Could not load this assessment (${areaErr}).`
+                  : "Loading assessment…"}
             </div>
           )}
           {fc && (
@@ -584,15 +591,13 @@ function RunSummary({ fc, areaId }: { fc: OpsCollection; areaId: string }) {
           </div>
         </div>
         <div className="flex shrink-0 gap-1">
-        <a
-          href={briefUrl(areaId)}
-          target="_blank"
-          rel="noreferrer"
+        <button
+          onClick={() => openBrief(areaId).catch((e: Error) => toast.error(e.message))}
           className="pressable rounded-md border border-line px-2 py-1 text-2xs text-ink hover:bg-surface-2"
-          title="One-page situation brief (printable; no addresses)"
+          title="One-page situation brief (printable; responder only)"
         >
           Brief
-        </a>
+        </button>
         <button
           disabled={busy}
           onClick={async () => {
@@ -617,7 +622,7 @@ function RunSummary({ fc, areaId }: { fc: OpsCollection; areaId: string }) {
           <tr className="text-ink-faint">
             <th className="text-left font-normal">Level</th>
             <th className="text-right font-normal">Expected</th>
-            <th className="text-right font-normal">80% range</th>
+            <th className="text-right font-normal" title="Conditional on the per-structure probabilities, which are not yet calibrated">80% range*</th>
           </tr>
         </thead>
         <tbody>
@@ -678,12 +683,16 @@ function ImpactPanel({ areaId }: { areaId: string }) {
           (80% {Math.round(imp.expected_displaced.p10)}–{Math.round(imp.expected_displaced.p90)})
         </span>
       </div>
+      <div className="tnum text-xs text-ink">
+        + {imp.unassessed_residential?.structures ?? 0} homes not assessed (~
+        {Math.round(imp.unassessed_residential?.occupants_nsi ?? 0)} residents)
+      </div>
       <p className="mt-1 text-2xs leading-relaxed text-ink-dim">
-        {imp.residential_structures_assessed.toLocaleString()} residential structures.{" "}
+        From {imp.residential_structures_assessed.toLocaleString()} assessed residential structures.{" "}
         {unadjusted
-          ? "Upper bound: seasonal and vacant homes are counted as occupied (no Census API key configured)."
+          ? "Seasonal and vacant homes are counted as occupied (no Census API key), which pushes this up; unassessed homes push it down."
           : imp.occupancy_adjustment + "."}{" "}
-        Prioritization aid, not an eligibility determination.
+        Range is conditional on uncalibrated probabilities. Prioritization aid, not an eligibility determination.
       </p>
       <table className="tnum mt-1.5 w-full text-2xs">
         <thead>
@@ -748,6 +757,39 @@ function ReviewList({
         ))}
       </ul>
     </section>
+  );
+}
+
+function Chip({ areaId, ncrId, kind }: { areaId: string; ncrId: string; kind: "pre" | "post" }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let url: string | null = null;
+    let live = true;
+    loadChip(areaId, ncrId, kind)
+      .then((u) => {
+        url = u;
+        if (live) setSrc(u);
+        else URL.revokeObjectURL(u);
+      })
+      .catch(() => live && setFailed(true));
+    return () => {
+      live = false;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [areaId, ncrId, kind]);
+  return (
+    <figure>
+      {src ? (
+        <img src={src} alt={`${kind}-event image of this structure`}
+          className="aspect-square w-full rounded-sm bg-surface-2 object-cover" />
+      ) : (
+        <div className="grid aspect-square w-full place-items-center rounded-sm bg-surface-2 text-2xs text-ink-faint">
+          {failed ? "needs responder token" : "loading…"}
+        </div>
+      )}
+      <figcaption className="text-center text-2xs text-ink-faint">{kind === "pre" ? "Before" : "After"}</figcaption>
+    </figure>
   );
 }
 
@@ -822,15 +864,7 @@ function StructureCard({
       {assessed && (
         <div className="mt-2 grid grid-cols-2 gap-1.5">
           {(["pre", "post"] as const).map((k) => (
-            <figure key={k}>
-              <img
-                src={chipUrl(areaId, p.ncr_id, k)}
-                alt={`${k}-event image of this structure`}
-                className="aspect-square w-full rounded-sm bg-surface-2 object-cover"
-                crossOrigin="anonymous"
-              />
-              <figcaption className="text-center text-2xs text-ink-faint">{k === "pre" ? "Before" : "After"}</figcaption>
-            </figure>
+            <Chip key={`${p.ncr_id}-${k}`} areaId={areaId} ncrId={p.ncr_id} kind={k} />
           ))}
         </div>
       )}

@@ -68,9 +68,12 @@ def brief(area: str) -> str:
             f"{P['n_needs_review']:,} calls need human verification before use.")
     if imp and imp.get("expected_displaced"):
         d = imp["expected_displaced"]
+        ua = imp.get("unassessed_residential") or {}
         bluf += (f" Roughly <b>{round(d['median'])}</b> people may be displaced "
-                 f"({round(d['p10'])}-{round(d['p90'])})"
-                 + (", an upper bound: seasonal homes not adjusted." if "UNADJUSTED" in imp["occupancy_adjustment"] else "."))
+                 f"({round(d['p10'])}-{round(d['p90'])}) from assessed homes; another "
+                 f"{ua.get('structures', 0)} homes (~{round(ua.get('occupants_nsi', 0))} residents) could not be "
+                 "assessed. Seasonal homes are " + ("not " if "UNADJUSTED" in imp["occupancy_adjustment"] else "")
+                 + "adjusted for.")
     rows = "".join(
         f'<tr><td><span class="sw" style="background:{COLORS[c]}"></span>{FEMA_LABEL[c]}</td>'
         f'<td class="n">{round(ec[c])}</td><td class="n">{"-".join(map(str, rng.get(c, [])))}</td></tr>'
@@ -120,7 +123,8 @@ ul{{font:12px system-ui,sans-serif;padding-left:18px}} @media print{{body{{margi
 <h2>Map</h2>{_svg_map(fc)}
 <p class="meta">Dots = structures, coloured by most likely FEMA level (grey = no damage, dark = not assessed); blue ring = needs review.</p>
 <h2>Structures by damage level</h2>
-<table><tr><th>Level</th><th class="n">Expected</th><th class="n">80% range</th></tr>{rows}</table>
+<table><tr><th>Level</th><th class="n">Expected</th><th class="n">80% range*</th></tr>{rows}</table>
+<p class="meta">* Ranges reflect sampling from the per-structure probabilities and are conditional on them; the probabilities are not yet calibrated, so true uncertainty is wider.</p>
 <p class="meta">{P['not_assessed']['total']:,} inventory structures had no footprint and were not assessed ({P['not_assessed']['residential']} residential). Probabilities are {calib}.</p>
 {"<h2>People and need by census tract</h2><table><tr><th>Tract</th><th class='n'>Displaced (exp.)</th><th class='n'>SVI</th><th class='n'>Need index</th></tr>" + tracts + "</table><p class='meta'>Need index = expected displaced x (1 + SVI percentile). Prioritization aid, not an eligibility determination. Road-isolation and power-outage terms not yet included.</p>" if imp else ""}
 <h2>Data gaps and confidence</h2><ul>{"".join(f"<li>{g}</li>" for g in gaps)}</ul>

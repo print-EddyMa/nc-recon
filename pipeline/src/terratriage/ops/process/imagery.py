@@ -43,6 +43,21 @@ class ImageInfo:
     clouds_pct: float | None
     url: str | None
     path: str
+    date_min: str | None = None   # acquisition may be known only as a range
+    date_max: str | None = None
+    date_source: str | None = None
+
+    @property
+    def dmin(self) -> date:
+        return date.fromisoformat(self.date_min or self.date)
+
+    @property
+    def dmax(self) -> date:
+        return date.fromisoformat(self.date_max or self.date)
+
+    @property
+    def exact(self) -> bool:
+        return self.dmin == self.dmax
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -107,11 +122,14 @@ def image_info(path: str, role: str, event: str) -> ImageInfo:
 def _from_sidecar(meta: dict, role: str) -> ImageInfo:
     m = meta[role]
     prov = m.get("provenance") or {}
+    lo = m.get("date_min") or m.get("date")
+    hi = m.get("date_max") or m.get("date")
     return ImageInfo(
-        role=role, date=m["date"], acquired_utc=None,
+        role=role, date=lo if lo == hi else f"{lo}..{hi}", acquired_utc=None,
         platform=f"aerial:{m['source']}", catalog_id=None, gsd_m=None,
         off_nadir_deg=None, sun_elevation_deg=None, sun_azimuth_deg=None,
         view_azimuth_deg=None, clouds_pct=None, url=prov.get("source_url"), path=m["path"],
+        date_min=lo, date_max=hi, date_source=m.get("date_source"),
     )
 
 
@@ -154,13 +172,15 @@ def pair_context(pre: ImageInfo, post: ImageInfo, geometry_limit_deg: float = 15
         reasons.append(f"OFF_NADIR_DIFF_{d_nadir:.0f}DEG")
     if d_sun is not None and d_sun > geometry_limit_deg:
         reasons.append(f"SUN_ELEV_DIFF_{d_sun:.0f}DEG")
-    s_pre = _season(date.fromisoformat(pre.date))
-    s_post = _season(date.fromisoformat(post.date))
+    s_pre = _season(pre.dmax)
+    s_post = _season(post.dmin)
     if s_pre != s_post:
         reasons.append(f"SEASON_{s_pre.upper().replace('-', '_')}_VS_{s_post.upper().replace('-', '_')}")
-    gap_days = (date.fromisoformat(post.date) - date.fromisoformat(pre.date)).days
+    gap_days = (post.dmin - pre.dmax).days   # lower bound when dates are ranges
     if gap_days > 365:
-        reasons.append(f"PRE_IMAGE_{gap_days // 365}Y_OLD")
+        reasons.append(f"PRE_IMAGE_{'GE_' if not (pre.exact and post.exact) else ''}{gap_days // 365}Y_OLD")
+    if not pre.exact or not post.exact:
+        reasons.append("ACQUISITION_DATE_IS_A_RANGE")
     # geometry penalty for pixel-level change: 1 when matched, -> 0.3 when both
     # angles differ by >= 2x the limit
     pen = 1.0

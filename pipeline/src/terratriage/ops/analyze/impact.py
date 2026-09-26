@@ -97,8 +97,15 @@ def run(area: str, seed: int = 0, n_mc: int = 2000) -> dict[str, Any]:
     occ_share = acs_occupancy([t["properties"]["FIPS"] for t in tracts])
 
     rows = []
+    unassessed = {"residential_structures": 0, "occupants_nsi": 0.0}
     for p in feats:
-        if not p.get("damage_probs") or not (p.get("flags") or {}).get("residential"):
+        if not (p.get("flags") or {}).get("residential"):
+            continue
+        if not p.get("damage_probs"):
+            # residential inventory point with no footprint: never assessed,
+            # but its people exist - counted separately, never silently dropped
+            unassessed["residential_structures"] += 1
+            unassessed["occupants_nsi"] += float((p.get("occupants") or {}).get("nsi_estimate") or 0)
             continue
         o = p.get("occupants") or {}
         ests = [v for v in (o.get("nsi_estimate"), o.get("usa_structures_median")) if v is not None]
@@ -165,7 +172,15 @@ def run(area: str, seed: int = 0, n_mc: int = 2000) -> dict[str, Any]:
         "area": area, "run_id": fc["properties"]["run_id"],
         "residential_structures_assessed": len(rows),
         "occupancy_adjustment": "ACS 2022 5-yr tract occupied share" if occ_share
-        else "UNADJUSTED (no NCR_CENSUS_API_KEY): seasonal / vacant homes counted as occupied -> upper bound",
+        else "UNADJUSTED (no NCR_CENSUS_API_KEY): seasonal / vacant homes counted as occupied",
+        "bias_note": (
+            "Neither a lower nor an upper bound: biased HIGH where seasonal / vacant homes are counted "
+            "as occupied" + ("" if occ_share else " (no occupancy adjustment applied)") + ", biased LOW by "
+            f"{unassessed['residential_structures']} residential structures with no footprint "
+            f"(~{round(unassessed['occupants_nsi'])} people by NSI) that were not assessed, and "
+            "conditional on uncalibrated damage probabilities."),
+        "unassessed_residential": {"structures": unassessed["residential_structures"],
+                                   "occupants_nsi": round(unassessed["occupants_nsi"], 1)},
         "expected_displaced": {"p10": float(np.percentile(main, 10)), "median": float(np.median(main)),
                                "p90": float(np.percentile(main, 90))},
         "sensitivity_w_minor": sens,

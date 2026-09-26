@@ -86,7 +86,8 @@ def _flat(p: dict[str, Any], responder: dict[str, Any] | None,
         "source_ids": json.dumps(p.get("source_ids") or {}),
     }
     fema = p.get("fema") or {}
-    for k in ("DMG_LEVEL", "ASMT_TYPE", "IMG_DATE", "EVENT_NAME", "EVENT_DATE", "DIS_NUMBER", "USNG", "SOURCE"):
+    for k in ("DMG_LEVEL", "ASMT_TYPE", "IMG_DATE", "IMG_DATE_RANGE", "EVENT_NAME", "EVENT_DATE",
+              "DIS_NUMBER", "USNG", "SOURCE"):
         row[k] = fema.get(k)
     if not lvl:
         # inventory structure with no footprint: event fields from the run,

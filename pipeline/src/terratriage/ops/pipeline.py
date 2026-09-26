@@ -151,17 +151,20 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
         raise SystemExit(f"{area} is not in config/events.yaml; register it with a TUNE/TEST role first")
     ev, aoi = found
     pre_info, post_info = imagery.pair_for_area(RAW, area, ev.maxar_event or "")
-    check_image_pair(date.fromisoformat(pre_info.date), date.fromisoformat(post_info.date),
-                     ev.incident_begin, area)
+    # with date ranges the whole range must satisfy the rule: the latest
+    # possible pre date before the incident, the earliest post date after it
+    check_image_pair(pre_info.dmax, post_info.dmin, ev.incident_begin, area)
     for info, want in ((pre_info, "pre"), (post_info, "post")):
-        got = ev.classify_image_date(date.fromisoformat(info.date))
-        if got != want:
-            raise SystemExit(f"{area}: {want} image {info.date} falls outside the event's {want} window "
-                             f"({getattr(ev, want).start}..{getattr(ev, want).end})")
+        for d_ in (info.dmin, info.dmax):
+            if ev.classify_image_date(d_) != want:
+                raise SystemExit(f"{area}: {want} image date {d_} falls outside the event's {want} window "
+                                 f"({getattr(ev, want).start}..{getattr(ev, want).end})")
     pair = imagery.pair_context(pre_info, post_info, rules()["geometry_limit_deg"])
-    lag = (date.fromisoformat(post_info.date) - ev.incident_begin).days
-    pair["post_days_after_incident"] = lag
-    pair["reasons"].append(f"POST_IMAGE_{lag}D_AFTER_INCIDENT")
+    lag_lo = (post_info.dmin - ev.incident_begin).days
+    lag_hi = (post_info.dmax - ev.incident_begin).days
+    pair["post_days_after_incident"] = lag_lo if lag_lo == lag_hi else [lag_lo, lag_hi]
+    pair["reasons"].append(f"POST_IMAGE_{lag_lo}D_AFTER_INCIDENT" if lag_lo == lag_hi
+                           else f"POST_IMAGE_{lag_lo}-{lag_hi}D_AFTER_INCIDENT")
     timings["plan"] = time.time() - t0
 
     # ---- collect: footprints + NSI --------------------------------------- #
@@ -291,7 +294,10 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
             "fema": {
                 "DMG_LEVEL": FEMA_DB_LEVEL[FEMA[v.label]],
                 "ASMT_TYPE": "Remote Sensing",
-                "IMG_DATE": post_info.date,
+                # FEMA's field is a date: filled only when the capture date is
+                # known exactly, never with an invented day
+                "IMG_DATE": post_info.date if post_info.exact else None,
+                "IMG_DATE_RANGE": f"{post_info.dmin}..{post_info.dmax}",
                 "EVENT_NAME": ev.name,
                 "EVENT_DATE": ev.incident_begin.isoformat(),
                 "DIS_NUMBER": ",".join(d.fema_id for d in ev.declarations),

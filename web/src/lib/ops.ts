@@ -181,7 +181,7 @@ async function getJSON<T>(path: string, auth = false): Promise<T> {
 
 export const loadOpsAreas = () => getJSON<OpsAreaSummary[]>("/ops/areas");
 export const loadOpsArea = (id: string) =>
-  getJSON<OpsCollection>(`/ops/areas/${encodeURIComponent(id)}`);
+  getJSON<OpsCollection>(`/ops/areas/${encodeURIComponent(id)}`, true);
 export const loadHealth = () =>
   getJSON<{ checked_utc: string; sources: HealthRow[] }>("/ops/health");
 export const loadReport = () => getJSON<Record<string, unknown>>("/ops/report");
@@ -201,6 +201,8 @@ export interface Impact {
   occupancy_adjustment: string;
   expected_displaced: { p10: number; median: number; p90: number };
   need_index_terms_missing: string[];
+  bias_note?: string;
+  unassessed_residential?: { structures: number; occupants_nsi: number };
   tracts: {
     tract: string;
     location: string | null;
@@ -216,11 +218,41 @@ export const loadImpact = (area: string) =>
 export const publicUrl = (area: string) =>
   `${API_URL}/ops/areas/${encodeURIComponent(area)}/public.geojson`;
 
-export const briefUrl = (area: string) =>
-  `${API_URL}/ops/areas/${encodeURIComponent(area)}/brief.html`;
-
-export const chipUrl = (area: string, ncrId: string, kind: "pre" | "post") =>
+const chipUrl = (area: string, ncrId: string, kind: "pre" | "post") =>
   `${API_URL}/ops/areas/${encodeURIComponent(area)}/chip/${ncrId}/${kind}.png`;
+
+/** Chips are responder-only, and an <img> cannot send the bearer header, so
+ * fetch with the header and hand back an object URL (caller revokes it). */
+export async function loadChip(
+  area: string,
+  ncrId: string,
+  kind: "pre" | "post",
+): Promise<string> {
+  const r = await fetch(chipUrl(area, ncrId, kind), { headers: authHeaders() });
+  if (!r.ok) throw new Error(`chip ${r.status}`);
+  return URL.createObjectURL(await r.blob());
+}
+
+/** Open the (responder-only) brief in a new tab via a blob, so the token
+ * travels in a header rather than the URL. */
+export async function openBrief(area: string): Promise<void> {
+  const w = window.open("", "_blank");
+  const r = await fetch(
+    `${API_URL}/ops/areas/${encodeURIComponent(area)}/brief.html`,
+    { headers: authHeaders() },
+  );
+  if (!r.ok) {
+    w?.close();
+    throw new Error(
+      r.status === 401 || r.status === 403
+        ? "Responder token required for the brief"
+        : `brief failed (${r.status})`,
+    );
+  }
+  const url = URL.createObjectURL(new Blob([await r.text()], { type: "text/html" }));
+  if (w) w.location.href = url;
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
 
 export async function postLabel(body: {
   area: string;

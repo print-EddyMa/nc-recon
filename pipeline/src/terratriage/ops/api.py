@@ -1,15 +1,17 @@
 """Ops-mode HTTP API (mounted by server.py under /ops).
 
-Public (no building-level PII; the ops GeoJSON never carries addresses):
-  GET  /ops/areas                       summaries of every ops assessment
-  GET  /ops/areas/{area}                ops GeoJSON (schema ops-1.0)
-  GET  /ops/areas/{area}/chip/{ncr_id}/{pre|post}.png
-                                        pre/post image chip with the footprint
+Public (aggregates only, nothing at building level):
+  GET  /ops/areas                       area summaries (counts, ranges, caveats)
+  GET  /ops/areas/{area}/public.geojson tract-level product, small counts withheld
+  GET  /ops/areas/{area}/impact         tract-level people / need
   GET  /ops/health                      collection board (refreshed <= 10 min)
   GET  /ops/report                      latest ACCURACY_REPORT.json
   GET  /ops/meta                        disclaimer, class vocab, colours
 
 Responder (bearer token; with no token configured, loopback clients only):
+  GET  /ops/areas/{area}                ops GeoJSON (building level; no addresses)
+  GET  /ops/areas/{area}/chip/{ncr_id}/{pre|post}.png
+  GET  /ops/areas/{area}/brief.html     situation brief (its map shows structures)
   GET  /ops/areas/{area}/responder      ncr_id -> address sidecar
   POST /ops/labels                      append a truth label (TUNE/TEST aware)
   GET  /ops/areas/{area}/export.zip     GeoJSON/CSV/KML/GPKG/FileGDB/Survey123 bundle
@@ -104,12 +106,15 @@ def areas():
 
 
 @router.get("/areas/{area}")
-def area(area: str):
-    return JSONResponse(_load(area), headers={"Cache-Control": "no-cache"})
+def area(area: str, request: Request, authorization: str | None = Header(default=None)):
+    # building-level (centroids ~ addresses): responder only
+    _responder(request, authorization)
+    return JSONResponse(_load(area), headers={"Cache-Control": "no-cache, private"})
 
 
 @router.get("/areas/{area}/chip/{ncr_id}/{kind}.png")
-def chip(area: str, ncr_id: str, kind: str, size: int = 256, pad_m: float = 12.0):
+def chip(area: str, ncr_id: str, kind: str, request: Request, size: int = 256, pad_m: float = 12.0,
+         authorization: str | None = Header(default=None)):
     import numpy as np
     import rasterio
     from PIL import Image, ImageDraw
@@ -120,6 +125,7 @@ def chip(area: str, ncr_id: str, kind: str, size: int = 256, pad_m: float = 12.0
     from .geodesy import transformer
     from .process import imagery
 
+    _responder(request, authorization)
     if kind not in ("pre", "post") or not _UUID.fullmatch(ncr_id):
         raise HTTPException(400, "bad chip request")
     fc = _load(area)
@@ -156,7 +162,7 @@ def chip(area: str, ncr_id: str, kind: str, size: int = 256, pad_m: float = 12.0
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return Response(buf.getvalue(), media_type="image/png",
-                    headers={"Cache-Control": "public, max-age=3600",
+                    headers={"Cache-Control": "private, max-age=3600",
                              "Cross-Origin-Resource-Policy": "cross-origin"})
 
 
@@ -179,11 +185,12 @@ def public_tracts(area: str):
 
 
 @router.get("/areas/{area}/brief.html")
-def brief_html(area: str):
+def brief_html(area: str, request: Request, authorization: str | None = Header(default=None)):
     from fastapi.responses import HTMLResponse
 
     from .disseminate.brief import brief
 
+    _responder(request, authorization)  # its map plots every structure
     _load(area)
     with open(brief(area), encoding="utf-8") as fh:
         return HTMLResponse(fh.read())
