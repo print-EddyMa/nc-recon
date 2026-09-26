@@ -30,6 +30,27 @@ features exactly (764 buildings, 305/349/45/65, 161 review).
 | Web | Operations screen: FEMA 5-class map (YlOrRd, opacity = confidence), review queue by P(≥Major) × occupants, keyboard labeling, evidence card with pre/post chips, collection board, accuracy panel, people panel, disclaimer | `web/src/screens/Ops.tsx` |
 | Docs | DATA_SOURCES, OPERATIONS, LABELING_PROTOCOL, MODEL_CARD, BIAS_AUDIT, LICENSES, ACCURACY_REPORT | `docs/ops/`, repo root, `reports/` |
 
+## Current assessments (all unvalidated; see the accuracy report)
+
+| Area | Role | Imagery | Structures (not assessed) | ≥ Major expected (80%) | Needs review | Displaced (upper bound) |
+|---|---|---|---|---|---|---|
+| Old Fort | TUNE | Maxar 2022-01 → 2024-10 | 2,206 (513) | 244 (222–266) | 1,160 | ~318 (291–346) |
+| Spruce Pine | TUNE | Maxar 2024-02 → 2024-10 | 1,982 (390) | 233 (208–257) | 1,267 | ~369 (337–405) |
+| Swannanoa | TEST | NC orthos 2020–23 → 2025 | 893 (70) | 119 (105–133) | 298 | ~144 (131–157) |
+| Chimney Rock | TEST | NC orthos 2020–23 → 2025 | 216 (23) | 49 (40–57) | 85 | ~26 (22–30) |
+
+The Maxar areas send ~55–65% of structures to review, the NC-ortho areas
+~33–40%: the Maxar pairs have haze, 18–19° geometry differences, a season
+change and a 7 px co-registration residual (NC orthos: 0.9 px). Old Fort's
+argmax "destroyed" count dropped from 129 to 52 once haze masking and
+footprint alignment went in. v2 reported 764 structures at Old Fort from OSM
+alone.
+
+Demo check: `npm run demo:validate` passes 10/10 runs, 0 external calls, 0
+console errors. Its frame-identical check fails, and fails identically when
+the `cac-v2-demo-stable` tag itself is built and validated, so this is
+pre-existing, not a Phase J regression.
+
 ## What we learned (where the brief was wrong or out of date)
 
 1. **Legacy USGS WaterServices was already down** (503), not just "at risk".
