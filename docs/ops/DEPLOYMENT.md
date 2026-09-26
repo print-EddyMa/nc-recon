@@ -5,7 +5,8 @@ Caddy sits in front for HTTPS. No paid services or keys are required.
 
 ## Requirements
 
-* A Linux or macOS host with Docker (4 CPU cores and 8 GB RAM minimum;
+* A Linux (x86_64 or arm64) or macOS host with Docker; the image builds for
+  both architectures (x86_64 verified with `docker buildx --platform linux/amd64`) (4 CPU cores and 8 GB RAM minimum;
   more cores make assessments faster). About 3 GB for the image, plus data.
 * Outbound HTTPS to the public data sources (USGS, NOAA, FEMA, NC OneMap,
   NOAA ERI on AWS, Maxar Open Data on AWS, OpenStreetMap Overpass, USACE NSI).
@@ -72,6 +73,7 @@ Everything the system writes lives in the `ncrecon-data` volume (`/app/data`):
 | `labels/*.csv` | **Ground-truth labels from analysts** | **No: the most valuable data in the system** |
 | `ops_registry.yaml` | provisional events + operational areas | No |
 | `output/ops/` | assessments, impact, exports, briefs | By re-running (hours) |
+| `audit.log` | who did what: assess, view, label, export, brief, delete (UTC, client address) | No |
 | `raw/`, `cache/` | imagery pairs, source caches | Yes (re-fetched) |
 
 Back up daily:
@@ -80,6 +82,20 @@ Back up daily:
 docker compose exec ncrecon python scripts/run.py ops-backup --out /app/data/backup.tar.gz
 docker compose cp ncrecon:/app/data/backup.tar.gz ./ncrecon-backup-$(date +%F).tar.gz
 ```
+
+## When sources are down
+
+Federal services fail during disasters. NC Recon degrades rather than stops:
+
+| Source down | Effect |
+|---|---|
+| OpenFEMA | cached declaration, else the one shipped in the image (Helene); new events can be registered manually |
+| USACE NSI | assessment completes; no occupancy/foundation data, flood depth unavailable, occupants from USA Structures; warning shown |
+| CDC SVI / Census | people estimate still computed; need index marked unavailable |
+| OpenStreetMap | USA Structures footprints only; warning shown |
+| USA Structures **and** OpenStreetMap, or the imagery service | that assessment fails cleanly (no partial output); others unaffected |
+
+Verified by blackholing hosts in the container (`--add-host=<host>:127.0.0.1`).
 
 ## Operating
 

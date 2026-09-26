@@ -29,6 +29,9 @@ Built for use by NC emergency offices, no paid services:
   gone; the pitch demo is a separate offline build with pinned libraries.
 * **Security**: maplibre-gl 6 / deck.gl 9.4 in the product, `npm audit` 0.
 * **CI**: `.github/workflows/ci.yml` (tests, typecheck, lint, build, image).
+* **Outage-tolerant**: secondary sources (NSI, SVI, Census, OSM, OpenFEMA)
+  degrade to warnings; verified in-container with those hosts blackholed on a
+  fresh volume. Audit log of responder actions.
 
 ## What exists now
 
