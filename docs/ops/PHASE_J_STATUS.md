@@ -39,8 +39,8 @@ features exactly (764 buildings, 305/349/45/65, 161 review).
 | Swannanoa | TEST | NC orthos 2020–23 → 2025 | 893 (70) | 119 (105–133) | 298 | ~144 (131–157) |
 | Chimney Rock | TEST | NC orthos 2020–23 → 2025 | 216 (23) | 49 (40–57) | 85 | ~26 (22–30) |
 
-The Maxar areas send ~55–65% of structures to review, the NC-ortho areas
-~33–40%: the Maxar pairs have haze, 18–19° geometry differences, a season
+The Maxar areas send 69% and 80% of assessed structures to review, the NC-ortho areas
+36% and 44%: the Maxar pairs have haze, 18–19° geometry differences, a season
 change and a 7 px co-registration residual (NC orthos: 0.9 px). Old Fort's
 argmax "destroyed" count dropped from 129 to 52 once haze masking and
 footprint alignment went in. v2 reported 764 structures at Old Fort from OSM
