@@ -112,6 +112,15 @@ def _conda_python(env: str = "terratriage-tf") -> str | None:
 
 def _keras_probs(crops, weights_path: str) -> np.ndarray:
     """(N, 4) softmax probabilities from the xView2 baseline classifier."""
+    pred = _keras_logits(crops, weights_path)
+    probs = np.exp(pred - pred.max(axis=1, keepdims=True))
+    probs /= probs.sum(axis=1, keepdims=True)
+    return probs
+
+
+def _keras_logits(crops, weights_path: str) -> np.ndarray:
+    """(N, 4) raw final-layer activations (the head ends in Dense(4, relu), so
+    these are non-negative "logits"; softmax over them is what v2 reported)."""
     py = _conda_python()
     if not py:
         raise RuntimeError("terratriage-tf conda env not found; run scripts/setup_tf_env.sh")
@@ -129,9 +138,7 @@ def _keras_probs(crops, weights_path: str) -> np.ndarray:
         if r.returncode != 0:
             raise RuntimeError(f"_keras_infer.py failed:\n{r.stdout}\n{r.stderr}")
         pred = np.load(outp)  # (N,4) activations
-    probs = np.exp(pred - pred.max(axis=1, keepdims=True))
-    probs /= probs.sum(axis=1, keepdims=True)
-    return probs
+    return pred
 
 
 def _keras_scores(crops, weights_path: str) -> list[tuple[int, float]]:

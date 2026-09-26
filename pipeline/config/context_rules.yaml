@@ -1,0 +1,72 @@
+# Context rules and evidence-channel settings (Phase J, fusion v1).
+#
+# status: provisional = hand-set from physics/definitions, NOT tuned on labels.
+# Tune on TUNE AOIs only (scripts/run.py ops-calibrate); never on TEST.
+status: provisional
+version: 2026-09-26.1
+
+geometry_limit_deg: 15          # pre/post off-nadir or sun-elevation difference
+
+# per-building masks
+cloud:
+  # Maxar visual products ship no cloud mask. Heuristic: bright, unsaturated,
+  # low-texture pixels. Over this fraction of footprint+ring -> E1/E2 unavailable.
+  bright_min: 205
+  sat_max: 0.12
+  unavailable_frac: 0.30
+canopy:
+  # excess-green (2G - R - B) over the roof. RGB only (no NIR in Maxar visual).
+  exg_min: 20
+  downweight_frac: 0.40         # > 40% of roof under canopy -> E1/E2 x0.4
+  downweight: 0.4
+nodata:
+  unavailable_frac: 0.20        # image edge / no-data inside footprint
+
+coreg:
+  max_local_shift_m: 6.0        # per-building post->pre search window
+  min_edge_ncc: 0.15            # below this after alignment -> MISREGISTERED
+                                # unless the pre chip shows a clear structure
+                                # and the post chip does not (then it is change)
+
+channels:
+  E1:
+    name: optical damage classifier (xView2 baseline CNN, post image only)
+    weight: 1.0
+    # With no fitted temperature, the CNN's softmax (over ReLU activations) is
+    # ~1.0 for almost every building and carries no confidence information.
+    # Label-only mode: the likelihood is the crosswalk row of the CNN's label.
+    uncalibrated_mode: label_only
+  E2:
+    name: pixel change (co-registered, radiometrically matched)
+    weight: 0.6
+    # change score s in [0,1] -> likelihood over FEMA classes. Provisional bins.
+    bins: [0.12, 0.25, 0.40]
+    likelihood:
+      - [0.40, 0.30, 0.17, 0.09, 0.04]
+      - [0.25, 0.28, 0.25, 0.14, 0.08]
+      - [0.12, 0.18, 0.28, 0.25, 0.17]
+      - [0.05, 0.10, 0.20, 0.30, 0.35]
+  E4:
+    name: blue tarps
+    weight: 0.8
+    min_new_tarp_frac: 0.08      # tarp-blue share of roof not present pre-event
+    # a tarp means the roof is damaged and being repaired; its absence is NOT
+    # evidence of no damage (tarps lag the event), so "no tarp" = no evidence.
+    likelihood_tarp: [0.02, 0.10, 0.45, 0.35, 0.08]
+  E5:
+    name: flood depth -> FEMA matrix
+    weight: 1.0
+
+fusion:
+  prior: config                 # crosswalks.yaml class_prior
+  temperature: 1.0              # replaced by config/calibration/fusion_v1.json once fit
+  abstain:
+    tau: 0.50                   # top-class probability below this -> needs_review
+    nonadjacent_top2_min: 0.20  # 2nd class >= this and not adjacent to 1st -> review
+    conformal_max_set: 2        # set size >= 3 -> review (only once conformal is fit)
+  key_channels:                 # channels without which a call is not made
+    default: [E1]
+
+guards:
+  # floors, never ceilings; each logged as a reason code
+  field_report_trusted_weight: 3.0

@@ -220,6 +220,12 @@ def cmd_validate(a):
     v.build_map(gj, pre, post, os.path.join(OUT, f"{a.area}_check.html"))
 
 
+def cmd_ops_assess(a):
+    from terratriage.ops.pipeline import run_area
+
+    run_area(a.area, limit=a.limit, night=not a.day)
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -276,6 +282,12 @@ def main():
     v = sub.add_parser("validate")
     v.add_argument("--area", required=True)
     v.set_defaults(fn=cmd_validate)
+
+    o = sub.add_parser("ops-assess", help="ops mode: fused, calibrated-where-possible, provenance-carrying assessment")
+    o.add_argument("--area", required=True)
+    o.add_argument("--limit", type=int, default=None)
+    o.add_argument("--day", action="store_true", help="use daytime occupant estimates (default: night)")
+    o.set_defaults(fn=cmd_ops_assess)
 
     a = p.parse_args()
     a.fn(a)
