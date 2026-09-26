@@ -104,7 +104,31 @@ def image_info(path: str, role: str, event: str) -> ImageInfo:
     )
 
 
+def _from_sidecar(meta: dict, role: str) -> ImageInfo:
+    m = meta[role]
+    prov = m.get("provenance") or {}
+    return ImageInfo(
+        role=role, date=m["date"], acquired_utc=None,
+        platform=f"aerial:{m['source']}", catalog_id=None, gsd_m=None,
+        off_nadir_deg=None, sun_elevation_deg=None, sun_azimuth_deg=None,
+        view_azimuth_deg=None, clouds_pct=None, url=prov.get("source_url"), path=m["path"],
+    )
+
+
+def sidecar(raw_dir: str, area: str) -> dict | None:
+    import json
+
+    p = os.path.join(raw_dir, area, "imagery.json")
+    if not os.path.exists(p):
+        return None
+    with open(p, encoding="utf-8") as fh:
+        return json.load(fh)
+
+
 def pair_for_area(raw_dir: str, area: str, event: str) -> tuple[ImageInfo, ImageInfo]:
+    meta = sidecar(raw_dir, area)
+    if meta:  # ops-fetch pair (NC orthos / ERI)
+        return _from_sidecar(meta, "pre"), _from_sidecar(meta, "post")
     pre = sorted(glob.glob(os.path.join(raw_dir, area, "pre_*.tif")))
     post = sorted(glob.glob(os.path.join(raw_dir, area, "post_*.tif")))
     if not pre or not post:
@@ -119,7 +143,12 @@ def pair_context(pre: ImageInfo, post: ImageInfo, geometry_limit_deg: float = 15
                if pre.off_nadir_deg is not None and post.off_nadir_deg is not None else None)
     d_sun = (abs(pre.sun_elevation_deg - post.sun_elevation_deg)
              if pre.sun_elevation_deg is not None and post.sun_elevation_deg is not None else None)
-    if d_nadir is None or d_sun is None:
+    aerial = (pre.platform or "").startswith("aerial:") and (post.platform or "").startswith("aerial:")
+    if (d_nadir is None or d_sun is None) and aerial:
+        # orthorectified aerial mosaics: near-nadir per frame but not true orthos,
+        # so tall objects lean differently along seamlines; angles not published
+        reasons.append("AERIAL_ORTHO_GEOMETRY_UNRECORDED")
+    elif d_nadir is None or d_sun is None:
         reasons.append("VIEW_GEOMETRY_UNKNOWN")
     if d_nadir is not None and d_nadir > geometry_limit_deg:
         reasons.append(f"OFF_NADIR_DIFF_{d_nadir:.0f}DEG")

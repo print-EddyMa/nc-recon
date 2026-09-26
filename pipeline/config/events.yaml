@@ -22,7 +22,10 @@ events:
     windows:
       # days relative to OpenFEMA incidentBeginDate (2024-09-25)
       pre_days: [-1500, -1]
-      post_days: [0, 45]
+      # 200 days admits the spring-2025 NC Collaboratory leaf-off collection.
+      # Later imagery shows a different scene (debris cleared, tarps, repairs,
+      # demolitions); the gap is recorded per run as POST_IMAGE_<n>D_AFTER.
+      post_days: [0, 200]
     aois:
       old_fort:
         role: TUNE
@@ -36,14 +39,14 @@ events:
         role: TEST
         county: Buncombe
         center: [-82.399, 35.598]
-        status: candidate   # confirm post-event imagery before use
+        imagery: nc_2020_2023 -> nc_helene_2025   # no Maxar post coverage
       chimney_rock:
         role: TEST
         county: Rutherford
-        center: [-82.249, 35.432]
-        status: candidate
+        center: [-82.2465, 35.4395]   # village on US-64 / Rocky Broad River
+        imagery: nc_2020_2023 -> nc_helene_2025
       marshall:
         role: TEST
         county: Madison
         center: [-82.684, 35.797]
-        status: candidate
+        status: candidate   # Madison Co. is outside the NC Helene 2025 ortho collection; ERI only (post-only)

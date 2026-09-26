@@ -5,7 +5,7 @@ from typing import Any
 
 import numpy as np
 
-from .classes import FEMA, XBD, xbd_to_fema_matrix
+from .classes import FEMA, XBD, class_prior, xbd_to_fema_matrix
 from .evidence import BuildingEvidence, change_score
 from .fusion import Channel, rules
 
@@ -27,13 +27,18 @@ def e1(ev: BuildingEvidence, logits: np.ndarray | None, T: float | None) -> Chan
         return Channel("E1", False, unavailable_reason="MODEL_NOT_RUN")
     W = xbd_to_fema_matrix()
     lab = int(np.argmax(logits))
+    # crosswalk rows are P(fema | xbd label) - posteriors that already contain a
+    # class prior. Pooling multiplies by the prior again, so divide it out:
+    # P(xbd label | fema) is proportional to P(fema | xbd) / P(fema).
+    prior = class_prior()
     if T is not None:
         from .calibration import softmax
 
         p_xbd = softmax(logits[None, :], T)[0]
-        L, status = p_xbd @ W, "calibrated"
+        L, status = (p_xbd @ W) / prior, "calibrated"
     else:
-        L, status = W[lab], "label_only"
+        L, status = W[lab] / prior, "label_only"
+    L = L / L.sum()
     w = cfg["weight"] * _context_weight(ev)
     return Channel("E1", True, L, w, status, [f"E1_CNN_{XBD[lab].upper().replace('-', '_')}"],
                    detail={"xbd_label": XBD[lab], "logits": [round(float(v), 3) for v in logits]})

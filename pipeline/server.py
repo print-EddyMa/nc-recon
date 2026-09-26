@@ -101,6 +101,10 @@ app.add_middleware(
     allow_headers=["authorization", "content-type"],
 )
 
+from terratriage.ops.api import router as ops_router  # noqa: E402
+
+app.include_router(ops_router)
+
 USGS_URL = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson"
 GDACS_URL = "https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH"
 

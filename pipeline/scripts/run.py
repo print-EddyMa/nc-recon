@@ -226,6 +226,50 @@ def cmd_ops_assess(a):
     run_area(a.area, limit=a.limit, night=not a.day)
 
 
+def cmd_ops_fetch(a):
+    from terratriage.ops.collect.imagery_fetch import fetch_pair
+
+    fetch_pair(a.area, a.lon, a.lat, half_m=a.half_m, pre=a.pre, post=a.post)
+
+
+def cmd_ops_health(a):
+    from terratriage.ops.collect import health
+
+    res = health.run()
+    health.print_table(res)
+    if any(h.status == "down" and h.source != "usgs_waterservices_legacy" for h in res):
+        sys.exit(1)
+
+
+def cmd_ops_export(a):
+    from terratriage.ops.disseminate.exports import export_area
+
+    export_area(a.area, mode="responder")
+
+
+def cmd_ops_eval(a):
+    from terratriage.ops.analyze import evaluate
+
+    rep = evaluate.evaluate()
+    print(evaluate.write_report(rep))
+    print(json.dumps(rep["labels"], indent=2))
+
+
+def cmd_ops_calibrate(a):
+    from terratriage.ops.analyze import evaluate
+
+    print(json.dumps(evaluate.calibrate(), indent=2))
+
+
+def cmd_ops_impact(a):
+    from terratriage.ops.analyze import impact
+
+    out = impact.run(a.area)
+    print(json.dumps({k: v for k, v in out.items() if k != "tracts"}, indent=2))
+    for t in out.get("tracts", [])[:8]:
+        print(t)
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -288,6 +332,25 @@ def main():
     o.add_argument("--limit", type=int, default=None)
     o.add_argument("--day", action="store_true", help="use daytime occupant estimates (default: night)")
     o.set_defaults(fn=cmd_ops_assess)
+
+    of = sub.add_parser("ops-fetch", help="ops mode: co-gridded pre/post pair from NC orthos / NOAA ERI")
+    of.add_argument("--area", required=True)
+    of.add_argument("--lon", type=float, required=True)
+    of.add_argument("--lat", type=float, required=True)
+    of.add_argument("--half-m", type=float, default=800.0)
+    of.add_argument("--pre", default="nc_2020_2023", choices=["nc_2020_2023"])
+    of.add_argument("--post", default="nc_helene_2025", choices=["nc_helene_2025", "eri"])
+    of.set_defaults(fn=cmd_ops_fetch)
+
+    sub.add_parser("ops-health", help="ops mode: live status of every data source").set_defaults(fn=cmd_ops_health)
+    ox = sub.add_parser("ops-export", help="ops mode: GeoJSON/CSV/KML/GPKG/FileGDB/Survey123 (responder)")
+    ox.add_argument("--area", required=True)
+    ox.set_defaults(fn=cmd_ops_export)
+    oi = sub.add_parser("ops-impact", help="ops mode: expected displaced people + tract need index")
+    oi.add_argument("--area", required=True)
+    oi.set_defaults(fn=cmd_ops_impact)
+    sub.add_parser("ops-eval", help="ops mode: accuracy report from data/labels").set_defaults(fn=cmd_ops_eval)
+    sub.add_parser("ops-calibrate", help="ops mode: fit temperature + conformal on TUNE labels").set_defaults(fn=cmd_ops_calibrate)
 
     a = p.parse_args()
     a.fn(a)

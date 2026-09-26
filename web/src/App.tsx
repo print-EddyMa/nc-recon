@@ -19,6 +19,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import ShortcutsDialog from "./components/ShortcutsDialog";
 import { Toaster, toast } from "sonner";
 import Home from "./screens/Home";
+import { OPS_ENABLED } from "./lib/ops";
 
 // the map-heavy screens pull in deck.gl (~1 MB); load them on demand so the
 // first paint of Home doesn't pay for code it isn't showing
@@ -29,9 +30,18 @@ const NCDashboard = lazy(() => import("./screens/NCDashboard"));
 const ReviewQueue = lazy(() => import("./screens/ReviewQueue"));
 const Stats = lazy(() => import("./screens/Stats"));
 const History = lazy(() => import("./screens/History"));
+const Ops = lazy(() => import("./screens/Ops"));
 
 type Screen =
-  "home" | "nc" | "history" | "assess" | "map" | "review" | "stats" | "about";
+  | "home"
+  | "nc"
+  | "history"
+  | "assess"
+  | "map"
+  | "review"
+  | "stats"
+  | "about"
+  | "ops";
 const AREA_SCREENS: Screen[] = ["map", "review", "stats"];
 
 /** cap the in-memory GeoJSON cache so a long session over many assessed areas
@@ -82,6 +92,7 @@ export default function App() {
   // NC Recon is a North Carolina product: it opens on the operations home.
   // The damage-assessment screens light up once an NC area has been assessed.
   const [screen, setScreen] = useState<Screen>("home");
+  const [opsArea, setOpsArea] = useState<string | null>(null);
   const [registry, setRegistry] = useState<EventConfig[] | null>(null);
   const [areaId, setAreaId] = useState<string | null>(null);
   const [cache, setCache] = useState<Record<string, DamageCollection>>({});
@@ -182,6 +193,12 @@ export default function App() {
     if (!registry) return;
     const applyHash = () => {
       hydrated.current = true;
+      const ops = window.location.hash.match(/^#\/ops(?:\/([a-z0-9_]{1,40}))?$/);
+      if (ops) {
+        setOpsArea(ops[1] ?? null);
+        setScreen("ops");
+        return;
+      }
       const m = window.location.hash.match(
         /^#\/(monitor|history|assess|about|a\/([^/]+)\/(map|review|stats))?$/,
       );
@@ -211,7 +228,8 @@ export default function App() {
   useEffect(() => {
     if (!registry || !hydrated.current) return;
     let hash = "#/";
-    if (screen === "nc") hash = "#/monitor";
+    if (screen === "ops") hash = opsArea ? `#/ops/${opsArea}` : "#/ops";
+    else if (screen === "nc") hash = "#/monitor";
     else if (screen === "history") hash = "#/history";
     else if (screen === "assess") hash = "#/assess";
     else if (screen === "about") hash = "#/about";
@@ -219,7 +237,7 @@ export default function App() {
       hash = `#/a/${encodeURIComponent(areaId)}/${screen}`;
     if (hash !== window.location.hash)
       window.history.replaceState(null, "", hash);
-  }, [screen, areaId, registry]);
+  }, [screen, areaId, registry, opsArea]);
 
   // shared "assess an NC area" flow, used by the Assess screen and ⌘K
   const { catalog, online, jobs, ingest } = useAssess(async (newAreaId) => {
@@ -331,6 +349,11 @@ export default function App() {
                 />
               </ErrorBoundary>
             )}
+            {effScreen === "ops" && (
+              <ErrorBoundary label="The operations view">
+                <Ops key={opsArea ?? "none"} areaId={opsArea} onPickArea={setOpsArea} />
+              </ErrorBoundary>
+            )}
             {effScreen === "nc" && (
               <ErrorBoundary label="The North Carolina risk dashboard">
                 <NCDashboard
@@ -429,6 +452,7 @@ function NavTabs({
           { id: "nc", label: "Live map" },
           { id: "history", label: "History" },
           { id: "assess", label: "Assess" },
+          ...(OPS_ENABLED ? [{ id: "ops", label: "Operations" }] : []),
           { id: "map", label: "Damage map" },
           { id: "review", label: "Review", badge: reviewOpen },
           { id: "stats", label: "Summary" },
@@ -438,6 +462,7 @@ function NavTabs({
           { id: "nc", label: "Live map" },
           { id: "history", label: "History" },
           { id: "assess", label: "Assess" },
+          ...(OPS_ENABLED ? [{ id: "ops", label: "Operations" }] : []),
         ]
   ) as { id: Screen; label: string; badge?: number }[];
   const navRef = useRef<HTMLElement | null>(null);

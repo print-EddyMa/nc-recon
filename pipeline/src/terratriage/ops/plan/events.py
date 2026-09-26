@@ -136,7 +136,10 @@ def parse_declaration(rows: list[dict[str, Any]], retrieved_url: str) -> Declara
     if any(_d(r["incidentBeginDate"]) != begin for r in rows):
         raise SchemaError("designated areas disagree on incidentBeginDate")
     areas = tuple(sorted({r["designatedArea"] for r in rows}))
-    ia = tuple(sorted({r["designatedArea"] for r in rows if r.get("iaProgramDeclared")}))
+    # IA-era declarations set iaProgramDeclared; IHP-era ones (incl. DR-4827)
+    # set ihProgramDeclared instead - either means individual assistance
+    ia = tuple(sorted({r["designatedArea"] for r in rows
+                       if r.get("iaProgramDeclared") or r.get("ihProgramDeclared")}))
     return Declaration(
         disaster_number=int(r0["disasterNumber"]),
         fema_id=r0.get("femaDeclarationString") or f"DR-{r0['disasterNumber']}",

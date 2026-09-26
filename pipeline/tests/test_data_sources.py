@@ -17,7 +17,8 @@ def test_no_legacy_usgs_waterservices_calls():
          os.path.join(REPO, "web", "scripts")],
         capture_output=True, text=True,
     )
-    assert out.stdout.strip() == "", f"legacy USGS calls remain:\n{out.stdout}"
+    hits = [ln for ln in out.stdout.splitlines() if "# legacy-probe" not in ln]
+    assert not hits, "legacy USGS calls remain:\n" + "\n".join(hits)
 
 
 def test_usgs_fixture_schema(fixture_json):

@@ -29,7 +29,8 @@ from .collect.nsi import NSI
 from .geodesy import transformer, usng
 from .plan.events import check_image_pair, event_for_area
 from .process import coreg, imagery
-from .process.structures import conflate, unmatched_nsi
+from .process.structures import RESIDENTIAL, conflate, unmatched_nsi
+from .process.structures import ncr_id as ncr_id_fn
 from .provenance import Provenance, utc_now
 
 RAW = os.path.join(DATA_DIR, "raw")
@@ -67,7 +68,7 @@ def footprints(raster_path: str, area: str, warnings: list[str]) -> dict[str, An
     from shapely.geometry import box, shape
     from shapely.strtree import STRtree
 
-    from ..footprints import MAX_BUILDING_AREA, MIN_BUILDING_AREA, fetch_osm_buildings, aoi_bounds_lonlat
+    from ..footprints import MAX_BUILDING_AREA, MIN_BUILDING_AREA, aoi_bounds_lonlat, fetch_osm_buildings_with_ids
     from .cachekey import cache_key
     from .collect.usa_structures import USAStructures
 
@@ -99,17 +100,18 @@ def footprints(raster_path: str, area: str, warnings: list[str]) -> dict[str, An
         vintage = None
     n_usa = len(polys)
     osm_cache = os.path.join(CACHE, f"osm_{cache_key('osm_buildings', geometry=bbox)[:16]}.json")
-    osm = [p for p in fetch_osm_buildings(bbox, cache_path=osm_cache) if p.is_valid and _ok(p)]
+    osm = [(oid, p) for oid, p in fetch_osm_buildings_with_ids(bbox, cache_path=osm_cache)
+           if p.is_valid and _ok(p)]
     tree = STRtree(polys) if polys else None
     added = 0
-    for j, p in enumerate(osm):
+    for oid, p in osm:
         if tree is not None:
             hit = any(p.intersection(polys[int(k)]).area >= 0.3 * p.area for k in tree.query(p))
             if hit:
                 continue
         polys.append(p)
         srcs.append("osm")
-        ids.append(f"osm-{j}")
+        ids.append(oid)
         attrs.append({})
         added += 1
     print(f"[ops] footprints: {n_usa} USA Structures + {added} OSM-only (of {len(osm)} OSM)")
@@ -151,7 +153,15 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
     pre_info, post_info = imagery.pair_for_area(RAW, area, ev.maxar_event or "")
     check_image_pair(date.fromisoformat(pre_info.date), date.fromisoformat(post_info.date),
                      ev.incident_begin, area)
+    for info, want in ((pre_info, "pre"), (post_info, "post")):
+        got = ev.classify_image_date(date.fromisoformat(info.date))
+        if got != want:
+            raise SystemExit(f"{area}: {want} image {info.date} falls outside the event's {want} window "
+                             f"({getattr(ev, want).start}..{getattr(ev, want).end})")
     pair = imagery.pair_context(pre_info, post_info, rules()["geometry_limit_deg"])
+    lag = (date.fromisoformat(post_info.date) - ev.incident_begin).days
+    pair["post_days_after_incident"] = lag
+    pair["reasons"].append(f"POST_IMAGE_{lag}D_AFTER_INCIDENT")
     timings["plan"] = time.time() - t0
 
     # ---- collect: footprints + NSI --------------------------------------- #
@@ -244,8 +254,6 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
             "cbfips_2010": nsi.get("cbfips"),
             "occupants": _occupants(st.nsi, night, st.attrs),
             "primary_occupancy": st.attrs.get("PRIM_OCC"),
-            "address": ", ".join(str(x) for x in (st.attrs.get("PROP_ADDR"), st.attrs.get("PROP_CITY"),
-                                                  st.attrs.get("PROP_ZIP")) if x) or None,
             "footprint_image_date": st.attrs.get("IMAGE_DATE"),
             "measurements": ev_b.m,
             # FEMA damage-database aligned fields (for export)
@@ -264,17 +272,59 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
                       "properties": props})
     timings["fusion"] = time.time() - t
 
+    # responder-only sidecar: addresses never go in the main (public-servable) file
+    responder = {}
+    for st in structs:
+        addr = ", ".join(str(x) for x in (st.attrs.get("PROP_ADDR"), st.attrs.get("PROP_CITY"),
+                                          st.attrs.get("PROP_ZIP")) if x)
+        if addr:
+            responder[st.ncr_id] = {"address": addr}
+
+    # NSI structures no footprint covers: listed, never silently dropped
+    for f in missing:
+        np_ = f["properties"]
+        x, y = f["geometry"]["coordinates"][:2]
+        base = (np_.get("occtype") or "").split("-")[0]
+        feats.append({"type": "Feature", "geometry": {"type": "Point", "coordinates": [round(x, 7), round(y, 7)]},
+                      "properties": {
+                          "ncr_id": ncr_id_fn("nsi", str(np_.get("fd_id"))),
+                          "source_ids": {"nsi_fd_id": np_.get("fd_id")},
+                          "footprint_source": None, "centroid": [round(x, 7), round(y, 7)],
+                          "usng_1m": usng(x, y, 1), "usng_10m": usng(x, y, 10),
+                          "damage_level": None, "damage_probs": None, "confidence": None,
+                          "needs_review": True, "review_reasons": ["NOT_ASSESSED_NO_FOOTPRINT"],
+                          "reason_codes": ["NOT_ASSESSED_NO_FOOTPRINT"], "evidence": [],
+                          "evidence_unavailable": {"ALL": "NO_FOOTPRINT"},
+                          "occupancy": np_.get("occtype"),
+                          "flags": {"residential": base in RESIDENTIAL, "manufactured_home": base == "RES2",
+                                    "outbuilding": False, "unmatched_source": False, "not_assessed": True},
+                          "occupants": _occupants(np_, night),
+                          "ground_elev_m_navd88": np_.get("grnd_elv_m"),
+                          "foundation_height_ft": np_.get("found_ht"),
+                          "cbfips_2010": np_.get("cbfips"),
+                      }})
+
     counts = {c: 0 for c in FEMA}
     expected = np.zeros(len(FEMA))
     n_review = 0
+    assessed_probs = []
+    n_unassessed = {"total": 0, "residential": 0}
     for f in feats:
         p = f["properties"]
+        if p["damage_level"] is None:
+            n_unassessed["total"] += 1
+            n_unassessed["residential"] += int(p["flags"]["residential"])
+            continue
         counts[p["damage_level"]] += 1
-        expected += np.array([p["damage_probs"][c] for c in FEMA])
+        pr = np.array([p["damage_probs"][c] for c in FEMA])
+        assessed_probs.append(pr)
+        expected += pr
         n_review += int(p["needs_review"])
+    interval = count_interval(np.array(assessed_probs)) if assessed_probs else {}
 
     provenance = {
-        "imagery": [
+        "imagery": [imagery.sidecar(RAW, area)[r]["provenance"] | {"role": r, "date_label": imagery.sidecar(RAW, area)[r]["date_label"]}
+                    for r in ("pre", "post")] if imagery.sidecar(RAW, area) else [
             Provenance(
                 source=f"Maxar Open Data ({i.platform})", source_url=i.url or "",
                 license="CC BY-NC 4.0", acquired_utc=i.acquired_utc,
@@ -312,6 +362,13 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
             "pair_context": pair, "coregistration": cr,
             "counts": counts,
             "expected_counts": {c: round(float(v), 1) for c, v in zip(FEMA, expected)},
+            "expected_counts_80pct": interval,
+            "argmax_counts_note": ("`counts` are argmax labels over broad probability "
+                                   "distributions; headline totals should use expected_counts "
+                                   "with their 80% interval"),
+            "not_assessed": n_unassessed,
+            "review_routing_note": ("review routing and all channel likelihoods come from "
+                                    "provisional config until TUNE labels exist"),
             "n_structures": len(feats), "n_needs_review": n_review,
             "calibration": {"cnn": "none" if T is None else T, "fusion": "none" if T_fusion is None else T_fusion,
                             "conformal": "none" if qhat is None else qhat},
@@ -327,10 +384,28 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
     out_path = os.path.join(OUT, f"{area}.geojson")
     with open(out_path, "w", encoding="utf-8") as fh:
         json.dump(fc, fh)
+    with open(os.path.join(OUT, f"{area}.responder.json"), "w", encoding="utf-8") as fh:
+        json.dump({"run_id": run_id, "access": "responder-only (contains addresses)",
+                   "structures": responder}, fh)
     _manifest(run_id, area, out_path, pre_info, post_info, timings, warnings, missing, ctx_rules)
     print(f"[ops] {area}: {len(feats)} structures, {n_review} need review, counts {counts} "
           f"in {fc['properties']['runtime_sec']}s -> {out_path}")
     return fc
+
+
+def count_interval(probs: np.ndarray, n: int = 2000, seed: int = 0, q=(10, 90)) -> dict[str, list[int]]:
+    """80 % interval on per-class structure counts, sampling each structure's
+    class independently from its probabilities (a lower bound on the true
+    spread, since neighbouring errors are correlated)."""
+    rng = np.random.default_rng(seed)
+    cum = np.cumsum(probs, axis=1)
+    draws = np.zeros((n, probs.shape[1]), dtype=int)
+    for k in range(n):
+        u = rng.random((probs.shape[0], 1))
+        cls = (u > cum).sum(axis=1)
+        draws[k] = np.bincount(np.minimum(cls, probs.shape[1] - 1), minlength=probs.shape[1])
+    lo, hi = np.percentile(draws, q, axis=0)
+    return {c: [int(a), int(b)] for c, a, b in zip(FEMA, lo, hi)}
 
 
 def _sha256(path: str) -> str:

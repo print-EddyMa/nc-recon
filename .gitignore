@@ -61,3 +61,7 @@ web/public/data/*.geojson
 video/
 docs/CAC_SUBMISSION_QA.md
 docs/CAC_VIDEO_SCRIPT.md
+
+# ops-mode run manifests and generated outputs
+pipeline/runs/
+reports/*.json
