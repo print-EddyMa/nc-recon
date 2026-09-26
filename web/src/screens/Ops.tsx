@@ -15,6 +15,8 @@ import {
   fmtAge,
   labelerName,
   loadHealth,
+  loadImpact,
+  publicUrl,
   loadLabels,
   loadOpsArea,
   loadOpsAreas,
@@ -29,6 +31,7 @@ import {
   setResponderToken,
   type FemaClass,
   type HealthRow,
+  type Impact,
   type OpsAreaSummary,
   type OpsCollection,
   type OpsFeature,
@@ -202,6 +205,7 @@ export default function Ops({
         </main>
         <aside className="min-h-0 overflow-y-auto border-l border-line p-3">
           {fc && <RunSummary fc={fc} areaId={areaId!} />}
+          {fc && <ImpactPanel areaId={areaId!} />}
           {sel ? (
             <StructureCard
               areaId={areaId!}
@@ -636,6 +640,62 @@ function RunSummary({ fc, areaId }: { fc: OpsCollection; areaId: string }) {
           </ul>
         </details>
       )}
+    </section>
+  );
+}
+
+function ImpactPanel({ areaId }: { areaId: string }) {
+  const [imp, setImp] = useState<Impact | null | "none">(null);
+  useEffect(() => {
+    loadImpact(areaId).then(setImp).catch(() => setImp("none"));
+  }, [areaId]);
+  if (imp === null) return null;
+  if (imp === "none")
+    return (
+      <p className="mb-3 text-2xs text-ink-dim">
+        No people-impact run yet (<code>run.py ops-impact --area {areaId}</code>).
+      </p>
+    );
+  const unadjusted = imp.occupancy_adjustment.startsWith("UNADJUSTED");
+  return (
+    <section className="mb-3 border-b border-line pb-3">
+      <h2 className="section-title">People</h2>
+      <div className="tnum mt-1 text-sm text-ink">
+        ~{Math.round(imp.expected_displaced.median)} people likely displaced{" "}
+        <span className="text-xs text-ink-dim">
+          (80% {Math.round(imp.expected_displaced.p10)}–{Math.round(imp.expected_displaced.p90)})
+        </span>
+      </div>
+      <p className="mt-1 text-2xs leading-relaxed text-ink-dim">
+        {imp.residential_structures_assessed.toLocaleString()} residential structures.{" "}
+        {unadjusted
+          ? "Upper bound: seasonal and vacant homes are counted as occupied (no Census API key configured)."
+          : imp.occupancy_adjustment + "."}{" "}
+        Prioritization aid, not an eligibility determination.
+      </p>
+      <table className="tnum mt-1.5 w-full text-2xs">
+        <thead>
+          <tr className="text-ink-faint">
+            <th className="text-left font-normal">Tract</th>
+            <th className="text-right font-normal">Displaced</th>
+            <th className="text-right font-normal">SVI</th>
+            <th className="text-right font-normal">Need</th>
+          </tr>
+        </thead>
+        <tbody>
+          {imp.tracts.slice(0, 6).map((t) => (
+            <tr key={t.tract}>
+              <td className="text-ink" title={t.location ?? ""}>{t.tract.slice(5)}</td>
+              <td className="text-right text-ink">{t.expected_displaced}</td>
+              <td className="text-right text-ink-dim">{t.svi_percentile?.toFixed(2) ?? "n/a"}</td>
+              <td className="text-right text-ink">{t.need_index ?? "n/a"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <a href={publicUrl(areaId)} className="mt-1.5 inline-block text-2xs text-accent underline" download>
+        Public tract summary (GeoJSON, no addresses)
+      </a>
     </section>
   );
 }

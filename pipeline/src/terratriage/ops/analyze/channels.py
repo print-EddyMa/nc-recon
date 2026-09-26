@@ -40,23 +40,39 @@ def e1(ev: BuildingEvidence, logits: np.ndarray | None, T: float | None) -> Chan
         L, status = W[lab] / prior, "label_only"
     L = L / L.sum()
     w = cfg["weight"] * _context_weight(ev)
+    if (ev.m.get("alignment") or {}).get("post", {}).get("weak"):
+        # the CNN may be looking at the neighbour's lawn
+        w *= rules()["channels"]["E1"].get("weak_alignment_weight", 0.5)
     return Channel("E1", True, L, w, status, [f"E1_CNN_{XBD[lab].upper().replace('-', '_')}"],
                    detail={"xbd_label": XBD[lab], "logits": [round(float(v), 3) for v in logits]})
 
 
-def e2(ev: BuildingEvidence, pair_weight: float) -> Channel:
+def e2_baseline(evs: list[BuildingEvidence]) -> tuple[float, float] | None:
+    """Robust (median, scaled MAD) of the change score across the AOI."""
+    xs = np.array([v for v in (change_score(e.m) for e in evs if "E2" not in e.unavailable) if v is not None])
+    if len(xs) < 30:
+        return None
+    med = float(np.median(xs))
+    mad = float(np.median(np.abs(xs - med))) * 1.4826
+    return med, max(mad, 1e-3)
+
+
+def e2(ev: BuildingEvidence, pair_weight: float, baseline: tuple[float, float] | None = None) -> Channel:
     cfg = rules()["channels"]["E2"]
     if "E2" in ev.unavailable:
         return Channel("E2", False, unavailable_reason=ev.unavailable["E2"])
     s = change_score(ev.m)
     if s is None:
         return Channel("E2", False, unavailable_reason="FOOTPRINT_TOO_SMALL")
-    b = int(np.searchsorted(cfg["bins"], s, side="right"))
+    if baseline is None:
+        return Channel("E2", False, unavailable_reason="TOO_FEW_STRUCTURES_FOR_BASELINE")
+    z = (s - baseline[0]) / baseline[1]
+    b = int(np.searchsorted(cfg["bins"], z, side="right"))
     L = np.asarray(cfg["likelihood"][b], float)
     w = cfg["weight"] * pair_weight * _context_weight(ev)
     ncc = ev.m.get("edge_ncc", 1.0)
-    return Channel("E2", True, L, w, "provisional", [f"E2_CHANGE_{s:.2f}"],
-                   detail={"score": round(s, 3), "edge_ncc": ncc})
+    return Channel("E2", True, L, w, "provisional", [f"E2_CHANGE_Z{z:+.1f}"],
+                   detail={"score": round(s, 3), "z": round(z, 2), "edge_ncc": ncc})
 
 
 def e4(ev: BuildingEvidence) -> Channel:

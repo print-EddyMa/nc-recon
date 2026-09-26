@@ -141,6 +141,26 @@ def measure(
                 ev.unavailable["E1"] = ev.unavailable["E2"] = "POSSIBLE_CLOUD"
                 ev.reasons.append(f"POSSIBLE_CLOUD_{cf_new * 100:.0f}PCT")
 
+            # haze / thin cloud / cloud shadow: the bright-white test misses
+            # these. Signature measured on Old Fort (Maxar post, 14% cloud):
+            # post loses its colour AND its texture relative to pre. Both are
+            # ratios to the pre image, so they carry across sensors.
+            hz = rules.get("haze", {})
+            _, s_pre, _ = _hsv(pre)
+            _, s_post, _ = _hsv(post)
+            valid = (pre.max(axis=0) > 0) & (post.max(axis=0) > 0)
+            if valid.sum() > 50:
+                sat_ratio = float(s_post[valid].mean() / max(s_pre[valid].mean(), 1e-3))
+                tex_pre = float(np.hypot(*np.gradient(_gray(pre)))[valid].mean())
+                tex_post = float(np.hypot(*np.gradient(_gray(post)))[valid].mean())
+                tex_ratio = tex_post / max(tex_pre, 1e-3)
+                ev.m["post_sat_ratio"] = round(sat_ratio, 3)
+                ev.m["post_texture_ratio"] = round(tex_ratio, 3)
+                if (sat_ratio < hz.get("max_sat_ratio", 0.5) and tex_ratio < hz.get("max_texture_ratio", 0.6)
+                        and "E1" not in ev.unavailable):
+                    ev.unavailable["E1"] = ev.unavailable["E2"] = "POSSIBLE_CLOUD_OR_HAZE"
+                    ev.reasons.append(f"POSSIBLE_CLOUD_OR_HAZE_SAT{sat_ratio:.2f}_TEX{tex_ratio:.2f}")
+
             # canopy over roof (either date; leaf-on post usually larger)
             can = max(float(exg_mask(pre, cfg_v["exg_min"])[fp].mean()),
                       float(exg_mask(post, cfg_v["exg_min"])[fp].mean()))

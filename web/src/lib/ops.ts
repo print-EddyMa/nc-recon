@@ -196,6 +196,26 @@ export const loadResponder = (area: string) =>
     true,
   );
 
+export interface Impact {
+  residential_structures_assessed: number;
+  occupancy_adjustment: string;
+  expected_displaced: { p10: number; median: number; p90: number };
+  need_index_terms_missing: string[];
+  tracts: {
+    tract: string;
+    location: string | null;
+    structures: number;
+    expected_displaced: number;
+    svi_percentile: number | null;
+    need_index: number | null;
+  }[];
+  note: string;
+}
+export const loadImpact = (area: string) =>
+  getJSON<Impact>(`/ops/areas/${encodeURIComponent(area)}/impact`);
+export const publicUrl = (area: string) =>
+  `${API_URL}/ops/areas/${encodeURIComponent(area)}/public.geojson`;
+
 export const chipUrl = (area: string, ncrId: string, kind: "pre" | "post") =>
   `${API_URL}/ops/areas/${encodeURIComponent(area)}/chip/${ncrId}/${kind}.png`;
 

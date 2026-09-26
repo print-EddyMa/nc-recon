@@ -129,8 +129,13 @@ def chip(area: str, ncr_id: str, kind: str, size: int = 256, pad_m: float = 12.0
     pre, post = imagery.pair_for_area(RAW, area, (fc["properties"].get("event") or {}).get("maxar") or "HurricaneHelene-Oct24")
     path = pre.path if kind == "pre" else post.path
     size = max(64, min(size, 512))
+    al = ((feat["properties"].get("measurements") or {}).get("alignment") or {}).get(kind) or {}
     with rasterio.open(path) as ds:
         g = st(transformer("storage", ds.crs.to_wkt()).transform, shape(feat["geometry"]))
+        if al:
+            from shapely.affinity import translate
+
+            g = translate(g, al.get("dx_m", 0.0), al.get("dy_m", 0.0))
         minx, miny, maxx, maxy = g.bounds
         half = max(maxx - minx, maxy - miny) / 2 + pad_m
         cx, cy = g.centroid.x, g.centroid.y
@@ -153,6 +158,24 @@ def chip(area: str, ncr_id: str, kind: str, size: int = 256, pad_m: float = 12.0
     return Response(buf.getvalue(), media_type="image/png",
                     headers={"Cache-Control": "public, max-age=3600",
                              "Cross-Origin-Resource-Policy": "cross-origin"})
+
+
+@router.get("/areas/{area}/impact")
+def impact(area: str):
+    p = os.path.join(OPS_OUT, f"{_area(area)}.impact.json")
+    if not os.path.exists(p):
+        raise HTTPException(404, "no impact run for this area")
+    with open(p, encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+@router.get("/areas/{area}/public.geojson")
+def public_tracts(area: str):
+    from .disseminate.aggregate import aggregate
+
+    _load(area)
+    with open(aggregate(area), encoding="utf-8") as fh:
+        return JSONResponse(json.load(fh))
 
 
 @router.get("/areas/{area}/responder")

@@ -270,6 +270,12 @@ def cmd_ops_impact(a):
         print(t)
 
 
+def cmd_ops_aggregate(a):
+    from terratriage.ops.disseminate.aggregate import aggregate
+
+    print(aggregate(a.area))
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -349,6 +355,9 @@ def main():
     oi = sub.add_parser("ops-impact", help="ops mode: expected displaced people + tract need index")
     oi.add_argument("--area", required=True)
     oi.set_defaults(fn=cmd_ops_impact)
+    og = sub.add_parser("ops-aggregate", help="ops mode: public tract-level product (no PII)")
+    og.add_argument("--area", required=True)
+    og.set_defaults(fn=cmd_ops_aggregate)
     sub.add_parser("ops-eval", help="ops mode: accuracy report from data/labels").set_defaults(fn=cmd_ops_eval)
     sub.add_parser("ops-calibrate", help="ops mode: fit temperature + conformal on TUNE labels").set_defaults(fn=cmd_ops_calibrate)
 

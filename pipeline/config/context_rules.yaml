@@ -14,6 +14,12 @@ cloud:
   bright_min: 205
   sat_max: 0.12
   unavailable_frac: 0.30
+haze:
+  # thin cloud / haze / cloud shadow on the post image, relative to pre
+  # (measured 2026-09-26 on Old Fort: haze chips sat 0.01-0.07, texture
+  # 0.14-0.56; real scenes sat >= 0.11, texture >= 0.6)
+  max_sat_ratio: 0.5
+  max_texture_ratio: 0.6
 canopy:
   # excess-green (2G - R - B) over the roof. RGB only (no NIR in Maxar visual).
   exg_min: 20
@@ -36,11 +42,18 @@ channels:
     # ~1.0 for almost every building and carries no confidence information.
     # Label-only mode: the likelihood is the crosswalk row of the CNN's label.
     uncalibrated_mode: label_only
+    weak_alignment_weight: 0.5   # footprint outline never found crisp roof edges in the post image
   E2:
     name: pixel change (co-registered, radiometrically matched)
     weight: 0.6
-    # change score s in [0,1] -> likelihood over FEMA classes. Provisional bins.
-    bins: [0.12, 0.25, 0.40]
+    # The raw change score's scale depends on the sensor pair (NC orthos
+    # 2023->2025: median 0.46; Maxar Old Fort: lower), so absolute cut-offs do
+    # not transfer. Bins are on the robust z-score of the score within the
+    # AOI + pair: z = (s - median) / (1.4826 * MAD). Assumes fewer than half
+    # the structures in an AOI are damaged (then the median is "unchanged").
+    # Unlike rank bins this does not force a damage share: an undamaged AOI
+    # produces small z everywhere.
+    bins: [1.0, 2.0, 3.5]
     likelihood:
       - [0.40, 0.30, 0.17, 0.09, 0.04]
       - [0.25, 0.28, 0.25, 0.14, 0.08]

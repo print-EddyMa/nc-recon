@@ -185,3 +185,22 @@ def test_ncr_id_stable():
     assert ncr_id("osm", "way/123") == ncr_id("osm", "way/123")
     assert ncr_id("osm", "way/123") != ncr_id("usa_structures", "way/123")
     _ = Point
+
+
+def test_e2_z_baseline_does_not_force_damage_share():
+    """An AOI where nothing changed must not produce 'changed' evidence."""
+    from terratriage.ops.analyze import channels
+    from terratriage.ops.analyze.evidence import BuildingEvidence
+    rng = np.random.default_rng(0)
+    evs = []
+    for i in range(200):
+        e = BuildingEvidence(i)
+        e.m.update(ssim_fp=0.9 + rng.normal(0, 0.01), edge_loss=0.02, cva_fp=0.03, cva_ring=0.03)
+        evs.append(e)
+    base = channels.e2_baseline(evs)
+    zs = [channels.e2(e, 1.0, base).detail["z"] for e in evs]
+    assert np.mean(np.abs(zs) < 2.0) > 0.9
+    # a genuinely changed building stands out
+    hit = BuildingEvidence(999)
+    hit.m.update(ssim_fp=0.2, edge_loss=0.4, cva_fp=0.3, cva_ring=0.2)
+    assert channels.e2(hit, 1.0, base).detail["z"] > 3.5

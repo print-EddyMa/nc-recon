@@ -57,3 +57,17 @@ def test_label_validation(client, monkeypatch, tmp_path):
     rows = (tmp_path / "old_fort.csv").read_text().splitlines()
     assert len(rows) == 2 and rows[1].startswith(nid)
     _ = json
+
+
+@pytest.mark.skipif(not _have("old_fort"), reason="no ops output for old_fort")
+def test_public_tracts_suppress_small_counts(client):
+    body = json.loads(client.get("/ops/areas/old_fort/public.geojson").content)
+    assert body["properties"]["suppression_threshold"] == 5
+    for f in body["features"]:
+        p = f["properties"]
+        assert "address" not in p
+        for k in p["suppressed_fields"]:
+            assert p[k] is None
+        for k in ("no_damage", "affected", "minor", "major", "destroyed", "structures"):
+            v = p[k]
+            assert v is None or v == 0 or v >= 5

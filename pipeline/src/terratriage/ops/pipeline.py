@@ -183,6 +183,31 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
                         "(not assessed from imagery; listed in the run manifest)")
     timings["collect"] = time.time() - t
 
+    # ---- process: footprint-to-image alignment, per source, per image ---- #
+    t = time.time()
+    from shapely.affinity import translate
+
+    from .process import align
+
+    align_info: dict[str, Any] = {}
+    polys_pre, polys_post = list(polys), list(polys)
+    per_bldg = [{} for _ in polys]
+    for src in sorted(set(srcs)):
+        ix = [i for i, sname in enumerate(srcs) if sname == src]
+        sub = [polys[i] for i in ix]
+        for role, info in (("pre", pre_info), ("post", post_info)):
+            base = align.consensus(info.path, sub)
+            align_info[f"{src}:{role}"] = base.to_dict()
+            for i, (dx, dy, gain, weak) in zip(ix, align.refine(info.path, sub, base)):
+                moved = translate(polys[i], dx, dy)
+                if role == "pre":
+                    polys_pre[i] = moved
+                else:
+                    polys_post[i] = moved
+                per_bldg[i][role] = {"dx_m": round(dx, 2), "dy_m": round(dy, 2),
+                                     "gain": round(gain, 2), "weak": bool(weak)}
+    timings["align"] = time.time() - t
+
     # ---- process: co-registration + radiometry --------------------------- #
     t = time.time()
     try:
@@ -195,10 +220,14 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
     # ---- analyze: channels ------------------------------------------------ #
     t = time.time()
     ctx_rules = rules()
-    evs = measure(pre_info.path, post_info.path, polys, ctx_rules, gains, offs)
+    evs = measure(pre_info.path, post_info.path, polys_pre, ctx_rules, gains, offs)
+    for ev_b, al in zip(evs, per_bldg):
+        ev_b.m["alignment"] = al
+        if any(v.get("weak") for v in al.values()):
+            ev_b.reasons.append("FOOTPRINT_ALIGNMENT_WEAK")
     timings["evidence"] = time.time() - t
     t = time.time()
-    logits, cnn_err = _cnn_logits(pre_info.path, post_info.path, polys, crs)
+    logits, cnn_err = _cnn_logits(pre_info.path, post_info.path, polys_post, crs)
     timings["cnn"] = time.time() - t
     cal = calibration.load(MODEL_ID)
     T = float(cal["temperature"]) if cal and "temperature" in cal else None
@@ -209,12 +238,13 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
         warnings.append("CNN uncalibrated (no TUNE labels yet): E1 in label-only mode")
 
     t = time.time()
+    e2_base = channels.e2_baseline(evs)
     feats = []
     for i, (st, ev_b) in enumerate(zip(structs, evs)):
         chs = [
             channels.e1(ev_b, None if logits is None else logits[i], T)
             if cnn_err is None else channels.Channel("E1", False, unavailable_reason=cnn_err),
-            channels.e2(ev_b, pair["e2_geometry_weight"]),
+            channels.e2(ev_b, pair["e2_geometry_weight"], e2_base),
             channels.e4(ev_b),
         ]
         cx, cy = st.footprint_ll.centroid.x, st.footprint_ll.centroid.y
@@ -359,7 +389,9 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
                       "declarations": [d.fema_id for d in ev.declarations],
                       "incident_begin": ev.incident_begin.isoformat()},
             "aoi": {"id": area, "role": aoi.role, "county": aoi.county},
-            "pair_context": pair, "coregistration": cr,
+            "pair_context": pair, "coregistration": cr, "footprint_alignment": align_info,
+            "e2_baseline": None if e2_base is None else {"median": round(e2_base[0], 3),
+                                                         "scaled_mad": round(e2_base[1], 3)},
             "counts": counts,
             "expected_counts": {c: round(float(v), 1) for c, v in zip(FEMA, expected)},
             "expected_counts_80pct": interval,

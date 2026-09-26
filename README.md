@@ -19,6 +19,36 @@ Nothing is pre-baked. There is no bundled sample dataset - areas appear on the
 damage map only after the pipeline has assessed them (locally, or against a
 hosted assessment service).
 
+## Operations mode (for emergency-management analysts)
+
+Ops mode is the decision-support path built for NC emergency offices. It runs
+next to the demo and doesn't change it. It works anywhere in western NC (NC
+OneMap orthos + NOAA ERI), not only where Maxar published imagery. It reports
+**five FEMA damage levels with probabilities**, routes uncertain structures to
+a human review queue, records **why** (reason codes, per-channel evidence,
+what could not be checked), carries provenance on every output, and exports
+GeoJSON / CSV (USNG) / KML / GeoPackage / File Geodatabase / Survey123.
+
+```bash
+cd pipeline
+.venv/bin/python scripts/run.py ops-health                      # data-source status
+.venv/bin/python scripts/run.py ops-fetch  --area swannanoa --lon -82.399 --lat 35.598
+.venv/bin/python scripts/run.py ops-assess --area swannanoa      # area must be in config/events.yaml
+.venv/bin/python scripts/run.py ops-impact --area swannanoa
+.venv/bin/python scripts/run.py ops-export --area swannanoa
+.venv/bin/python scripts/run.py ops-eval                        # accuracy from human labels
+.venv/bin/python server.py                                      # /ops API; web: Operations tab
+```
+
+> Decision-support tool. Not an official FEMA or NC Emergency Management
+> damage assessment. Verify on the ground. **Accuracy is not yet validated**:
+> see `reports/ACCURACY_REPORT.md` and `docs/ops/LABELING_PROTOCOL.md`.
+
+Docs: `docs/ops/OPERATIONS.md` (playbook), `docs/ops/DATA_SOURCES.md`,
+`docs/ops/PHASE_J_STATUS.md`, `MODEL_CARD.md`, `BIAS_AUDIT.md`, `LICENSES.md`.
+Set `TERRATRIAGE_TOKEN` before serving beyond localhost: it gates addresses,
+labels and building-level exports.
+
 ## Quick start
 
 ```bash
