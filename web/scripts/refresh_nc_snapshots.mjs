@@ -187,30 +187,45 @@ function iconsToFC(items, layer, titlePrefix) {
 }
 
 // --- E7 USGS NWIS streamflow --------------------------------------------- //
-function nwisSnapshot(raw) {
-  const series = raw?.value?.timeSeries ?? [];
+// USGS Water Data OGC API (legacy NWIS WaterServices is being decommissioned).
+// latest-continuous has no state field, so pull by bbox and join to the NC
+// (state 37) stream-site list; drop series silent for more than 48 h.
+async function usgsWaterSnapshot() {
+  const B = "https://api.waterdata.usgs.gov/ogcapi/v1/collections";
+  const [w, s, e, n] = [-84.33, 33.84, -75.46, 36.59];
+  const [sites, q, h] = await Promise.all([
+    getJSON(`${B}/monitoring-locations/items?f=json&limit=10000&state_code=37&site_type_code=ST&properties=monitoring_location_name`),
+    getJSON(`${B}/latest-continuous/items?f=json&limit=10000&bbox=${w},${s},${e},${n}&parameter_code=00060`),
+    getJSON(`${B}/latest-continuous/items?f=json&limit=10000&bbox=${w},${s},${e},${n}&parameter_code=00065`),
+  ]);
+  const meta = new Map();
+  for (const f of sites.features ?? []) {
+    if (f.id && f.geometry) meta.set(f.id, { name: f.properties.monitoring_location_name, ll: f.geometry.coordinates });
+  }
+  const now = Date.now();
   const bySite = new Map();
-  for (const ts of series) {
-    const code = ts.sourceInfo?.siteCode?.[0]?.value;
-    const g = ts.sourceInfo?.geoLocation?.geogLocation;
-    if (!code || !g || !inNC(g.longitude, g.latitude)) continue;
-    const latest = ts.values?.[0]?.value?.slice(-1)?.[0];
-    const v = latest ? Number(latest.value) : NaN;
-    const rec = bySite.get(code) ?? { name: ts.sourceInfo.siteName, lon: g.longitude, lat: g.latitude };
-    bySite.set(code, rec);
-    const param = ts.variable?.variableCode?.[0]?.value;
-    if (param === "00060" && Number.isFinite(v) && v > -1e5) rec.q = v;
-    else if (param === "00065" && Number.isFinite(v) && v > -900) rec.h = v;
+  for (const [fc, key] of [[q, "q"], [h, "h"]]) {
+    for (const f of fc.features ?? []) {
+      const p = f.properties;
+      const m = meta.get(p.monitoring_location_id);
+      const t = Date.parse(p.time);
+      const v = Number(p.value);
+      if (!m || !Number.isFinite(t) || now - t > 48 * 3600e3 || !Number.isFinite(v)) continue;
+      const rec = bySite.get(p.monitoring_location_id) ?? { ...m, t };
+      rec[key] = v;
+      rec.t = Math.max(rec.t, t);
+      bySite.set(p.monitoring_location_id, rec);
+    }
   }
   const feats = [];
-  for (const [code, s] of bySite) {
-    if (s.q == null && s.h == null) continue;
+  for (const [sid, s] of bySite) {
+    const code = sid.replace(/^USGS-/, "");
     const bits = [];
     if (s.q != null) bits.push(`${s.q.toLocaleString()} ft³/s`);
     if (s.h != null) bits.push(`stage ${s.h.toFixed(1)} ft`);
     feats.push({
       type: "Feature",
-      geometry: { type: "Point", coordinates: [s.lon, s.lat] },
+      geometry: { type: "Point", coordinates: s.ll },
       properties: {
         id: `nwis-${code}`,
         layer: "flow",
@@ -219,10 +234,12 @@ function nwisSnapshot(raw) {
         severity: 0,
         value: bits[0] ?? "reporting",
         category: "Streamgage",
-        url: `https://waterdata.usgs.gov/monitoring-location/${code}/`,
+        url: `https://waterdata.usgs.gov/monitoring-location/${sid}/`,
+        time: s.t,
       },
     });
   }
+  if (!feats.length) throw new Error("no NC gauges reporting");
   return { type: "FeatureCollection", generated: Date.now(), features: feats };
 }
 
@@ -246,13 +263,7 @@ const jobs = [
       }).then(nwsSnapshot),
   ],
   ["nhc_snapshot.geojson", () => getJSON("https://www.nhc.noaa.gov/CurrentStorms.json").then(nhcSnapshot)],
-  [
-    "nwis_snapshot.geojson",
-    () =>
-      getJSON(
-        "https://waterservices.usgs.gov/nwis/iv/?format=json&stateCd=nc&parameterCd=00060,00065&siteType=ST&siteStatus=active",
-      ).then(nwisSnapshot),
-  ],
+  ["nwis_snapshot.geojson", usgsWaterSnapshot],
   [
     "ncdot_cameras_snapshot.geojson",
     () => driveNCIcons("Cameras").then((x) => iconsToFC(x, "camera", "Camera")),

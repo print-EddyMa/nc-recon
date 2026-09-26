@@ -183,11 +183,6 @@ _FEEDS: dict[str, tuple[str, int]] = {
         300,
     ),
     "nws": ("https://api.weather.gov/alerts/active?area=NC", 180),
-    "nwis": (
-        "https://waterservices.usgs.gov/nwis/iv/?format=json&stateCd=nc"
-        "&parameterCd=00060,00065&siteType=ST&siteStatus=active",
-        300,
-    ),
     # ADS-B snapshot centred on NC, 250nm radius (adsb.lol's max) covers the
     # whole state from this point. Keyless, ODbL-licensed; short TTL since
     # positions move fast. https://api.adsb.lol
@@ -197,8 +192,40 @@ _FEED_CACHE: dict[str, tuple[float, bytes, str]] = {}
 _FEED_UA = "NCRecon/1.0 (Congressional App Challenge; +https://github.com/)"
 
 
+# Feeds the server composes itself (several upstream calls -> one normalized
+# GeoJSON), rather than passing one URL through. USGS streamflow moved off the
+# legacy NWIS WaterServices (503 since Aug 2026, decommission Q1 2027) onto the
+# api.waterdata.usgs.gov OGC API, whose NC query needs a site-list join.
+_COMPOSED_TTL = {"usgs_water": 300}
+
+
+def _composed(name: str) -> bytes:
+    if name == "usgs_water":
+        from terratriage.ops.collect.usgs_water import USGSWater
+
+        layer = USGSWater().fetch()
+        fc = dict(layer.data)
+        fc["provenance"] = layer.provenance.to_dict()
+        fc["warnings"] = layer.warnings
+        return json.dumps(fc).encode()
+    raise KeyError(name)
+
+
 @app.get("/feed/{name}")
 def feed(name: str):
+    if name in _COMPOSED_TTL:
+        hit = _FEED_CACHE.get(name)
+        if hit and time.time() - hit[0] < _COMPOSED_TTL[name]:
+            return Response(content=hit[1], media_type=hit[2])
+        try:
+            body = _composed(name)
+            _FEED_CACHE[name] = (time.time(), body, "application/geo+json")
+            return Response(content=body, media_type="application/geo+json")
+        except Exception as ex:  # noqa: BLE001
+            if hit:
+                return Response(content=hit[1], media_type=hit[2], headers={"X-Stale": "1"})
+            print(f"[server] composed feed {name} failed, no cache: {ex}")
+            return Response(content=b"{}", media_type="application/json", headers={"X-Stale": "miss"})
     spec = _FEEDS.get(name)
     if not spec:
         raise HTTPException(404, "unknown feed")

@@ -576,104 +576,157 @@ export const ncClimate = () =>
   memoFeed(`climate:${getSetting("cloudsKey") ?? ""}`, _ncClimate);
 
 // --------------------------------------------------------------------------- //
-// E7. USGS streamflow (NWIS instantaneous values), NC statewide.
-// Open, keyless, CORS-enabled. Discharge (00060) + gage height (00065).
+// E7. USGS streamflow, NC statewide, from the USGS Water Data OGC API
+// (api.waterdata.usgs.gov). Legacy NWIS WaterServices was answering 503 by
+// Sept 2026 and is decommissioned in Q1 2027. Discharge (00060) + gage height
+// (00065). Gage height is stage above the gauge's own datum, not NAVD88.
+// The pipeline server composes the NC join (`/feed/usgs_water`); the direct
+// path does the same three keyless, CORS-enabled calls in the browser.
 // --------------------------------------------------------------------------- //
-const NWIS_URL =
-  "https://waterservices.usgs.gov/nwis/iv/?format=json&stateCd=nc" +
-  "&parameterCd=00060,00065&siteType=ST&siteStatus=active";
+const USGS_OGC = "https://api.waterdata.usgs.gov/ogcapi/v1/collections";
+const USGS_FRESH_MS = 48 * 3600 * 1000;
 
-interface NWISValue {
-  value: { value: string; dateTime: string }[];
+interface UsgsGaugeProps {
+  id: string;
+  site_no: string;
+  name: string;
+  discharge_cfs: number | null;
+  gage_height_ft: number | null;
+  observed_utc: string;
+  url: string;
 }
-interface NWISTimeSeries {
-  sourceInfo: {
-    siteName: string;
-    siteCode: { value: string }[];
-    geoLocation: { geogLocation: { latitude: number; longitude: number } };
+
+type UsgsGauge = { props: UsgsGaugeProps; ll: [number, number] };
+
+async function usgsDirect(): Promise<UsgsGauge[]> {
+  const [w, s, e, n] = NC_BBOX;
+  const get = async (u: string) => {
+    const r = await fetch(u, { signal: AbortSignal.timeout(20000) });
+    if (!r.ok) throw new Error(String(r.status));
+    return (await r.json()) as {
+      features?: {
+        id?: string;
+        geometry?: { coordinates: [number, number] };
+        properties: Record<string, string | null>;
+      }[];
+    };
   };
-  variable: { variableCode: { value: string }[]; unit: { unitCode: string } };
-  values: NWISValue[];
+  const latest = (p: string) =>
+    get(
+      `${USGS_OGC}/latest-continuous/items?f=json&limit=10000&bbox=${w},${s},${e},${n}&parameter_code=${p}`,
+    );
+  const [sites, q, h] = await Promise.all([
+    get(
+      `${USGS_OGC}/monitoring-locations/items?f=json&limit=10000&state_code=37&site_type_code=ST&properties=monitoring_location_name`,
+    ),
+    latest("00060"),
+    latest("00065"),
+  ]);
+  const meta = new Map<string, { name: string; lon: number; lat: number }>();
+  for (const f of sites.features ?? []) {
+    if (!f.id || !f.geometry) continue;
+    const [lon, lat] = f.geometry.coordinates;
+    meta.set(f.id, {
+      name: f.properties.monitoring_location_name ?? f.id,
+      lon,
+      lat,
+    });
+  }
+  const now = Date.now();
+  const rec = new Map<string, UsgsGauge>();
+  const fold = (fc: Awaited<ReturnType<typeof get>>, key: "q" | "h") => {
+    for (const f of fc.features ?? []) {
+      const p = f.properties;
+      const sid = p.monitoring_location_id ?? "";
+      const m = meta.get(sid);
+      const t = Date.parse(p.time ?? "");
+      const v = Number(p.value);
+      if (!m || !Number.isFinite(t) || now - t > USGS_FRESH_MS) continue;
+      if (!Number.isFinite(v)) continue;
+      let g = rec.get(sid);
+      if (!g) {
+        g = {
+          ll: [m.lon, m.lat],
+          props: {
+            id: sid,
+            site_no: sid.replace(/^USGS-/, ""),
+            name: m.name,
+            discharge_cfs: null,
+            gage_height_ft: null,
+            observed_utc: new Date(t).toISOString(),
+            url: `https://waterdata.usgs.gov/monitoring-location/${sid}/`,
+          },
+        };
+        rec.set(sid, g);
+      }
+      if (key === "q") g.props.discharge_cfs = v;
+      else g.props.gage_height_ft = v;
+      if (t > Date.parse(g.props.observed_utc))
+        g.props.observed_utc = new Date(t).toISOString();
+    }
+  };
+  fold(q, "q");
+  fold(h, "h");
+  return [...rec.values()];
 }
 
 async function _ncStreamflow(): Promise<NCResult<NCPointFC>> {
   const now = Date.now();
   try {
-    const r = await feedFetch("nwis", NWIS_URL);
-    if (!r.ok) throw new Error(String(r.status));
-    const raw = (await r.json()) as {
-      value?: { timeSeries?: NWISTimeSeries[] };
-    };
-    const series = raw.value?.timeSeries ?? [];
-    if (!series.length) throw new Error("empty NWIS response"); // → committed snapshot
-    // fold the per-parameter series into one point per site
-    const bySite = new Map<
-      string,
-      {
-        name: string;
-        lon: number;
-        lat: number;
-        q?: number;
-        qUnit?: string;
-        h?: number;
-        hUnit?: string;
-        t?: number;
-      }
-    >();
-    for (const ts of series) {
-      const code = ts.sourceInfo.siteCode[0]?.value;
-      if (!code) continue;
-      const g = ts.sourceInfo.geoLocation?.geogLocation;
-      if (!g || !inNC(g.longitude, g.latitude)) continue;
-      const vals = ts.values?.[0]?.value ?? [];
-      const latest = vals[vals.length - 1];
-      const v = latest ? Number(latest.value) : NaN;
-      const rec =
-        bySite.get(code) ??
-        bySite
-          .set(code, {
-            name: ts.sourceInfo.siteName,
-            lon: g.longitude,
-            lat: g.latitude,
-          })
-          .get(code)!;
-      if (latest) rec.t = Math.max(rec.t ?? 0, Date.parse(latest.dateTime));
-      const param = ts.variable.variableCode[0]?.value;
-      if (param === "00060" && Number.isFinite(v) && v > -1e5) {
-        rec.q = v;
-        rec.qUnit = ts.variable.unit.unitCode;
-      } else if (param === "00065" && Number.isFinite(v) && v > -900) {
-        rec.h = v;
-        rec.hUnit = ts.variable.unit.unitCode;
+    let gauges: UsgsGauge[] = [];
+    let viaServer = false;
+    if (API_URL) {
+      try {
+        const r = await fetch(`${API_URL}/feed/usgs_water`, {
+          signal: AbortSignal.timeout(26000),
+        });
+        const fc = (await r.json()) as {
+          features?: {
+            geometry: { coordinates: [number, number] };
+            properties: UsgsGaugeProps;
+          }[];
+        };
+        if (fc.features?.length) {
+          gauges = fc.features.map((f) => ({
+            props: f.properties,
+            ll: f.geometry.coordinates,
+          }));
+          viaServer = true;
+        }
+      } catch {
+        /* fall through to the direct path */
       }
     }
-    const feats: NCPointFC["features"] = [];
-    for (const [code, s] of bySite) {
-      if (s.q == null && s.h == null) continue;
+    if (!viaServer) {
+      gauges = await usgsDirect();
+    }
+    if (!gauges.length) throw new Error("no USGS gauges reporting"); // → committed snapshot
+    const feats: NCPointFC["features"] = gauges.map(({ props: s, ll }) => {
       const bits: string[] = [];
-      if (s.q != null)
-        bits.push(`${s.q.toLocaleString()} ${s.qUnit ?? "ft³/s"}`);
-      if (s.h != null) bits.push(`stage ${s.h.toFixed(1)} ${s.hUnit ?? "ft"}`);
-      feats.push({
+      if (s.discharge_cfs != null)
+        bits.push(`${s.discharge_cfs.toLocaleString()} ft³/s`);
+      if (s.gage_height_ft != null)
+        bits.push(`stage ${s.gage_height_ft.toFixed(1)} ft`);
+      return {
         type: "Feature",
-        geometry: { type: "Point", coordinates: [s.lon, s.lat] },
+        geometry: { type: "Point", coordinates: ll },
         properties: {
-          id: `nwis-${code}`,
+          id: `nwis-${s.site_no}`,
           layer: "flow",
           title: s.name,
-          detail: `USGS ${code} · ${bits.join(" · ")}`,
+          detail: `USGS ${s.site_no} · ${bits.join(" · ")}`,
           severity: 0, // informational; NWPS carries the flood-category signal
           value: bits[0] ?? "reporting",
           category: "Streamgage",
-          url: `https://waterdata.usgs.gov/monitoring-location/${code}/`,
-          time: s.t ?? null,
+          url: s.url,
+          time: Date.parse(s.observed_utc) || null,
         },
-      });
-    }
+      };
+    });
     return {
       data: { type: "FeatureCollection", features: feats },
       stale: false,
-      source: `USGS NWIS · ${feats.length} gages`,
+      source: `USGS Water Data API · ${feats.length} gages`,
       fetchedAt: now,
       headline: `${feats.length} gages reporting`,
     };
@@ -682,7 +735,7 @@ async function _ncStreamflow(): Promise<NCResult<NCPointFC>> {
     return {
       data,
       stale: true,
-      source: "USGS NWIS · cached snapshot",
+      source: "USGS Water Data · cached snapshot",
       fetchedAt: now,
       headline: data.features.length
         ? `${data.features.length} gages (cached)`

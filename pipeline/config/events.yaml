@@ -1,0 +1,49 @@
+# NC Recon ops event registry.
+#
+# Incident dates are NOT written here: they are pulled from OpenFEMA
+# DisasterDeclarationsSummaries by disaster number (see ops/plan/events.py) and
+# cached. What lives here is our own analysis plan: which AOIs belong to the
+# event, whether each is a TUNE area (thresholds, calibration and crosswalks may
+# be fit on it) or a TEST area (never used for fitting; held out for honest
+# accuracy numbers), and the pre/post imagery windows relative to the incident.
+#
+# Hard rules checked for every event (tests/test_events.py):
+#   pre.end  <  incident.begin
+#   post.start >= incident.begin
+#   no AOI id appears in both TUNE and TEST
+
+events:
+  helene-2024-nc:
+    name: Hurricane / Tropical Storm Helene (NC)
+    disaster_numbers: [4827]
+    state: NC
+    hazards: [riverine_flood, flash_flood, landslide, wind]
+    maxar_event: HurricaneHelene-Oct24
+    windows:
+      # days relative to OpenFEMA incidentBeginDate (2024-09-25)
+      pre_days: [-1500, -1]
+      post_days: [0, 45]
+    aois:
+      old_fort:
+        role: TUNE
+        county: McDowell
+        center: [-82.1804, 35.6293]
+      spruce_pine:
+        role: TUNE
+        county: Mitchell
+        center: [-82.075, 35.912]
+      swannanoa:
+        role: TEST
+        county: Buncombe
+        center: [-82.399, 35.598]
+        status: candidate   # confirm post-event imagery before use
+      chimney_rock:
+        role: TEST
+        county: Rutherford
+        center: [-82.249, 35.432]
+        status: candidate
+      marshall:
+        role: TEST
+        county: Madison
+        center: [-82.684, 35.797]
+        status: candidate
