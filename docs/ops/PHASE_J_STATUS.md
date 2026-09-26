@@ -32,12 +32,21 @@ features exactly (764 buildings, 305/349/45/65, 161 review).
 
 ## Current assessments (all unvalidated; see the accuracy report)
 
-| Area | Role | Imagery | Structures (not assessed) | ≥ Major expected (80%) | Needs review | Displaced (upper bound) |
-|---|---|---|---|---|---|---|
-| Old Fort | TUNE | Maxar 2022-01 → 2024-10 | 2,206 (513) | 244 (222–266) | 1,160 | ~318 (291–346) |
-| Spruce Pine | TUNE | Maxar 2024-02 → 2024-10 | 1,982 (390) | 233 (208–257) | 1,267 | ~369 (337–405) |
-| Swannanoa | TUNE (was TEST) | NC orthos 2020–23 → 2025 | 893 (70) | 119 (105–133) | 298 | ~144 (131–157) |
-| Chimney Rock | TEST | NC orthos 2020–23 → 2025 | 216 (23) | 49 (40–57) | 85 | ~26 (22–30) |
+| Area | Role | Imagery | Structures (not assessed) | ≥ Major expected (80%*) | Needs review | Displaced from assessed homes | + homes not assessed |
+|---|---|---|---|---|---|---|---|
+| Old Fort | TUNE | Maxar 2022-01-07 → 2024-10-02 | 2,206 (513) | 244 (222–266) | 1,160 | ~318 | 307 homes (~760 people) |
+| Spruce Pine | TUNE | Maxar 2024-02-03 → 2024-10-02 | 1,982 (390) | 233 (208–257) | 1,267 | ~369 | 278 homes (~525 people) |
+| Swannanoa | TUNE (was TEST) | NC orthos 2023-02-18 → spring 2025 | 893 (70) | 119 (105–133) | 298 | ~144 | 38 homes (~81 people) |
+| Chimney Rock | TEST | NC orthos 2023-02-14 → spring 2025 | 216 (23) | 49 (40–57) | 85 | ~26 | 12 homes (~18) |
+| Canton | TEST | NC orthos → spring 2025 | 1,046 (242) | 42 (34–51) | 246 | ~83 | 134 homes (~330) |
+| Burnsville | TEST | NC orthos → spring 2025 | 674 (65) | 48 (39–57) | 213 | ~90 | 33 homes (~93) |
+| Marshall | TEST | NC orthos 2022-02-10 → **NOAA ERI 2024-10-07** | 291 (37) | 48 (38–57) | 131 | ~41 | 14 homes (~42) |
+
+\* Ranges are conditional on the per-structure probabilities, which are not
+yet calibrated; true uncertainty is wider. Displacement counts seasonal homes
+as occupied (no Census key) and excludes homes that could not be assessed, so
+it is neither a lower nor an upper bound. The ERI post-imagery path (`ops-fetch
+--post eri`) was verified end to end on Marshall.
 
 The Maxar areas send 69% and 80% of assessed structures to review, the NC-ortho areas
 36% and 44%: the Maxar pairs have haze, 18–19° geometry differences, a season
