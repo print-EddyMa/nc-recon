@@ -32,6 +32,13 @@ to unseen areas when whole areas are held out (Gerard et al. 2024).
 damage database stops at 2020 events). `reports/ACCURACY_REPORT.md` reports
 `NO_TRUTH` until labels are collected per `docs/ops/LABELING_PROTOCOL.md`.
 
+## Safety rule while uncalibrated
+
+Every Major or Destroyed call goes to the human review queue
+(`UNCALIBRATED_SEVERE_CALL_*`) until temperature scaling has been fit on TUNE
+labels. A 12-chip smoke test in Swannanoa found roughly 7 of 12 CNN
+"destroyed" calls visibly correct; the prior crosswalk would have claimed 0.80.
+
 ## Known limitations
 
 * **The CNN only sees the post-event image** (128×128 chip). It cannot tell a

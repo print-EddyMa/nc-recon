@@ -35,7 +35,9 @@ cd pipeline
 .venv/bin/python scripts/run.py ops-fetch  --area swannanoa --lon -82.399 --lat 35.598
 .venv/bin/python scripts/run.py ops-assess --area swannanoa      # area must be in config/events.yaml
 .venv/bin/python scripts/run.py ops-impact --area swannanoa
-.venv/bin/python scripts/run.py ops-export --area swannanoa
+.venv/bin/python scripts/run.py ops-export --area swannanoa     # responder GIS bundle
+.venv/bin/python scripts/run.py ops-brief  --area swannanoa     # one-page situation brief
+.venv/bin/python scripts/run.py ops-aggregate --area swannanoa  # public tract summary
 .venv/bin/python scripts/run.py ops-eval                        # accuracy from human labels
 .venv/bin/python server.py                                      # /ops API; web: Operations tab
 ```

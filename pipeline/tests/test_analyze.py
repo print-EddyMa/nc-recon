@@ -94,8 +94,10 @@ def test_uninformative_channel_does_not_move_posterior():
 
 def test_strong_evidence_wins_and_is_explained():
     L = np.array([0.01, 0.01, 0.02, 0.06, 0.90])
-    v = decide([Channel("E1", True, L, 1.0), Channel("E5", True, L, 1.0)])
+    v = decide([Channel("E1", True, L, 1.0), Channel("E5", True, L, 1.0)], calibrated=True)
     assert FEMA[v.label] == "destroyed" and not v.needs_review
+    u = decide([Channel("E1", True, L, 1.0), Channel("E5", True, L, 1.0)], calibrated=False)
+    assert u.needs_review and "UNCALIBRATED_SEVERE_CALL_DESTROYED" in u.review_reasons
     assert any(r.startswith("E1_FOR_DESTROYED") for r in v.reasons)
 
 

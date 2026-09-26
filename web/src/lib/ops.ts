@@ -216,6 +216,9 @@ export const loadImpact = (area: string) =>
 export const publicUrl = (area: string) =>
   `${API_URL}/ops/areas/${encodeURIComponent(area)}/public.geojson`;
 
+export const briefUrl = (area: string) =>
+  `${API_URL}/ops/areas/${encodeURIComponent(area)}/brief.html`;
+
 export const chipUrl = (area: string, ncrId: string, kind: "pre" | "post") =>
   `${API_URL}/ops/areas/${encodeURIComponent(area)}/chip/${ncrId}/${kind}.png`;
 

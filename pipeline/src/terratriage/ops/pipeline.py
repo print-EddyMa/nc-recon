@@ -262,7 +262,8 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
                 s.wse, sig, Elevation.of(nsi["grnd_elv_m"]), 0.5,
                 Depth.of(nsi["found_ht"], "ft"), 0.3, st.flags["manufactured_home"], seed=i)
             chs.append(channels.e5(probs, depth, s.ref))
-        v = decide(chs, T=T_fusion, qhat=qhat, extra_reasons=list(ev_b.reasons))
+        v = decide(chs, T=T_fusion, qhat=qhat, extra_reasons=list(ev_b.reasons),
+                   calibrated=T is not None and T_fusion is not None)
         ring = [[round(x, 7), round(y, 7)] for x, y in st.footprint_ll.exterior.coords]
         props = {
             "ncr_id": st.ncr_id,

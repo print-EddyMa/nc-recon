@@ -276,6 +276,12 @@ def cmd_ops_aggregate(a):
     print(aggregate(a.area))
 
 
+def cmd_ops_brief(a):
+    from terratriage.ops.disseminate.brief import brief
+
+    print(brief(a.area))
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -358,6 +364,9 @@ def main():
     og = sub.add_parser("ops-aggregate", help="ops mode: public tract-level product (no PII)")
     og.add_argument("--area", required=True)
     og.set_defaults(fn=cmd_ops_aggregate)
+    ob = sub.add_parser("ops-brief", help="ops mode: one-page situation brief (HTML + text)")
+    ob.add_argument("--area", required=True)
+    ob.set_defaults(fn=cmd_ops_brief)
     sub.add_parser("ops-eval", help="ops mode: accuracy report from data/labels").set_defaults(fn=cmd_ops_eval)
     sub.add_parser("ops-calibrate", help="ops mode: fit temperature + conformal on TUNE labels").set_defaults(fn=cmd_ops_calibrate)
 

@@ -34,6 +34,10 @@ cd pipeline
 4. Work the review queue on the Operations screen. Every label is truth for
    calibration (TUNE) or measurement (TEST).
 5. `ops-export --area <id>` (or the Export button) for GIS / Survey123 teams.
+6. `ops-brief --area <id>` (or the Brief button): one-page HTML brief to print
+   or save as PDF, plus a plain-text twin for radio / SMS relay.
+7. `ops-aggregate --area <id>`: tract-level public product (no addresses,
+   counts under 5 withheld) for public maps and elected officials.
 
 ## T+2 to T+6 weeks
 1. `run.py ops-eval` → `reports/ACCURACY_REPORT.md`.

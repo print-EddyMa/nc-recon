@@ -26,6 +26,7 @@ features exactly (764 buildings, 305/349/45/65, 161 review).
 | Evaluation | metrics (sklearn-checked), spatial-cluster bootstrap CIs, ECE, TUNE/TEST separation, temperature scaling, split-conformal APS | `run.py ops-eval`, `ops-calibrate` |
 | Impact | expected displaced (Monte Carlo), SVI tract need index, public tract product with small-count suppression | `run.py ops-impact`, `ops-aggregate` |
 | Dissemination | GeoJSON (RFC 7946), CSV with USNG, KML, GeoPackage, File Geodatabase, Survey123 sheet, provenance sidecar, license README; addresses only in a responder sidecar | `run.py ops-export`, `/ops/*` |
+| Brief | One-page printable situation brief (BLUF, map, ranges, tracts, gaps, sources) + text twin | `run.py ops-brief`, `/ops/areas/<id>/brief.html` |
 | Web | Operations screen: FEMA 5-class map (YlOrRd, opacity = confidence), review queue by P(≥Major) × occupants, keyboard labeling, evidence card with pre/post chips, collection board, accuracy panel, people panel, disclaimer | `web/src/screens/Ops.tsx` |
 | Docs | DATA_SOURCES, OPERATIONS, LABELING_PROTOCOL, MODEL_CARD, BIAS_AUDIT, LICENSES, ACCURACY_REPORT | `docs/ops/`, repo root, `reports/` |
 
@@ -60,6 +61,11 @@ features exactly (764 buildings, 305/349/45/65, 161 review).
     and the output says so per structure.
 13. The xBD→FEMA crosswalk makes a CNN "minor" call ambiguous between Affected
     and Minor; those land in review until calibration.
+14. **Smoke test, not a metric**: of 12 random Swannanoa CNN-"destroyed" calls
+    (NC ortho pair), about 7 visibly show the structure gone and 3-4 show it
+    standing. The crosswalk's 0.80 was overconfident, so until calibration
+    **every Major/Destroyed call is routed to review**
+    (`review_severe_until_calibrated`).
 
 ## Open decisions (need the team)
 
@@ -79,4 +85,4 @@ E8 road isolation + Black Marble outage (the need index's β/γ terms), E6
 lidar DEM of Difference (post-Helene 2025 lidar), E3 shadow/height, E7 wind,
 E9 field-report ingest + `gnss_quality.py`, OpenFEMA housing-assistance
 ZIP comparison, coverage-gap analysis, offline PWA packs, situation brief
-PDF, QGIS project, Spanish UI, collection planner (satellite passes).
+PDF export button (print-to-PDF works today), QGIS project, Spanish UI, collection planner (satellite passes).

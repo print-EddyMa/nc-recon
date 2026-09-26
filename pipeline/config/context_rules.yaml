@@ -77,6 +77,10 @@ fusion:
     tau: 0.50                   # top-class probability below this -> needs_review
     nonadjacent_top2_min: 0.20  # 2nd class >= this and not adjacent to 1st -> review
     conformal_max_set: 2        # set size >= 3 -> review (only once conformal is fit)
+    # Until probabilities are calibrated on labels, every Major / Destroyed
+    # call goes to a human: a smoke test of 12 Swannanoa CNN "destroyed" calls
+    # found ~7 correct, far below the 0.80 the prior crosswalk implies.
+    review_severe_until_calibrated: true
   key_channels:                 # channels without which a call is not made
     default: [E1]
 

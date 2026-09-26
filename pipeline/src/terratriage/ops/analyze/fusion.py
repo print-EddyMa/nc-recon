@@ -116,6 +116,7 @@ def decide(
     T: float | None = None,
     qhat: float | None = None,
     extra_reasons: list[str] | None = None,
+    calibrated: bool = False,
 ) -> Verdict:
     cfg = rules()["fusion"]
     ab = cfg["abstain"]
@@ -135,6 +136,9 @@ def decide(
         pset = aps_sets(probs[None, :], qhat)[0]
         if len(pset) > ab["conformal_max_set"]:
             review.append(f"PREDICTION_SET_{len(pset)}_CLASSES")
+    if (not calibrated and ab.get("review_severe_until_calibrated")
+            and top >= FEMA.index("major")):
+        review.append(f"UNCALIBRATED_SEVERE_CALL_{FEMA[top].upper()}")
     keys = key_channels if key_channels is not None else cfg["key_channels"]["default"]
     by_id = {c.id: c for c in channels}
     for k in keys:

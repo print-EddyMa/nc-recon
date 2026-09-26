@@ -56,7 +56,8 @@ def _ring_ccw(ring: list[list[float]]) -> list[list[float]]:
     return ring if a > 0 else list(reversed(ring))
 
 
-def _flat(p: dict[str, Any], responder: dict[str, Any] | None) -> dict[str, Any]:
+def _flat(p: dict[str, Any], responder: dict[str, Any] | None,
+          fema_defaults: dict[str, Any] | None = None) -> dict[str, Any]:
     lvl = p.get("damage_level")
     probs = p.get("damage_probs") or {}
     occ = p.get("occupants") or {}
@@ -88,7 +89,14 @@ def _flat(p: dict[str, Any], responder: dict[str, Any] | None) -> dict[str, Any]
     for k in ("DMG_LEVEL", "ASMT_TYPE", "IMG_DATE", "EVENT_NAME", "EVENT_DATE", "DIS_NUMBER", "USNG", "SOURCE"):
         row[k] = fema.get(k)
     if not lvl:
+        # inventory structure with no footprint: event fields from the run,
+        # FEMA's own "Unknown" assessment type, no damage level
+        for k in ("EVENT_NAME", "EVENT_DATE", "DIS_NUMBER", "SOURCE"):
+            row[k] = (fema_defaults or {}).get(k)
         row["DMG_LEVEL"] = "Not Assessed"
+        row["ASMT_TYPE"] = "Unknown"
+        row["IMG_DATE"] = None
+        row["USNG"] = p.get("usng_10m")
     if responder is not None:
         row["address"] = (responder.get(p["ncr_id"]) or {}).get("address")
     row["disclaimer"] = DISCLAIMER
@@ -114,8 +122,9 @@ def export_area(area: str, mode: str = "responder", out_dir: str | None = None) 
     os.makedirs(d, exist_ok=True)
     rows, geoms = [], []
     feats_out = []
+    defaults = next((f["properties"]["fema"] for f in fc["features"] if f["properties"].get("fema")), {})
     for f in fc["features"]:
-        row = _flat(f["properties"], responder)
+        row = _flat(f["properties"], responder, defaults)
         g = f["geometry"]
         if g["type"] == "Polygon":
             g = {"type": "Polygon", "coordinates": [_ring_ccw(g["coordinates"][0])]}

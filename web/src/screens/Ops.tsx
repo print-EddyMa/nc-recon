@@ -17,6 +17,7 @@ import {
   loadHealth,
   loadImpact,
   publicUrl,
+  briefUrl,
   loadLabels,
   loadOpsArea,
   loadOpsAreas,
@@ -582,6 +583,16 @@ function RunSummary({ fc, areaId }: { fc: OpsCollection; areaId: string }) {
             {p.aoi.county} Co. · {p.aoi.role} area
           </div>
         </div>
+        <div className="flex shrink-0 gap-1">
+        <a
+          href={briefUrl(areaId)}
+          target="_blank"
+          rel="noreferrer"
+          className="pressable rounded-md border border-line px-2 py-1 text-2xs text-ink hover:bg-surface-2"
+          title="One-page situation brief (printable; no addresses)"
+        >
+          Brief
+        </a>
         <button
           disabled={busy}
           onClick={async () => {
@@ -599,6 +610,7 @@ function RunSummary({ fc, areaId }: { fc: OpsCollection; areaId: string }) {
         >
           {busy ? "Exporting…" : "Export"}
         </button>
+        </div>
       </div>
       <table className="tnum mt-2 w-full text-2xs">
         <thead>

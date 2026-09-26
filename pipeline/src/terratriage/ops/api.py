@@ -178,6 +178,17 @@ def public_tracts(area: str):
         return JSONResponse(json.load(fh))
 
 
+@router.get("/areas/{area}/brief.html")
+def brief_html(area: str):
+    from fastapi.responses import HTMLResponse
+
+    from .disseminate.brief import brief
+
+    _load(area)
+    with open(brief(area), encoding="utf-8") as fh:
+        return HTMLResponse(fh.read())
+
+
 @router.get("/areas/{area}/responder")
 def responder(area: str, request: Request, authorization: str | None = Header(default=None)):
     _responder(request, authorization)
