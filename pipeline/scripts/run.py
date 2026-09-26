@@ -291,6 +291,7 @@ def cmd_ops_backup(a):
 
     out = a.out or os.path.join(ROOT, "data", f"ncrecon-backup-{_t.strftime('%Y%m%dT%H%M%SZ', _t.gmtime())}.tar.gz")
     items = [("data/labels", "labels"), ("data/ops_registry.yaml", "ops_registry.yaml"),
+             ("data/audit.log", "audit.log"),
              ("data/output/ops", "output_ops"),
              (os.environ.get("NCR_RUNS_DIR") or "runs", "runs"),
              (os.environ.get("NCR_CALIBRATION_DIR") or "config/calibration", "calibration")]

@@ -203,8 +203,8 @@ export interface Impact {
   tracts: {
     tract: string;
     location: string | null;
-    structures: number;
-    expected_displaced: number;
+    structures: number | null;
+    expected_displaced: number | null;
     svi_percentile: number | null;
     need_index: number | null;
   }[];
@@ -339,10 +339,11 @@ export interface Job {
   area: string;
   event: string;
   name: string;
-  status: "queued" | "running" | "done" | "failed";
+  status: "queued" | "running" | "done" | "failed" | "lost";
   step: string;
   post_source: string | null;
   error: string | null;
+  warnings?: string[];
   log: string[];
   created: number;
   finished: number | null;

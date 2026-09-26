@@ -105,6 +105,15 @@ from terratriage.ops.api import router as ops_router  # noqa: E402
 
 app.include_router(ops_router)
 
+try:  # half-registered areas from a restart mid-job
+    from terratriage.ops.jobs import prune_orphans  # noqa: E402
+
+    _pruned = prune_orphans()
+    if _pruned:
+        print(f"[server] pruned unfinished operational areas: {_pruned}")
+except Exception as _ex:  # noqa: BLE001
+    print(f"[server] orphan prune skipped: {_ex}")
+
 USGS_URL = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson"
 GDACS_URL = "https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH"
 

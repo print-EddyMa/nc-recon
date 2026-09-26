@@ -44,6 +44,7 @@ class Job:
     step: str = ""
     post_source: str | None = None
     error: str | None = None
+    warnings: list = field(default_factory=list)
     log: deque = field(default_factory=lambda: deque(maxlen=40))
     created: float = field(default_factory=time.time)
     finished: float | None = None
@@ -124,8 +125,15 @@ def _execute(job: Job) -> None:
             args += ["--eri-prefix", ev.eri_prefix]
         _run(job, "fetching imagery", args)
     _run(job, "assessing structures", ["ops-assess", "--area", job.area])
-    _run(job, "estimating people", ["ops-impact", "--area", job.area])
-    _run(job, "writing brief", ["ops-brief", "--area", job.area])
+    # the damage assessment is the product; a secondary source being down
+    # (CDC SVI, Census, ...) must never throw it away
+    for label, args in (("estimating people", ["ops-impact", "--area", job.area]),
+                        ("writing brief", ["ops-brief", "--area", job.area])):
+        try:
+            _run(job, label, args)
+        except Exception as ex:  # noqa: BLE001
+            job.warnings.append(f"{label}: {str(ex)[:200]}")
+            job.log.append(f"WARNING: {label} failed; assessment kept")
 
 
 def _loop() -> None:
@@ -137,18 +145,24 @@ def _loop() -> None:
                 return
             job = _jobs[_queue.popleft()]
             job.status = "running"
+        run_job(job)
+
+
+def run_job(job: Job) -> None:
+    """Run one job to completion. Only a failed fetch or assess fails the job
+    (and removes its partial outputs); later steps degrade to warnings."""
+    try:
+        _execute(job)
+        job.status, job.step = "done", "done"
+    except Exception as ex:  # noqa: BLE001
+        job.status, job.error = "failed", str(ex)[:500]
+        job.log.append(f"FAILED: {job.error}")
+        # never leave a half-finished assessment looking like a real one
         try:
-            _execute(job)
-            job.status, job.step = "done", "done"
-        except Exception as ex:  # noqa: BLE001
-            job.status, job.error = "failed", str(ex)[:500]
-            job.log.append(f"FAILED: {job.error}")
-            # never leave a half-finished assessment looking like a real one
-            try:
-                delete_area(job.area)
-            except Exception as ex2:  # noqa: BLE001
-                job.log.append(f"cleanup failed: {ex2}")
-        job.finished = time.time()
+            delete_area(job.area)
+        except Exception as ex2:  # noqa: BLE001
+            job.log.append(f"cleanup failed: {ex2}")
+    job.finished = time.time()
 
 
 def delete_area(area: str) -> list[str]:
@@ -211,3 +225,26 @@ def get(job_id: str) -> Job | None:
 
 def recent(n: int = 20) -> list[Job]:
     return sorted(_jobs.values(), key=lambda j: -j.created)[:n]
+
+
+def prune_orphans() -> list[str]:
+    """At startup: drop OPS registry entries whose assessment never finished
+    (e.g. the server restarted mid-job). Nothing runs at that point."""
+    from . import DATA_DIR
+    from .plan.events import load_events
+
+    out = os.path.join(DATA_DIR, "output", "ops")
+    removed = []
+    try:
+        evs = load_events()
+    except Exception:  # noqa: BLE001
+        return removed
+    for ev in evs.values():
+        for aid, a in list(ev.aois.items()):
+            if a.role == "OPS" and not os.path.exists(os.path.join(out, f"{aid}.geojson")):
+                try:
+                    delete_area(aid)
+                    removed.append(aid)
+                except Exception:  # noqa: BLE001
+                    pass
+    return removed

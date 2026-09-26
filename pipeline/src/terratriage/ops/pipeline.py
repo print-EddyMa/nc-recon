@@ -112,8 +112,14 @@ def footprints(raster_path: str, area: str, warnings: list[str]) -> dict[str, An
         vintage = None
     n_usa = len(polys)
     osm_cache = os.path.join(CACHE, f"osm_{cache_key('osm_buildings', geometry=bbox)[:16]}.json")
-    osm = [(oid, p) for oid, p in fetch_osm_buildings_with_ids(bbox, cache_path=osm_cache)
-           if p.is_valid and _ok(p)]
+    try:
+        osm = [(oid, p) for oid, p in fetch_osm_buildings_with_ids(bbox, cache_path=osm_cache)
+               if p.is_valid and _ok(p)]
+    except Exception as ex:  # noqa: BLE001
+        if not polys:
+            raise RuntimeError(f"no building footprints: USA Structures and OpenStreetMap both failed ({ex})") from ex
+        warnings.append(f"OpenStreetMap gap-fill unavailable ({str(ex)[:100]}); USA Structures only")
+        osm = []
     tree = STRtree(polys) if polys else None
     added = 0
     for oid, p in osm:
@@ -190,9 +196,16 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
     to_r = transformer("storage", crs).transform
     polys = [shapely_transform(to_r, p) for p in polys_ll]
     bbox = aoi_bounds_lonlat(pre_info.path)
-    nsi_layer = NSI().fetch(bbox)
-    structs = conflate(polys_ll, srcs, ids, nsi_layer.data["features"], attrs)
-    missing = unmatched_nsi(structs, nsi_layer.data["features"])
+    try:
+        nsi_layer = NSI().fetch(bbox)
+        nsi_feats = nsi_layer.data["features"]
+        nsi_prov = nsi_layer.provenance.to_dict()
+    except Exception as ex:  # noqa: BLE001 - occupancy is context, not the damage call
+        warnings.append(f"USACE NSI unavailable ({str(ex)[:120]}): no occupancy/foundation data; "
+                        "occupants from USA Structures only; flood depth (E5) unavailable")
+        nsi_feats, nsi_prov = [], {"source": "USACE National Structure Inventory", "status": "unavailable"}
+    structs = conflate(polys_ll, srcs, ids, nsi_feats, attrs)
+    missing = unmatched_nsi(structs, nsi_feats)
     if missing:
         warnings.append(f"{len(missing)} NSI structure points have no footprint in any source "
                         "(not assessed from imagery; listed in the run manifest)")
@@ -390,7 +403,7 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
              "license": "ODbL 1.0 (attribution + share-alike for derived databases)",
              "source_url": "https://overpass-api.de/", "count": fp["counts"]["osm_only"]},
         ],
-        "structures": nsi_layer.provenance.to_dict(),
+        "structures": nsi_prov,
         "declaration": ev.declarations[0].provenance.to_dict(),
         "model": {
             "id": MODEL_ID,

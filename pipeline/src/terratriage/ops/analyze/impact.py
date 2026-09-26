@@ -91,10 +91,18 @@ def run(area: str, seed: int = 0, n_mc: int = 2000) -> dict[str, Any]:
     lons = [p["centroid"][0] for p in feats]
     lats = [p["centroid"][1] for p in feats]
     bbox = (min(lons), min(lats), max(lons), max(lats))
-    tracts = svi_tracts(bbox)
+    svi_status = "ok"
+    try:
+        tracts = svi_tracts(bbox)
+    except Exception as ex:  # noqa: BLE001 - displacement does not need SVI
+        tracts, svi_status = [], f"unavailable ({str(ex)[:120]})"
     tgeoms = [shape(t["geometry"]) for t in tracts]
     tree = STRtree(tgeoms) if tgeoms else None
-    occ_share = acs_occupancy([t["properties"]["FIPS"] for t in tracts])
+    try:
+        occ_share = acs_occupancy([t["properties"]["FIPS"] for t in tracts])
+    except Exception as ex:  # noqa: BLE001
+        print(f"[impact] ACS unavailable: {ex}")
+        occ_share = None
 
     rows = []
     unassessed = {"residential_structures": 0, "occupants_nsi": 0.0}
@@ -185,6 +193,7 @@ def run(area: str, seed: int = 0, n_mc: int = 2000) -> dict[str, Any]:
                                "p90": float(np.percentile(main, 90))},
         "sensitivity_w_minor": sens,
         "params": PARAMS,
+        "svi_status": svi_status,
         "need_index_terms_missing": ["beta * isolated_persons (E8 road isolation not built)",
                                      "gamma * outage_person_days (E8 Black Marble not built)"],
         "tracts": ranked,

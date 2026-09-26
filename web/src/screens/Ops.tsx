@@ -389,17 +389,30 @@ function NewAssessment({
   }
 
   useEffect(() => {
-    if (!job || job.status === "done" || job.status === "failed") return;
+    if (!job || job.status === "done" || job.status === "failed" || job.status === "lost") return;
     const t = window.setInterval(() => {
       jobStatus(job.id)
         .then((j) => {
           setJob(j);
           if (j.status === "done") {
-            toast.success(`${j.name}: assessment complete`);
+            toast.success(
+              j.warnings?.length
+                ? `${j.name}: assessment complete, with warnings`
+                : `${j.name}: assessment complete`,
+            );
             onDone(j.area);
           } else if (j.status === "failed") toast.error(`${j.name}: ${j.error}`);
         })
-        .catch(() => {});
+        .catch((e: Error) => {
+          // job state lives in the server process: a restart loses it
+          if (/: 404$/.test(e.message)) {
+            setJob((cur) =>
+              cur
+                ? { ...cur, status: "lost", error: "The server restarted while this assessment was running. Run it again." }
+                : cur,
+            );
+          }
+        });
     }, 4000);
     return () => window.clearInterval(t);
   }, [job, onDone]);
@@ -561,7 +574,9 @@ function JobCard({ job, onNew }: { job: Job; onNew: () => void }) {
             ? "Running"
             : job.status === "done"
               ? "Complete"
-              : "Failed"}
+              : job.status === "lost"
+                ? "Lost"
+                : "Failed"}
         {job.post_source && ` · ${POST_SOURCE_LABEL[job.post_source] ?? job.post_source}`}
       </div>
       <ol className="mt-2 space-y-0.5 text-sm">
@@ -575,8 +590,17 @@ function JobCard({ job, onNew }: { job: Job; onNew: () => void }) {
           );
         })}
       </ol>
-      {job.status === "failed" && <p className="mt-2 text-sm text-dmg3">{job.error}</p>}
-      {(done || job.status === "failed") && (
+      {(job.status === "failed" || job.status === "lost") && (
+        <p className="mt-2 text-sm text-dmg3">{job.error}</p>
+      )}
+      {job.warnings && job.warnings.length > 0 && (
+        <ul className="mt-2 list-disc pl-5 text-sm text-ink">
+          {job.warnings.map((w) => (
+            <li key={w}>Warning: {w}</li>
+          ))}
+        </ul>
+      )}
+      {(done || job.status === "failed" || job.status === "lost") && (
         <button className={`${btn} mt-2`} onClick={onNew}>
           New assessment
         </button>
@@ -1214,7 +1238,7 @@ function ImpactPanel({ areaId }: { areaId: string }) {
               <td className="py-0.5 text-ink" title={t.location ?? ""}>
                 {(t.location ?? t.tract).split(";")[0].replace("Census Tract ", "")}
               </td>
-              <td className="py-0.5 text-right text-ink">{t.expected_displaced}</td>
+              <td className="py-0.5 text-right text-ink">{t.expected_displaced ?? "<5 bldgs"}</td>
               <td className="py-0.5 text-right text-ink-dim">{t.svi_percentile?.toFixed(2) ?? "n/a"}</td>
               <td className="py-0.5 text-right font-semibold text-ink">{t.need_index ?? "n/a"}</td>
             </tr>

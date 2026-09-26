@@ -9,6 +9,7 @@ imagery gaps or a hand table, and every imagery window is asserted against it:
 """
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass, field
 from datetime import date, timedelta
@@ -191,8 +192,16 @@ def fetch_declaration(number: int, *, max_age_s: float = 7 * 86400) -> Declarati
         except Exception:
             rows = cache.get(key)  # any age beats nothing - but say so
             if rows is None:
-                raise
-            print(f"[events] OpenFEMA unreachable; using cached DR-{number} (stale)")
+                # last resort: the declaration shipped with the image, so a
+                # fresh deployment still works while OpenFEMA is unreachable
+                seed = os.path.join(CONFIG_DIR, "seeds", f"openfema_dr_{number}.json")
+                if not os.path.exists(seed):
+                    raise
+                with open(seed, encoding="utf-8") as fh:
+                    rows = json.load(fh)
+                print(f"[events] OpenFEMA unreachable; using shipped seed for DR-{number} (stale)")
+            else:
+                print(f"[events] OpenFEMA unreachable; using cached DR-{number} (stale)")
     return parse_declaration(rows, url)
 
 

@@ -33,7 +33,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field, field_validator
 
-from . import DATA_DIR, DISCLAIMER, PIPELINE_ROOT
+from . import DATA_DIR, DISCLAIMER, PIPELINE_ROOT, audit
 from .analyze.classes import FEMA, FEMA_LABEL
 
 OPS_OUT = os.path.join(DATA_DIR, "output", "ops")
@@ -106,7 +106,9 @@ def areas():
 def area(area: str, request: Request, authorization: str | None = Header(default=None)):
     # building-level (centroids ~ addresses): responder only
     _responder(request, authorization)
-    return JSONResponse(_load(area), headers={"Cache-Control": "no-cache, private"})
+    fc = _load(area)
+    audit.record("view_area", request, area)
+    return JSONResponse(fc, headers={"Cache-Control": "no-cache, private"})
 
 
 @router.get("/areas/{area}/chip/{ncr_id}/{kind}.png")
@@ -167,12 +169,29 @@ def chip(area: str, ncr_id: str, kind: str, request: Request, size: int = 256, p
 
 
 @router.get("/areas/{area}/impact")
-def impact(area: str):
+def impact(area: str, authorization: str | None = Header(default=None)):
+    """People / need by tract. Responders get it whole; the public gets the same
+    small-count suppression as the public tract product."""
+    from . import auth
+    from .disseminate.aggregate import SUPPRESS
+
     p = os.path.join(OPS_OUT, f"{_area(area)}.impact.json")
     if not os.path.exists(p):
         raise HTTPException(404, "no impact run for this area")
     with open(p, encoding="utf-8") as fh:
-        return json.load(fh)
+        d = json.load(fh)
+    try:
+        auth.check(authorization)
+        return d
+    except HTTPException:
+        pass
+    for t in d.get("tracts", []):
+        if (t.get("structures") or 0) < SUPPRESS:
+            t.update(structures=None, expected_displaced=None, need_index=None, suppressed=True)
+    ua = d.get("unassessed_residential") or {}
+    if ua and (ua.get("structures") or 0) < SUPPRESS:
+        d["unassessed_residential"] = {"structures": None, "occupants_nsi": None, "suppressed": True}
+    return d
 
 
 @router.get("/areas/{area}/public.geojson")
@@ -192,6 +211,7 @@ def brief_html(area: str, request: Request, authorization: str | None = Header(d
 
     _responder(request, authorization)  # its map plots every structure
     _load(area)
+    audit.record("brief", request, area)
     with open(brief(area), encoding="utf-8") as fh:
         return HTMLResponse(fh.read())
 
@@ -199,6 +219,7 @@ def brief_html(area: str, request: Request, authorization: str | None = Header(d
 @router.get("/areas/{area}/responder")
 def responder(area: str, request: Request, authorization: str | None = Header(default=None)):
     _responder(request, authorization)
+    audit.record("view_addresses", request, area)
     p = os.path.join(OPS_OUT, f"{_area(area)}.responder.json")
     if not os.path.exists(p):
         raise HTTPException(404, "no responder sidecar")
@@ -274,6 +295,7 @@ def add_label(req: LabelReq, request: Request, authorization: str | None = Heade
         w.writerow([req.ncr_id, req.label, req.labeler, PROTOCOL,
                     post.get("acquired_utc") or post.get("date_label") or post.get("dataset_version") or "",
                     role, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), req.notes])
+    audit.record("label", request, req.area, ncr_id=req.ncr_id, label=req.label, labeler=req.labeler)
     return {"ok": True, "aoi_role": role, "file": os.path.basename(path)}
 
 
@@ -293,6 +315,7 @@ def export_zip(area: str, request: Request, authorization: str | None = Header(d
 
     _responder(request, authorization)
     _load(area)
+    audit.record("export", request, area)
     d = os.path.join(OPS_OUT, "exports", area)
     export_area(area, mode="responder", out_dir=d)
     buf = io.BytesIO()
@@ -334,6 +357,7 @@ def create_event(req: EventReq, request: Request, authorization: str | None = He
                                    eri_prefix=req.eri_prefix, disaster_numbers=req.disaster_numbers or None)
     except (ValueError, LookupError) as ex:
         raise HTTPException(400, str(ex)) from ex
+    audit.record("create_event", request, None, event=req.id)
     return ev.to_summary()
 
 
@@ -382,6 +406,7 @@ def assess(req: AssessReq, request: Request, authorization: str | None = Header(
         raise HTTPException(429, str(ex)) from ex
     except ValueError as ex:
         raise HTTPException(400, str(ex)) from ex
+    audit.record("assess", request, job.area, event=req.event, lon=req.lon, lat=req.lat)
     return job.to_dict()
 
 
@@ -416,5 +441,6 @@ def delete_area(area: str, request: Request, authorization: str | None = Header(
         raise HTTPException(403, str(ex)) from ex
     if not removed:
         raise HTTPException(404, "no such operational area")
+    audit.record("delete_area", request, area)
     _cache.pop(os.path.join(OPS_OUT, f"{area}.geojson"), None)
     return {"area": area, "removed": removed}
