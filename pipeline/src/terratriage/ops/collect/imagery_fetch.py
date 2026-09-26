@@ -43,7 +43,7 @@ def grid_for(lon: float, lat: float, half_m: float) -> tuple[int, tuple[float, f
     return epsg, (x0, y1 - n * RES, x0 + n * RES, y1)
 
 
-def _eri_mosaic(bounds_xy, epsg: int, flight_pref: list[str] | None = None) -> tuple[np.ndarray, dict]:
+def _eri_mosaic(bounds_xy, epsg: int, eri_prefix: str) -> tuple[np.ndarray, dict]:
     from rasterio.vrt import WarpedVRT
     from rasterio.warp import transform_bounds
     from rasterio.enums import Resampling
@@ -51,7 +51,7 @@ def _eri_mosaic(bounds_xy, epsg: int, flight_pref: list[str] | None = None) -> t
     x0, y0, x1, y1 = bounds_xy
     w, s, e, n = transform_bounds(epsg, 4326, x0, y0, x1, y1)
     pad = 0.01
-    tiles = [t for t in ERI().index() if w - pad <= t["lon"] <= e + pad and s - pad <= t["lat"] <= n + pad]
+    tiles = [t for t in ERI().index(eri_prefix) if w - pad <= t["lon"] <= e + pad and s - pad <= t["lat"] <= n + pad]
     if not tiles:
         raise LookupError("no ERI tiles cover this AOI")
     # most recent flight last so it paints over earlier ones
@@ -108,7 +108,8 @@ def _write(path: str, arr: np.ndarray, epsg: int, bounds_xy) -> None:
 
 
 def fetch_pair(area: str, lon: float, lat: float, *, half_m: float = 800.0,
-               pre: str = "nc_2020_2023", post: str = "nc_helene_2025") -> dict[str, Any]:
+               pre: str = "nc_2020_2023", post: str = "nc_helene_2025",
+               eri_prefix: str = "2024_Hurricane_Helene") -> dict[str, Any]:
     epsg, b = grid_for(lon, lat, half_m)
     d = os.path.join(RAW, area)
     os.makedirs(d, exist_ok=True)
@@ -130,7 +131,7 @@ def fetch_pair(area: str, lon: float, lat: float, *, half_m: float = 800.0,
                    "season": spec["season"], "provenance": nc_orthos.provenance(pre).to_dict(), "path": pre_path}
 
     if post == "eri":
-        post_arr, info = _eri_mosaic(b, epsg)
+        post_arr, info = _eri_mosaic(b, epsg, eri_prefix)
         plo, phi = info["dates"][0], info["dates"][-1]
         meta["post"] = {"source": "eri", "date": plo if plo == phi else None, "date_min": plo, "date_max": phi,
                         "date_source": "ERI flight ids", "date_label": f"ERI flights {', '.join(info['flights'])}",
@@ -157,9 +158,17 @@ def fetch_pair(area: str, lon: float, lat: float, *, half_m: float = 800.0,
         json.dump(meta, fh, indent=2)
     # the demo registry reads meta.json; keep it minimal and truthful
     with open(os.path.join(d, "meta.json"), "w", encoding="utf-8") as fh:
-        json.dump({"event": "HurricaneHelene-Oct24", "area": area, "name": area.replace("_", " ").title(),
+        json.dump({"event": "ops", "area": area, "name": area.replace("_", " ").title(),
                    "center": [lon, lat], "zoom": 15.2, "pre_date": meta["pre"]["date"],
                    "post_date": _span(plo, phi), "imagery_source": f"{pre} -> {post}"}, fh, indent=2)
     print(f"[ops-fetch] {area}: {pre} -> {post}, grid EPSG:{epsg} {post_arr.shape[2]}x{post_arr.shape[1]} "
           f"@ {RES} m, valid overlap {valid:.0%}")
     return meta
+
+
+def eri_covers(lon: float, lat: float, eri_prefix: str, radius_deg: float = 0.012) -> bool:
+    try:
+        return any(abs(t["lon"] - lon) < radius_deg and abs(t["lat"] - lat) < radius_deg
+                   for t in ERI().index(eri_prefix))
+    except Exception:  # noqa: BLE001
+        return False

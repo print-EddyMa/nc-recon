@@ -137,9 +137,12 @@ def tile_dates(service: str, points_lonlat: list[tuple[float, float]]) -> tuple[
 def covered(service: str, lon: float, lat: float) -> bool:
     """Does the service have imagery at this point? (catalog footprint query)"""
     spec = SERVICES[service]
+    # the geometry must carry its spatialReference: a bare "x,y" with sr=4326 is
+    # silently read in the service's own CRS (NC State Plane ftUS) -> NoData
     d = http_json(f"{ROOT}/{spec['path']}/ImageServer/identify", params={
-        "geometry": f"{lon},{lat}", "geometryType": "esriGeometryPoint",
-        "sr": 4326, "returnGeometry": "false", "returnCatalogItems": "false", "f": "json"}, timeout=60)
+        "geometry": json.dumps({"x": lon, "y": lat, "spatialReference": {"wkid": 4326}}),
+        "geometryType": "esriGeometryPoint",
+        "returnGeometry": "false", "returnCatalogItems": "false", "f": "json"}, timeout=60)
     v = str(d.get("value", "NoData"))
     return v not in ("NoData", "", "None")
 

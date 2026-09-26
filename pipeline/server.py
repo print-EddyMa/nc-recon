@@ -117,11 +117,9 @@ def _safe_area(area: str) -> str:
 
 
 def _require_token(authorization: str | None) -> None:
-    if not TOKEN:
-        return
-    expected = f"Bearer {TOKEN}"
-    if not authorization or authorization != expected:
-        raise HTTPException(401, "missing or invalid bearer token")
+    from terratriage.ops import auth
+
+    auth.check(authorization)  # fails closed: no token + no dev flag -> 403
 
 
 def _clean_name(s: str | None, limit: int = 80) -> str | None:
@@ -657,9 +655,13 @@ def tile(area: str, kind: str, z: int, x: int, y: int, empty: int = 0):
 if __name__ == "__main__":
     import uvicorn
 
+    from terratriage.ops import auth
+
     # 127.0.0.1 for local dev; containers/hosts set HOST=0.0.0.0
+    host = os.environ.get("HOST", "127.0.0.1")
+    auth.startup_check(host)
     uvicorn.run(
         app,
-        host=os.environ.get("HOST", "127.0.0.1"),
+        host=host,
         port=int(os.environ.get("PORT", "8000")),
     )

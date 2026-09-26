@@ -87,6 +87,8 @@ def _gather(truth: dict[str, int]) -> dict[str, dict[str, Any]]:
         area = os.path.basename(path)[:-8]
         found = event_for_area(area)
         role = found[1].role if found else "UNREGISTERED"
+        if role not in ("TUNE", "TEST"):
+            continue  # operational areas are never evaluation data
         with open(path, encoding="utf-8") as fh:
             fc = json.load(fh)
         for f in fc["features"]:

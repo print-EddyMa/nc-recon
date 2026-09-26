@@ -8,7 +8,8 @@ Public (aggregates only, nothing at building level):
   GET  /ops/report                      latest ACCURACY_REPORT.json
   GET  /ops/meta                        disclaimer, class vocab, colours
 
-Responder (bearer token; with no token configured, loopback clients only):
+Responder (bearer token; refused when no token is configured, unless the
+operator runs with NCR_DEV_OPEN=1 for local development - see ops/auth.py):
   GET  /ops/areas/{area}                ops GeoJSON (building level; no addresses)
   GET  /ops/areas/{area}/chip/{ncr_id}/{pre|post}.png
   GET  /ops/areas/{area}/brief.html     situation brief (its map shows structures)
@@ -56,14 +57,9 @@ def _area(area: str) -> str:
 
 
 def _responder(request: Request, authorization: str | None) -> None:
-    token = os.environ.get("TERRATRIAGE_TOKEN", "").strip()
-    if token:
-        if authorization != f"Bearer {token}":
-            raise HTTPException(401, "responder token required")
-        return
-    host = request.client.host if request.client else ""
-    if host not in ("127.0.0.1", "::1", "localhost", "testclient"):
-        raise HTTPException(403, "responder data needs TERRATRIAGE_TOKEN when served beyond localhost")
+    from . import auth
+
+    auth.check(authorization)
 
 
 def _load(area: str) -> dict[str, Any]:
@@ -132,7 +128,10 @@ def chip(area: str, ncr_id: str, kind: str, request: Request, size: int = 256, p
     feat = next((f for f in fc["features"] if f["properties"]["ncr_id"] == ncr_id), None)
     if feat is None:
         raise HTTPException(404, "no such structure")
-    pre, post = imagery.pair_for_area(RAW, area, (fc["properties"].get("event") or {}).get("maxar") or "HurricaneHelene-Oct24")
+    from .plan.events import event_for_area
+
+    found = event_for_area(area)
+    pre, post = imagery.pair_for_area(RAW, area, (found[0].maxar_event if found else None) or "")
     path = pre.path if kind == "pre" else post.path
     size = max(64, min(size, 512))
     al = ((feat["properties"].get("measurements") or {}).get("alignment") or {}).get(kind) or {}
@@ -303,3 +302,102 @@ def export_zip(area: str, request: Request, authorization: str | None = Header(d
                 z.write(full, os.path.relpath(full, d))
     return Response(buf.getvalue(), media_type="application/zip",
                     headers={"Content-Disposition": f'attachment; filename="nc-recon-{area}-responder.zip"'})
+
+
+# --------------------------------------------------------------------------- #
+# events + operational assessments
+# --------------------------------------------------------------------------- #
+@router.get("/events")
+def events():
+    from .plan.events import load_events
+
+    return [ev.to_summary() for ev in load_events().values()]
+
+
+class EventReq(BaseModel):
+    id: str = Field(pattern=r"^[a-z0-9-]{3,40}$")
+    name: str = Field(min_length=3, max_length=80)
+    incident_begin: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    disaster_numbers: list[int] = Field(default_factory=list, max_length=4)
+    eri_prefix: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{3,60}$")
+    hazards: list[str] = Field(default_factory=list, max_length=6)
+
+
+@router.post("/events")
+def create_event(req: EventReq, request: Request, authorization: str | None = Header(default=None)):
+    from .plan.events import add_provisional_event
+
+    _responder(request, authorization)
+    try:
+        ev = add_provisional_event(req.id, req.name, req.incident_begin, hazards=req.hazards,
+                                   eri_prefix=req.eri_prefix, disaster_numbers=req.disaster_numbers or None)
+    except (ValueError, LookupError) as ex:
+        raise HTTPException(400, str(ex)) from ex
+    return ev.to_summary()
+
+
+@router.get("/coverage")
+def coverage(event: str, lon: float, lat: float):
+    """Which post-event imagery would be used at this point (no data returned)."""
+    from .geodesy import in_nc
+    from .jobs import choose_post_source
+    from .plan.events import load_events
+
+    evs = load_events()
+    if event not in evs:
+        raise HTTPException(404, "unknown event")
+    if not in_nc(lon, lat, pad=0.1):
+        return {"covered": False, "reason": "outside North Carolina"}
+    try:
+        return {"covered": True, "post_source": choose_post_source(evs[event], lon, lat)}
+    except LookupError as ex:
+        return {"covered": False, "reason": str(ex)}
+
+
+class AssessReq(BaseModel):
+    event: str = Field(max_length=40)
+    name: str = Field(min_length=2, max_length=60)
+    lon: float = Field(ge=-85, le=-75)
+    lat: float = Field(ge=33, le=37)
+    half_m: float = Field(default=800, ge=200, le=1500)
+
+    @field_validator("name")
+    @classmethod
+    def _name(cls, v: str) -> str:
+        v = re.sub(r"[^\w .,'-]", "", v).strip()
+        if len(v) < 2:
+            raise ValueError("name required")
+        return v
+
+
+@router.post("/assess")
+def assess(req: AssessReq, request: Request, authorization: str | None = Header(default=None)):
+    from . import jobs
+
+    _responder(request, authorization)
+    try:
+        job = jobs.submit(req.event, req.name, req.lon, req.lat, req.half_m)
+    except OverflowError as ex:
+        raise HTTPException(429, str(ex)) from ex
+    except ValueError as ex:
+        raise HTTPException(400, str(ex)) from ex
+    return job.to_dict()
+
+
+@router.get("/assess/{job_id}")
+def assess_status(job_id: str, request: Request, authorization: str | None = Header(default=None)):
+    from . import jobs
+
+    _responder(request, authorization)
+    job = jobs.get(job_id)
+    if job is None:
+        raise HTTPException(404, "no such job")
+    return job.to_dict()
+
+
+@router.get("/jobs")
+def job_list(request: Request, authorization: str | None = Header(default=None)):
+    from . import jobs
+
+    _responder(request, authorization)
+    return [j.to_dict() for j in jobs.recent()]

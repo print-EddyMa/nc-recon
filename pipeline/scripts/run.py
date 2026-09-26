@@ -229,7 +229,8 @@ def cmd_ops_assess(a):
 def cmd_ops_fetch(a):
     from terratriage.ops.collect.imagery_fetch import fetch_pair
 
-    fetch_pair(a.area, a.lon, a.lat, half_m=a.half_m, pre=a.pre, post=a.post)
+    kw = {"eri_prefix": a.eri_prefix} if a.eri_prefix else {}
+    fetch_pair(a.area, a.lon, a.lat, half_m=a.half_m, pre=a.pre, post=a.post, **kw)
 
 
 def cmd_ops_health(a):
@@ -352,6 +353,7 @@ def main():
     of.add_argument("--half-m", type=float, default=800.0)
     of.add_argument("--pre", default="nc_2020_2023", choices=["nc_2020_2023"])
     of.add_argument("--post", default="nc_helene_2025", choices=["nc_helene_2025", "eri"])
+    of.add_argument("--eri-prefix", default=None, help="NOAA ERI event folder, e.g. 2024_Hurricane_Helene")
     of.set_defaults(fn=cmd_ops_fetch)
 
     sub.add_parser("ops-health", help="ops mode: live status of every data source").set_defaults(fn=cmd_ops_health)

@@ -34,3 +34,10 @@ def test_usgs_water_live():
     layer = USGSWater().fetch()
     assert len(layer.data["features"]) > 150
     assert layer.provenance.source_url.startswith("https://api.waterdata.usgs.gov")
+
+
+@pytest.mark.live
+def test_nc_orthos_coverage_live():
+    from terratriage.ops.collect import nc_orthos
+    assert nc_orthos.covered("nc_helene_2025", -82.009, 35.684)      # Marion, McDowell Co.
+    assert not nc_orthos.covered("nc_helene_2025", -78.64, 35.78)    # Raleigh, outside the 13 counties

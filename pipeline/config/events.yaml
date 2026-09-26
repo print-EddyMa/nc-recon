@@ -19,6 +19,9 @@ events:
     state: NC
     hazards: [riverine_flood, flash_flood, landslide, wind]
     maxar_event: HurricaneHelene-Oct24
+    eri_prefix: 2024_Hurricane_Helene
+    # post-event imagery, in order of preference, for new operational areas
+    post_sources: [nc_helene_2025, eri, maxar]
     windows:
       # days relative to OpenFEMA incidentBeginDate (2024-09-25)
       pre_days: [-1500, -1]

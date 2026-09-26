@@ -7,6 +7,13 @@ from fastapi.testclient import TestClient
 HERE = os.path.dirname(__file__)
 
 
+@pytest.fixture(autouse=True)
+def _dev_open(monkeypatch):
+    # tests exercise responder endpoints; production has no such bypass
+    monkeypatch.delenv("TERRATRIAGE_TOKEN", raising=False)
+    monkeypatch.setenv("NCR_DEV_OPEN", "1")
+
+
 @pytest.fixture(scope="module")
 def client():
     import sys
@@ -81,3 +88,54 @@ def test_building_level_is_responder_only(client, monkeypatch):
     assert client.get("/ops/areas/old_fort/public.geojson").status_code == 200
     ok = client.get("/ops/areas/old_fort", headers={"Authorization": "Bearer s3cret"})
     assert ok.status_code == 200
+
+
+def test_fails_closed_without_token_or_dev_flag(client, monkeypatch):
+    monkeypatch.delenv("NCR_DEV_OPEN", raising=False)
+    monkeypatch.delenv("TERRATRIAGE_TOKEN", raising=False)
+    # a request that looks like it came through a same-host reverse proxy
+    r = client.get("/ops/areas/old_fort", headers={"X-Forwarded-For": "127.0.0.1"})
+    assert r.status_code == 403
+    assert client.post("/ops/labels", json={}).status_code in (403, 422)
+
+
+def test_wrong_token_rejected(client, monkeypatch):
+    monkeypatch.setenv("TERRATRIAGE_TOKEN", "s3cret")
+    r = client.get("/ops/areas/old_fort", headers={"Authorization": "Bearer nope"})
+    assert r.status_code == 401
+
+
+def test_startup_refuses_exposed_without_token(monkeypatch):
+    from terratriage.ops import auth
+    monkeypatch.delenv("TERRATRIAGE_TOKEN", raising=False)
+    monkeypatch.delenv("NCR_DEV_OPEN", raising=False)
+    with pytest.raises(SystemExit):
+        auth.startup_check("0.0.0.0")
+    auth.startup_check("127.0.0.1")
+    monkeypatch.setenv("NCR_DEV_OPEN", "1")
+    with pytest.raises(SystemExit):
+        auth.startup_check("0.0.0.0")
+
+
+def test_provisional_event_and_ops_area(tmp_path, monkeypatch):
+    from terratriage.ops.plan import events as ev
+    monkeypatch.setenv("NCR_OPS_REGISTRY", str(tmp_path / "reg.yaml"))
+    e = ev.add_provisional_event("storm-x", "Storm X", "2026-10-01", eri_prefix="2026_Storm_X")
+    assert e.provisional and e.incident_begin.isoformat() == "2026-10-01"
+    assert e.pre.end.isoformat() == "2026-09-30"
+    a = ev.add_ops_area("town_ab12", "storm-x", "Town", -82.2, 35.6)
+    assert a.role == "OPS"
+    assert ev.event_for_area("town_ab12")[0].id == "storm-x"
+    with pytest.raises(ValueError):
+        ev.add_ops_area("town_ab12", "storm-x", "Town", -82.2, 35.6)
+
+
+def test_assess_requires_auth_and_validates(client, monkeypatch):
+    monkeypatch.delenv("NCR_DEV_OPEN", raising=False)
+    body = {"event": "helene-2024-nc", "name": "Test", "lon": -82.2, "lat": 35.6}
+    assert client.post("/ops/assess", json=body).status_code == 403
+    monkeypatch.setenv("NCR_DEV_OPEN", "1")
+    bad = dict(body, lon=-90.0)
+    assert client.post("/ops/assess", json=bad).status_code == 422
+    unknown = dict(body, event="nope")
+    assert client.post("/ops/assess", json=unknown).status_code == 400

@@ -104,8 +104,45 @@ class Earthdata(Connector):
         return None
 
 
+class DamageModel(Connector):
+    """Not a data feed, but a component that must be present: without it every
+    structure loses its imagery classifier and lands in review."""
+    name = "damage_model"
+    license = "xView2 challenge terms (non-commercial)"
+    homepage = "weights/xview2_cmu_classifier.onnx (see MODEL_CARD.md)"
+
+    def configured(self):
+        from ..pipeline import ONNX
+
+        if not os.path.exists(ONNX):
+            return False, f"model file missing: {ONNX} (mount it or set NCR_MODEL_PATH)"
+        return True, ""
+
+    def health(self) -> Health:
+        ok, why = self.configured()
+        if not ok:
+            return Health(self.name, "down", None, None, why)
+        t0 = time.time()
+        try:
+            import numpy as np
+            import onnxruntime as ort
+
+            from ..pipeline import ONNX
+
+            sess = ort.InferenceSession(ONNX, providers=["CPUExecutionProvider"])
+            out = sess.run(None, {sess.get_inputs()[0].name: np.zeros((1, 128, 128, 3), "float32")})[0]
+            if out.shape != (1, 4):
+                raise SchemaError(f"unexpected model output shape {out.shape}")
+        except Exception as ex:  # noqa: BLE001
+            return Health(self.name, "down", None, None, str(ex)[:200])
+        return Health(self.name, "ok", round((time.time() - t0) * 1000), None, "")
+
+    def probe(self):
+        return None
+
+
 def connectors() -> list[Connector]:
-    return [USGSWater(), NWPS(), NWSAlerts(), OpenFEMA(), NSI(), USAStructures(), NCOrthos(),
+    return [DamageModel(), USGSWater(), NWPS(), NWSAlerts(), OpenFEMA(), NSI(), USAStructures(), NCOrthos(),
             ERI(), USGSLegacy(), GEE(), Earthdata()]
 
 
