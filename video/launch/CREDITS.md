@@ -51,3 +51,44 @@ Marcellus, Public Sans, IBM Plex Mono: SIL Open Font License 1.1 (from `web/node
 
 The film shows 15 of 19 as a comparison with search-team field records, never
 as accuracy, and says so on screen.
+
+---
+
+# Version 2 (75 s, 112 bpm)
+
+Built by `capture_v2.py`, `compose_v2.py`, `render.py --html composition_v2.html --out picture_v2.mp4`
+and `score_v2.py`. Renders: `build/groma_launch_v2.mp4` (master), `_web.mp4`, `_preview.mp4`.
+
+## Additional picture
+
+| Material | Source | Licence / terms | Where used |
+|---|---|---|---|
+| Swannanoa valley in 3D | Rebuilt in three.js 0.160 (MIT, loaded from jsDelivr at render time) from the site's baked assets in `site/assets/terrain/`: USGS 3DEP elevation (public domain), NC OneMap pre and post imagery, smoothed damage density, published roads, USNG sectors and landing-zone candidates (`layers.json`), OpenStreetMap rivers (ODbL). Contours traced from the DEM at 20 m. | As listed | 0:04 to 0:16, 0:26 to 0:30 |
+| App 3D orbit, Respond, stepper, overview, Verify | The product, captured frame by frame from a scratch server (`groma-film-api`, scratch registry, jobs, truth, labels, audit, cache) via the app's `?rec=1` camera hook; building views Swannanoa (TUNE) only | Project; basemap © OpenStreetMap contributors, CARTO | 0:16 to 0:19, 0:30 to 0:43 |
+| Offline packs (beta) | Swannanoa pack imported into a scratch install and served with `NCR_OFFLINE=1` under macOS `sandbox-exec` with all outbound network denied (outbound test returned no connection; 255 requests, all local). Basemap from the pack: USGS The National Map topo (public domain) | Project | 0:43 to 0:47 |
+| Anatomy of a call | `site/assets/chips.json` (NC OneMap chips of record 17S LV 7253 4080), `anatomy_change.jpg`, `anatomy_ground.png`, evidence from `layers.json` `anatomy` | As above | 0:19 to 0:26 |
+| Wildfire area view | App overview, Altadena at area level only (no building views; Altadena is a TEST area) | Project | 0:41 to 0:43 |
+
+Type: Barlow Condensed, Overpass, Overpass Mono (SIL OFL 1.1), loaded from Google Fonts at render time, as the site does.
+
+## Sound
+
+- Music: original, synthesised by `score_v2.py`, with no samples: drums, sub bass, plucks, pads, risers, impacts and a bell. Owned by the project; no third-party licence.
+- Voiceover: Kokoro-82M (Apache-2.0), voice `af_heart`, 11 lines in `assets/vo2/lines.json`.
+
+## Figures on screen (v2)
+
+| On screen | Source file |
+|---|---|
+| 532 road segments likely blocked | `pipeline/data/output/ops/swannanoa.response.json` `access.roads.blocked` |
+| 9 search sectors, 1 km USNG | `swannanoa.response.json` `sectors` (9 entries) |
+| 30 landing-zone candidates | `swannanoa.response.json` / `layers.json` `response_summary.landing_zone_candidates` |
+| 74 buildings, about 113 people cut off if debris also blocks roads | `swannanoa.response.json` `summary.cut_off.plus_debris` |
+| Destroyed 76%, Major 22%, Minor 3%, change z +2.8, ring max 0.31 m, search team Destroyed | `site/assets/terrain/layers.json` `anatomy` (from `swannanoa.geojson` and the SARCOP comparison) |
+| 4856, Wildfires and Straight-Line Winds (CA, DR-4856-CA), incident 2025-01-07 | Captured from the app's lookup (OpenFEMA) |
+| ~1,417 expected at Major or Destroyed, Altadena (area level) | `pipeline/data/output/ops/altadena.geojson` via the app overview |
+| 15 of 19 severe calls agreed with county search teams | `swannanoa.sarcop_reference.json` `summary_homes.major_or_destroyed` (15 both, 19 called) |
+| 95.7% of the wildfire model's Major or Destroyed calls matched CAL FIRE inspections; 2,246 buildings | `docs/model/MODEL_CARD.md`, pre-registered M1 evaluation on Altadena (precision 0.957, 2,246 matched); standalone model, not yet fused, stated on screen |
+| Damage density | `site/assets/terrain/heat.png`, expected Major + Destroyed per building smoothed 70 m |
+
+Nothing unbuilt is described in the present tense; offline packs are labelled (beta).

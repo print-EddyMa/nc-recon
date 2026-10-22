@@ -20,13 +20,16 @@ CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 JS = r"""
 import puppeteer from "puppeteer-core";
 import { spawn } from "node:child_process";
-const [,, html, mode, arg, fps, out] = process.argv;
+const [,, html, mode, arg, fps, out, name] = process.argv;
 const browser = await puppeteer.launch({ executablePath: CHROME_PATH, headless: true,
-  args: ["--no-sandbox", "--hide-scrollbars", "--allow-file-access-from-files", "--force-color-profile=srgb"],
+  args: ["--no-sandbox", "--hide-scrollbars", "--allow-file-access-from-files", "--force-color-profile=srgb",
+         "--use-angle=metal", "--enable-gpu", "--ignore-gpu-blocklist", "--enable-webgl"],
   defaultViewport: { width: 1920, height: 1080, deviceScaleFactor: 1 } });
 const page = await browser.newPage();
 await page.goto("file://" + html, { waitUntil: "load" });
-await page.evaluate(async () => { await document.fonts.ready; await Promise.all([...document.images].map(i => i.decode().catch(() => {}))); });
+page.on("console", m => { if (m.type() === "error") console.log("page:", m.text()); });
+await page.evaluate(async () => { if (window.READY) await window.READY; await document.fonts.ready;
+  await Promise.all([...document.images].map(i => i.decode().catch(() => {}))); });
 const dur = await page.evaluate(() => window.DURATION);
 if (mode === "stills") {
   for (const t of arg.split(",").map(Number)) {
@@ -36,7 +39,7 @@ if (mode === "stills") {
 } else {
   const n = Math.round(dur * +fps);
   const ff = spawn("ffmpeg", ["-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", fps, "-i", "-",
-    "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out + "/picture.mp4"],
+    "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out + "/" + name],
     { stdio: ["pipe", "inherit", "inherit"] });
   for (let f = 0; f < n; f++) {
     await page.evaluate(t => window.render(t), f / +fps);
@@ -55,6 +58,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--stills", default="")
     ap.add_argument("--fps", default="30")
+    ap.add_argument("--html", default="composition.html")
+    ap.add_argument("--out", default="picture.mp4")
     a = ap.parse_args()
     os.makedirs(BUILD, exist_ok=True)
     js = os.path.join(BUILD, "render.mjs")
@@ -65,7 +70,7 @@ def main() -> None:
     if not os.path.exists(link):
         os.symlink(os.path.join(ROOT, "web", "node_modules"), link)
     mode, arg = ("stills", a.stills) if a.stills else ("film", "")
-    subprocess.run(["node", js, os.path.join(BUILD, "composition.html"), mode, arg, a.fps, BUILD], check=True)
+    subprocess.run(["node", js, os.path.join(BUILD, a.html), mode, arg, a.fps, BUILD, a.out], check=True)
 
 
 if __name__ == "__main__":
