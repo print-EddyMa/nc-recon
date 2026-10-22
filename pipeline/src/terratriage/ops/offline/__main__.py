@@ -1,8 +1,9 @@
-"""Offline packs from the command line (run from pipeline/):
+"""Offline packs from the command line (run from pipeline/; the package is not
+installed into the venv, so put src on the path):
 
-  .venv/bin/python -m terratriage.ops.offline pack --area swannanoa [--out DIR] [--tar]
-  .venv/bin/python -m terratriage.ops.offline verify PACK
-  .venv/bin/python -m terratriage.ops.offline import PACK [--replace]
+  PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline pack --area swannanoa [--out DIR] [--tar]
+  PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline verify PACK
+  PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline import PACK [--replace]
 """
 from __future__ import annotations
 
@@ -15,7 +16,7 @@ from .pack import PackError, build, import_pack, verify
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(prog="python -m terratriage.ops.offline", description=__doc__,
+    ap = argparse.ArgumentParser(prog="PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("pack", help="build an offline pack for one assessed area")

@@ -1,7 +1,8 @@
 """Offline packs: one assessed area, carried to a laptop with no network.
 
-  pack.py      build a pack from an area (`run.py ops-pack`), verify it, and
-               import it on another machine (`run.py ops-pack-import`)
+  pack.py      build a pack from an area, verify it, and import it on
+               another machine (`python -m terratriage.ops.offline`, see
+               __main__.py for the exact command)
   basemap.py   a public-domain basemap extract (USGS The National Map) and the
                MapLibre style that shows it
   api.py       the routes that serve the local basemap and say what works

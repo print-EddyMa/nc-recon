@@ -1,7 +1,8 @@
 """Build, verify and import offline packs.
 
-  run.py ops-pack --area swannanoa [--out DIR] [--tar] [--with-web DIST]
-  run.py ops-pack-import PACK [--replace]
+  PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline pack --area swannanoa [--out DIR] [--tar]
+  PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline import PACK [--replace]
+  (from pipeline/; see __main__.py)
 
 A pack is a directory (or a .tar of one) holding everything one assessed area
 needs to be reviewed with no network:
