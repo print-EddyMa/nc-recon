@@ -1,4 +1,4 @@
-"""NC Recon Verify: the ground-truth engine (docs/truth/README.md).
+"""Groma Verify: the ground-truth engine (docs/truth/README.md).
 
 Assessment -> value-of-information task list -> blind judgments from several
 verifiers -> reliability-weighted consensus -> explicit release into the
@@ -27,6 +27,7 @@ from typing import Any
 
 from . import DATA_DIR, DISCLAIMER
 from .analyze.classes import FEMA, FEMA_LABEL
+from .guard import csv_cell
 
 K_JUDGMENTS = 3          # independent verifiers per building
 RELEASE_MIN_AGREE = 2    # at least this many level votes on the winning level
@@ -350,8 +351,8 @@ def release(area: str) -> dict[str, Any]:
                 w.writerow(["ncr_id", "label", "labeler", "protocol", "imagery_date", "aoi_role", "labeled_utc", "notes"])
             stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             for nid, d in new:
-                w.writerow([nid, d["label"], d["by"], PROTOCOL, img_date, role, stamp,
-                            f"NC Recon Verify: {d['agree']} of {d['n']} agree, posterior {d['posterior']}"])
+                w.writerow([nid, d["label"], csv_cell(d["by"]), PROTOCOL, img_date, role, stamp,
+                            f"Groma Verify: {d['agree']} of {d['n']} agree, posterior {d['posterior']}"])
         os.makedirs(os.path.dirname(_released_path(area)), exist_ok=True)
         with open(_released_path(area), "w", encoding="utf-8") as fh:
             json.dump({"area": area, "aoi_role": role, "ncr_ids": sorted(done | {n for n, _ in new})}, fh)
@@ -388,7 +389,7 @@ def dataset(areas: list[str] | None = None) -> tuple[list[dict[str, Any]], dict[
             })
     by_split = Counter(r["split"] for r in records)
     sheet = {
-        "name": "NC Recon Verify structure damage labels", "generated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "name": "Groma Verify structure damage labels", "generated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "records": len(records), "by_split": dict(by_split), "by_label": dict(Counter(r["label"] for r in records)),
         "areas": areas, "commercial_use_records": sum(r["commercial_use"] for r in records),
         "method": (f"Blind remote judgments of before/after imagery, {K_JUDGMENTS} per building, pooled with "

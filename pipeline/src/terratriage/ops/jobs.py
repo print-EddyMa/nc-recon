@@ -5,6 +5,10 @@ or small server); others wait in a FIFO queue. Each step runs as a subprocess
 of `scripts/run.py` with a timeout, so a hung upstream cannot wedge the server,
 and its log tail is kept for the UI.
 
+Pre-event imagery is the NC Orthoimagery Program inside North Carolina and
+USDA NAIP elsewhere, whichever covers the point and was flown before the
+incident (`choose_pre_source`).
+
 Post-event imagery is chosen automatically from the event's `post_sources`
 (config / ops registry), first one that covers the point:
   nc_helene_2025  NC OneMap post-Helene orthos (leaf-off, same program as pre)
@@ -64,6 +68,7 @@ class Job:
     status: str = "queued"          # queued | running | done | failed | cancelled | lost
     step: str = ""
     post_source: str | None = None
+    pre_source: str | None = None
     error: str | None = None
     warnings: list = field(default_factory=list)
     log: deque = field(default_factory=lambda: deque(maxlen=40))
@@ -176,6 +181,34 @@ def choose_post_source(event, lon: float, lat: float) -> str:
                       f"(tried {', '.join(event.post_sources)})")
 
 
+PRE_SOURCES = ("nc_2020_2023", "naip")
+
+
+def choose_pre_source(event, lon: float, lat: float) -> str:
+    """First pre-event source that covers the point with imagery flown inside
+    the event's pre window. NAIP holds only each state's latest collection, so
+    a collection flown after the incident is refused, never used as "before"."""
+    from datetime import date
+
+    from .collect import nc_orthos
+
+    tried = []
+    for src in PRE_SOURCES:
+        try:
+            if not nc_orthos.covered(src, lon, lat):
+                tried.append(f"{src}: no coverage")
+                continue
+            lo, hi, _how = nc_orthos.tile_dates(src, [(lon, lat)])
+        except Exception as ex:  # noqa: BLE001
+            tried.append(f"{src}: {str(ex)[:80]}")
+            continue
+        if all(event.classify_image_date(date.fromisoformat(d)) == "pre" for d in (lo, hi)):
+            return src
+        tried.append(f"{src}: flown {hi}, outside the pre-event window")
+    raise LookupError("no pre-event imagery covers this point before the incident ("
+                      + "; ".join(tried) + ")")
+
+
 def _step(job: Job, label: str) -> None:
     if job.cancel_requested:
         raise Cancelled()
@@ -227,6 +260,11 @@ def _execute(job: Job) -> None:
     job.log.append(f"post-event imagery: {src}")
     if job.cancel_requested:
         raise Cancelled()
+    if src != "maxar":
+        job.pre_source = choose_pre_source(ev, job.lon, job.lat)
+        job.log.append(f"pre-event imagery: {job.pre_source}")
+        if job.cancel_requested:
+            raise Cancelled()
     add_ops_area(job.area, job.event, job.name, job.lon, job.lat)
     if src == "maxar":
         _run(job, "fetching imagery", ["fetch", "--event", ev.maxar_event, "--area", job.area,
@@ -234,7 +272,7 @@ def _execute(job: Job) -> None:
                                         "--event-date", ev.incident_begin.isoformat(), "--name", job.name])
     else:
         args = ["ops-fetch", "--area", job.area, "--lon", str(job.lon), "--lat", str(job.lat),
-                "--half-m", str(job.half_m), "--post", src]
+                "--half-m", str(job.half_m), "--pre", job.pre_source or "nc_2020_2023", "--post", src]
         if src == "eri":
             args += ["--eri-prefix", ev.eri_prefix]
         _run(job, "fetching imagery", args)
@@ -356,11 +394,11 @@ def delete_area(area: str) -> list[str]:
 
 
 def submit(event: str, name: str, lon: float, lat: float, half_m: float = 800.0) -> Job:
-    from .geodesy import assert_lonlat_in_nc
+    from .geodesy import assert_lonlat_in_us
     from .plan.events import load_events
 
     global _worker
-    assert_lonlat_in_nc(lon, lat)
+    assert_lonlat_in_us(lon, lat)
     if event not in load_events():
         raise ValueError(f"unknown event {event}")
     if not 200 <= half_m <= 1500:

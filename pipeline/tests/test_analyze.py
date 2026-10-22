@@ -237,7 +237,11 @@ def test_nc_county_table():
                        ("37129", "New Hanover"), ("37161", "Rutherford"), ("37183", "Wake"),
                        ("37199", "Yancey")):
         assert NC_COUNTIES[fips] == name
-    assert county_name("371119703001023") == "McDowell" and county_name("45045001") is None
+    # every other state comes from the Census table shipped in config/seeds
+    assert county_name("371119703001023") == "McDowell" and county_name("45045001") == "Greenville"
+    assert county_name("060374601001000") == "Los Angeles" and county_name("99999") is None
+    from terratriage.ops.counties import _us
+    assert len(_us()) > 3000 and all(_us()[k] == v for k, v in NC_COUNTIES.items())
     assert county_of(["371119703001023", "371119703001024", "370219801001000", None]) == "McDowell"
     assert county_of([]) == "" and county_of([None, "99"]) == ""
 

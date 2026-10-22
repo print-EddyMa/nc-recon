@@ -679,37 +679,27 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
 
   const riskPanels = (
     <>
-      <section className="panel px-3.5 py-3.5">
-        <h2 className="section-title mb-2">Current conditions</h2>
-        {climate?.disabled ? (
-          <p className="text-2xs leading-relaxed text-ink-faint">
-            {climate.reason}
-          </p>
-        ) : climate ? (
-          <>
-            <StatTile
-              label="Stations reporting"
-              value={climate.headline ?? "-"}
-              sub="ECONet research + RAWS fire-weather stations, via the NC State Climate Office CLOUDS API."
-            />
-            {(() => {
-              const fire = (climate.data.features ?? []).filter(
-                (f) => f.properties.severity >= 2,
-              );
-              return fire.length ? (
-                <p className="mt-2 rounded-sm bg-dmg1/15 px-1.5 py-1 text-2xs text-dmg1">
-                  {fire.length} RAWS station{fire.length > 1 ? "s" : ""} at
-                  fire-weather risk (low fuel moisture + wind)
-                </p>
-              ) : null;
-            })()}
-          </>
-        ) : (
-          <div className="skel h-10" />
-        )}
-      </section>
+      {climate && !climate.disabled && (
+        <section className="px-3.5 py-3">
+          <h2 className="section-title mb-2">Current conditions</h2>
+          <StatTile
+            label="Stations reporting"
+            value={climate.headline ?? "-"}
+            sub="ECONet research + RAWS fire-weather stations, via the NC State Climate Office CLOUDS API."
+          />
+          {(() => {
+            const fire = (climate.data.features ?? []).filter((f) => f.properties.severity >= 2);
+            return fire.length ? (
+              <p className="mt-2 rounded-sm bg-dmg1/15 px-1.5 py-1 text-2xs text-dmg1">
+                {fire.length} RAWS station{fire.length > 1 ? "s" : ""} at fire-weather risk (low fuel moisture +
+                wind)
+              </p>
+            ) : null;
+          })()}
+        </section>
+      )}
 
-      <section className="panel px-3.5 py-3.5">
+      <section className="px-3.5 py-3">
         <div className="mb-2 flex items-baseline justify-between">
           <h2 className="section-title">Flood forecast</h2>
           <span className="cap">{gauge?.headline ?? "…"}</span>
@@ -717,14 +707,17 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
         {gauge ? (
           <RankedList
             items={floodItems}
-            empty="Every forecast gauge in NC is below flood stage. NWM forecasts extend to ungauged creeks too, a rise shows here before a gauge is under water."
+            empty="No river forecasts above action stage."
           />
         ) : (
-          <div className="skel h-16" />
+          <p className="flex items-center gap-2 text-xs text-ink-faint">
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-line-strong border-t-transparent" />
+            Loading river forecasts…
+          </p>
         )}
       </section>
 
-      <section className="panel px-3.5 py-3.5">
+      <section className="px-3.5 py-3">
         <div className="mb-2 flex items-baseline justify-between">
           <h2 className="section-title">Official alerts</h2>
           <span className="cap">{alert?.headline ?? "…"}</span>
@@ -741,7 +734,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
       </section>
 
       {fire && !fire.disabled && fire.data.features.length > 0 && (
-        <section className="panel px-3.5 py-3.5">
+        <section className="px-3.5 py-3">
           <div className="mb-2 flex items-baseline justify-between">
             <h2 className="section-title">Active fire</h2>
             <span className="cap">{fire.headline ?? "…"}</span>
@@ -754,7 +747,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
         </section>
       )}
 
-      <section className="panel px-3.5 py-3.5">
+      <section className="px-3.5 py-3">
         <div className="mb-2 flex items-baseline justify-between">
           <h2 className="section-title">NC disaster history</h2>
           <span className="cap">{history ? "OpenFEMA" : "…"}</span>
@@ -795,7 +788,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
       </section>
 
       {storm && !storm.disabled && (
-        <section className="panel px-3.5 py-3.5">
+        <section className="px-3.5 py-3">
           <h2 className="section-title mb-1.5">Active storm</h2>
           <ul className="space-y-1">
             {(storm.data.features ?? []).map((f) => (
@@ -818,7 +811,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
 
       {elevatedRisk &&
         (nearbyCameras.length > 0 || nearbyClosures.length > 0) && (
-          <section className="panel px-3.5 py-3.5">
+          <section className="px-3.5 py-3">
             <h2 className="section-title mb-1.5">Ground truth near the risk</h2>
             {nearbyClosures.length > 0 && (
               <div className="mb-2">
@@ -870,19 +863,17 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
       <aside className="absolute left-3 top-3 z-20 flex max-h-[calc(100%-1.5rem)] w-[18rem] max-w-[calc(100vw-1.5rem)] flex-col gap-3 overflow-y-auto sm:left-4 sm:top-4">
         <section className="panel px-4 py-3.5">
           <div className="flex items-baseline justify-between">
-            <h1 className="font-display text-lg font-semibold leading-tight text-ink">
-              North Carolina
-            </h1>
+            <h1 className="text-base leading-tight text-ink">Conditions · North Carolina</h1>
             <span className="flex items-center gap-1.5 text-2xs text-ink-faint">
               <span
-                className={`h-1.5 w-1.5 rounded-full ${anyStale ? "bg-dmg1" : "bg-accent"}`}
+                className={`h-1.5 w-1.5 rounded-full ${anyStale ? "bg-st-warn" : "bg-st-ok"}`}
               />
               {anyStale ? "cached" : "live"}
             </span>
           </div>
           <p className="mt-1 text-xs leading-relaxed text-ink-dim">
-            Flood forecasts, warnings, storm tracking and road conditions, the
-            hours before and during a disaster.
+            Rivers, warnings, power, shelters, storms and roads, before and during a
+            disaster. Live feeds cover North Carolina today.
           </p>
           <button
             onClick={onOpenAssess}
@@ -919,7 +910,12 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
           <div className={layersOpen ? "mt-2.5" : "hidden"}>
             <LayerToggles rows={layerRows} />
 
-            {(settings.cloudsKey || climate?.disabled) && (
+            <details className="mt-2 text-2xs text-ink-faint">
+              <summary className="cursor-pointer hover:text-ink">Optional data keys</summary>
+              <p className="mt-1.5 leading-relaxed">
+                A free NC State Climate Office CLOUDS key adds current conditions: temperature, wind, rain
+                and fire-weather stations.
+              </p>
               <KeyForm
                 hasKey={!!settings.cloudsKey}
                 placeholder="CLOUDS API hash"
@@ -927,7 +923,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
                 onAdd={(v) => set("cloudsKey", v)}
                 onRemove={() => set("cloudsKey", undefined)}
               />
-            )}
+            </details>
 
             <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 border-t border-line pt-2.5">
               {[-1, 0, 1, 2, 3].map((s) => (
@@ -971,15 +967,21 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
               onClick={onOpenAbout}
               className="pressable mt-3 border-t border-line pt-2.5 text-2xs text-ink-faint hover:text-ink"
             >
-              About NC Recon
+              About Groma
             </button>
           </div>
         </section>
       </aside>
 
       {/* right: NC risk now, full panel on md+ */}
-      <aside className="absolute right-3 top-3 z-20 hidden max-h-[calc(100%-1.5rem)] w-[20rem] flex-col gap-3 overflow-y-auto md:flex lg:right-4 lg:top-4">
-        {riskPanels}
+      <aside className="absolute right-3 top-3 z-20 hidden max-h-[calc(100%-1.5rem)] w-[20rem] flex-col overflow-y-auto md:flex lg:right-4 lg:top-4">
+        <div className="panel divide-y divide-line overflow-hidden">
+          <div className="flex items-center justify-between px-3.5 py-2.5">
+            <span className="text-sm font-semibold text-ink">Now</span>
+            <span className="text-xs text-ink-faint">{anyStale ? "some feeds cached" : "all feeds live"}</span>
+          </div>
+          {riskPanels}
+        </div>
       </aside>
 
       {/* mobile: a compact state strip that opens the full sheet. Right edge
@@ -987,7 +989,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
           the sheet's rounded corner doesn't sit on top of the compass button. */}
       <div className="absolute bottom-3 left-3 right-14 z-20 md:hidden">
         {riskOpen ? (
-          <div className="panel flex max-h-[70vh] flex-col gap-3 overflow-y-auto p-3">
+          <div className="panel flex max-h-[70vh] flex-col divide-y divide-line overflow-y-auto">
             <button
               onClick={() => setRiskOpen(false)}
               className="pressable cap self-end text-ink-faint hover:text-ink"

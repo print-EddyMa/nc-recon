@@ -10,7 +10,7 @@
 import { API_URL } from "./catalog";
 
 export const DISCLAIMER =
-  "Decision-support tool. Not an official FEMA or NC Emergency Management damage assessment. Verify on the ground.";
+  "Decision-support tool. Not an official FEMA or state emergency management damage assessment. Verify on the ground.";
 
 export const FEMA = [
   "no_damage",
@@ -257,7 +257,7 @@ export interface FemaReference {
 export const loadFemaReference = (area: string) =>
   getJSON<FemaReference>(`/ops/areas/${encodeURIComponent(area)}/fema-assistance`, true);
 
-/** NC Recon's calls beside the Helene search-and-rescue field categories for
+/** The calls beside the Helene search-and-rescue field categories for
  * the same structures. A comparison, not validation (see `caveats`). */
 export interface FieldReference {
   area: string;
@@ -367,7 +367,7 @@ export async function openBrief(area: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// NC Recon Verify (docs/truth/README.md): blind verification tasks.
+// Groma Verify (docs/truth/README.md): blind verification tasks.
 // A task carries no model output, by design.
 // ---------------------------------------------------------------------------
 export interface VerifyTask {
@@ -402,6 +402,34 @@ export const nextVerifyTask = (area: string, worker: string, role: "verifier" | 
   );
 export const loadVerifyStatus = (area: string) =>
   getJSON<VerifyAreaStatus>(`/ops/truth/areas/${encodeURIComponent(area)}`, true);
+
+/** Civil Air Patrol frames that probably show a building (reviewer context). */
+export interface CapPhoto {
+  key: string;
+  kind: "oblique" | "nadir";
+  date: string;
+  dist_m: number;
+  /** expected horizontal position of the building in an oblique, 0..1 */
+  x_frac: number | null;
+  url: string;
+  mission: string | null;
+}
+export interface CapPhotos {
+  photos: CapPhoto[];
+  note: string | null;
+  source: string;
+  caveat: string;
+}
+export const loadCapPhotos = (area: string, ncrId: string) =>
+  getJSON<CapPhotos>(`/ops/photos/${encodeURIComponent(area)}/${encodeURIComponent(ncrId)}`, true);
+export async function loadCapThumb(area: string, key: string): Promise<string> {
+  const r = await fetch(`${API_URL}/ops/photos/${encodeURIComponent(area)}/thumb/${encodeURIComponent(key)}.jpg`, {
+    headers: authHeaders(),
+    signal: AbortSignal.timeout(180_000),
+  });
+  if (!r.ok) throw new Error(`photo: ${r.status}`);
+  return URL.createObjectURL(await r.blob());
+}
 export async function postJudgment(body: {
   area: string;
   ncr_id: string;
@@ -466,7 +494,7 @@ export async function downloadExport(area: string): Promise<void> {
   const blob = await r.blob();
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `nc-recon-${area}-responder.zip`;
+  a.download = `groma-${area}-responder.zip`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
@@ -511,6 +539,7 @@ export const loadEvents = () => getJSON<OpsEvent[]>("/ops/events");
 export const checkCoverage = (event: string, lon: number, lat: number) =>
   getJSON<{ covered: boolean; post_source?: string; reason?: string }>(
     `/ops/coverage?event=${encodeURIComponent(event)}&lon=${lon}&lat=${lat}`,
+    true,
   );
 
 export interface Job {
@@ -622,4 +651,266 @@ export async function deleteArea(area: string): Promise<void> {
     headers: authHeaders(),
   });
   if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? "Responder token required" : `delete failed (${r.status})`);
+}
+
+// --------------------------------------------------------------------------- //
+// any-hazard events from a FEMA declaration (UI, fork 3)
+// --------------------------------------------------------------------------- //
+export interface FemaEventDraft {
+  event_id: string;
+  name: string;
+  state: string;
+  hazards: string[];
+  disaster_number: number;
+  incident_begin: string;
+  designated_areas: string[];
+  post_days: [number, number];
+  eri_prefix: string | null;
+  maxar_event: string | null;
+  candidates?: Record<string, { folder: string; score: number; why: string[] }[]>;
+  notes: string[];
+}
+/** Draft (write=false) or register (write=true) an event from its FEMA number. */
+export const eventFromFema = (disaster_number: number, write = false) =>
+  postJSON<{ event: OpsEvent | null; draft: FemaEventDraft }>("/ops/events/from-fema", {
+    disaster_number,
+    write,
+  });
+
+/** Coverage answer including the before-event source where the API gives it. */
+export const checkCoverageFull = (event: string, lon: number, lat: number) =>
+  getJSON<{ covered: boolean; post_source?: string; pre_source?: string; reason?: string }>(
+    `/ops/coverage?event=${encodeURIComponent(event)}&lon=${lon}&lat=${lat}`,
+    true,
+  );
+
+export const PRE_SOURCE_LABEL: Record<string, string> = {
+  nc_2020_2023: "NC OneMap statewide orthos (leaf-off, 6 in)",
+  naip: "USDA NAIP aerial (leaf-on, 0.3-0.6 m)",
+};
+
+export const HAZARD_LABEL: Record<string, string> = {
+  riverine_flood: "River flooding",
+  flash_flood: "Flash flooding",
+  coastal_surge: "Storm surge",
+  wind: "Wind",
+  tornado: "Tornado",
+  wildfire: "Wildfire",
+  earthquake: "Earthquake",
+  landslide: "Landslide",
+  volcanic: "Volcanic",
+  winter: "Winter storm",
+  other: "Other",
+};
+
+/** Every stored comparison of an area with a published field record or
+ * measurement (responder): DINS, FEMA historical, SARCOP, NEMAC, lidar. */
+export interface AreaReference {
+  source: "dins" | "fema_hgda" | "nemac" | "sarcop" | "lidar" | string;
+  role?: string;
+  generated_utc?: string;
+  reference?: { name: string; url: string };
+  match_rule?: string;
+  counts?: Record<string, number>;
+  caveats: string[];
+  summary?: Record<string, unknown> | null;
+  summary_homes?: Record<string, unknown> | null;
+  // lidar ground change
+  rule?: string;
+  typical_change_m?: number;
+  measured?: number;
+  structures?: number;
+  flag_counts?: Record<string, number>;
+  flagged_by_ncr_level?: Partial<Record<FemaClass, number>>;
+}
+export const loadReferences = (area: string) =>
+  getJSON<{ area: string; references: AreaReference[] }>(
+    `/ops/areas/${encodeURIComponent(area)}/references`,
+    true,
+  );
+
+// --------------------------------------------------------------------------
+// Response products (pipeline ops/response/, routes in ops/response_api.py)
+// --------------------------------------------------------------------------
+export type LifelineColour = "red" | "yellow" | "green" | "grey";
+export type FacilityStatus = "disrupted" | "at_risk" | "no_evidence" | "not_assessed";
+
+export interface CutOffScenario {
+  isolated_buildings: number;
+  isolated_people_est: number;
+  isolated_major_or_destroyed: number;
+}
+export interface ResponseSector {
+  priority: number;
+  usng_1km: string;
+  center: [number, number];
+  buildings: number;
+  major_or_destroyed_expected: number;
+  people_in_severe_expected: number;
+  people: number;
+  cut_off_buildings: number;
+  cut_off_people: number;
+  needs_review: number;
+  review_share: number;
+}
+export interface LandingZone {
+  lon: number;
+  lat: number;
+  usng: string;
+  clear_diameter_m: number;
+  slope_deg: number;
+  elevation_m: number;
+  cover: string;
+  marginal: boolean;
+  fits: string[];
+  nearest_need: { label: string; distance_m: number; weight: number } | null;
+  score: number;
+}
+export interface Lifeline {
+  lifeline: string;
+  label: string;
+  status: LifelineColour;
+  facilities: number;
+  disrupted: number;
+  at_risk: number;
+  not_assessed: number;
+  first_look: { name: string; kind: string; status: FacilityStatus; reasons: string[]; lon: number; lat: number }[];
+  roads_note?: string;
+  bridges_unverified?: number;
+  note?: string;
+}
+export interface ResponseFacility {
+  id: string;
+  kind: string;
+  lifeline: string;
+  name: string | null;
+  lon: number;
+  lat: number;
+  status: FacilityStatus;
+  reasons: string[];
+  critical: boolean;
+  min_to_hospital: number | null;
+}
+export interface UsdRange {
+  low: number;
+  high: number;
+}
+export interface ResponseProducts {
+  schema: "groma.response/1";
+  area: string;
+  run_id: string;
+  generated_utc: string;
+  disclaimer: string;
+  summary: {
+    area: string;
+    event: string;
+    hazards: string[];
+    buildings_assessed: number;
+    /** Inventory points with no footprint: unknown, never undamaged. */
+    buildings_not_assessed: number;
+    /** assessed / (assessed + not assessed) */
+    coverage: number;
+    reading_notes: string[];
+    major_or_destroyed_expected: number;
+    people_in_severe_expected: number;
+    cut_off: { known_blocks: CutOffScenario; plus_debris: CutOffScenario; worst_case: CutOffScenario } | null;
+    lifelines: { lifeline: string; label: string; status: LifelineColour }[];
+    landing_zone_candidates: number;
+    water_systems_at_risk: number;
+    private_well_homes: number | null;
+    building_loss_usd: (UsdRange & { buildings_valued: number; buildings_without_value: number; note: string }) | null;
+    debris_cy: (UsdRange & { destroyed_expected: number; method: string }) | null;
+    top_sectors: Pick<ResponseSector, "priority" | "usng_1km" | "major_or_destroyed_expected" | "people_in_severe_expected" | "cut_off_people">[];
+  };
+  access: {
+    box: number[];
+    roads: { ways: number; segments: number; blocked: number; debris: number; bridge: number; exits: number };
+    hospitals: { name: string | null; id: string; lon: number; lat: number }[];
+    scenarios: { known_blocks: CutOffScenario; plus_debris: CutOffScenario; worst_case: CutOffScenario };
+    isolated_clusters: { cluster: number; buildings: number; people_est: number; major_or_destroyed: number; center: [number, number]; usng: string }[];
+    method: string;
+  } | null;
+  resources: { lifelines: Lifeline[]; status_rule: string; facilities: ResponseFacility[] } | null;
+  landing: { candidates: LandingZone[]; params: Record<string, number>; caveat?: string; open_fraction?: number } | null;
+  money: {
+    building_loss_usd: UsdRange & { buildings_valued: number; buildings_without_value: number; note: string };
+    homes_major_or_destroyed_expected: number;
+    debris_cy: UsdRange & { destroyed_expected: number; method: string };
+    public_assistance_threshold: {
+      fiscal_year: number;
+      county?: string;
+      county_population_2024?: number;
+      countywide_per_capita?: number;
+      county_threshold_usd?: number;
+      statewide_per_capita?: number;
+      source?: string;
+      note?: string;
+    };
+    ratio_source: string;
+  } | null;
+  sectors: ResponseSector[];
+  needs: {
+    people_served: number;
+    people_displaced_expected: number | null;
+    people_cut_off: number;
+    water_litres_per_day: number;
+    meals_per_day: number;
+    shelter_ft2_standard: number;
+    shelter_ft2_evacuation: number;
+    distribution_points: { type: string; count: number; people_per_day_each: number }[];
+    note: string;
+  };
+  water: {
+    systems: {
+      pwsid: string;
+      name: string;
+      population_served: number | null;
+      boundary: string;
+      buildings_assessed_inside: number;
+      major_or_destroyed_expected: number;
+      people_in_assessed_buildings: number;
+      status: "at_risk" | "no_evidence";
+      reasons: string[];
+      flagged_facilities: { name: string | null; kind: string; status: FacilityStatus }[];
+    }[];
+    private_wells: { residential_buildings: number; people_est: number; major_or_destroyed_expected: number; advice: string };
+    note: string;
+  } | null;
+  power: {
+    /** false: the event is too old for live outage feeds; null: feed unavailable */
+    active: boolean | null;
+    counties?: { utility: string; county: string; state: string; meters_out: number; estimated_restoration: string | null }[];
+    note: string;
+  };
+  sources: Record<string, { name: string; url?: string; license: string }>;
+  notes: string[];
+  errors: Record<string, string>;
+}
+/** Map layers: properties.layer is road | cut_off_cluster | facility | landing_zone | sector. */
+export interface ResponseLayers {
+  type: "FeatureCollection";
+  features: { type: "Feature"; geometry: { type: string; coordinates: unknown }; properties: Record<string, unknown> & { layer: string } }[];
+}
+const respPath = (area: string) => `/ops/areas/${encodeURIComponent(area)}/response`;
+export const loadResponse = (area: string) => getJSON<ResponseProducts>(respPath(area), true);
+export const loadResponseLayers = (area: string) => getJSON<ResponseLayers>(`${respPath(area)}/layers`, true);
+export const loadResponseStatus = (area: string) =>
+  getJSON<{ area: string; status: "building" | "idle"; started_utc: string | null; error: string | null; built: boolean }>(
+    `${respPath(area)}/status`,
+    true,
+  );
+export async function buildResponse(area: string): Promise<{ area: string; status: string }> {
+  const r = await fetch(`${API_URL}${respPath(area)}`, {
+    method: "POST",
+    headers: authHeaders(),
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!r.ok) throw new Error(`build response: ${r.status}`);
+  return r.json();
+}
+/** KML download URL (opens in Google Earth, ATAK/WinTAK, ArcGIS); needs the responder token header, so fetch it as a blob. */
+export async function downloadResponseKml(area: string): Promise<Blob> {
+  const r = await fetch(`${API_URL}${respPath(area)}/plan.kml`, { headers: authHeaders() });
+  if (!r.ok) throw new Error(`plan.kml: ${r.status}`);
+  return r.blob();
 }

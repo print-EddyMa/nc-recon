@@ -17,7 +17,7 @@ operator runs with NCR_DEV_OPEN=1 for local development - see ops/auth.py):
   GET  /ops/areas/{area}/responder      ncr_id -> address sidecar
   GET  /ops/areas/{area}/fema-assistance  FEMA assistance by ZIP beside the assessment
   GET  /ops/areas/{area}/field-reference  Helene SAR field categories beside the calls (Buncombe)
-  GET  /ops/truth/next?area=&worker=&role=   NC Recon Verify: next blind verification task
+  GET  /ops/truth/next?area=&worker=&role=   Groma Verify: next blind verification task
   POST /ops/truth/judgments                  one blind judgment
   GET  /ops/truth/areas/{area}               verification progress for an area
   GET  /ops/truth/metrics                    verified structures, verifiers, reliability
@@ -45,6 +45,7 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field, field_validator
 
 from . import DATA_DIR, DISCLAIMER, PIPELINE_ROOT, audit
+from .guard import csv_cell
 from .analyze.classes import FEMA, FEMA_LABEL
 
 OPS_OUT = os.path.join(DATA_DIR, "output", "ops")
@@ -144,7 +145,8 @@ def areas():
     out = []
     if os.path.isdir(OPS_OUT):
         for f in sorted(os.listdir(OPS_OUT)):
-            if not f.endswith(".geojson"):
+            # only <area>.geojson is an assessment; sidecars (<area>.<product>...) never are
+            if not f.endswith(".geojson") or not _AREA.fullmatch(f[:-8]):
                 continue
             fc = _load(f[:-8])
             p = fc["properties"]
@@ -306,7 +308,7 @@ def fema_assistance(area: str, request: Request, authorization: str | None = Hea
 
 @router.get("/areas/{area}/field-reference")
 def field_reference(area: str, request: Request, authorization: str | None = Header(default=None)):
-    """NC Recon's calls beside the Helene search-and-rescue field categories
+    """Groma's calls beside the Helene search-and-rescue field categories
     for the same structures (Buncombe's public SARCOP extract). Responder-only:
     the per-structure pairs locate damage calls. Read from the stored
     comparison (`run.py ops-sarcop`); never computed on request, and never for
@@ -514,9 +516,9 @@ def add_label(req: LabelReq, request: Request, authorization: str | None = Heade
         w = csv.writer(fh)
         if new:
             w.writerow(["ncr_id", "label", "labeler", "protocol", "imagery_date", "aoi_role", "labeled_utc", "notes"])
-        w.writerow([req.ncr_id, req.label, req.labeler, PROTOCOL,
+        w.writerow([req.ncr_id, req.label, csv_cell(req.labeler), PROTOCOL,
                     post.get("acquired_utc") or post.get("date_label") or post.get("dataset_version") or "",
-                    role, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), req.notes])
+                    role, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), csv_cell(req.notes)])
     audit.record("label", request, req.area, ncr_id=req.ncr_id, label=req.label, labeler=req.labeler)
     return {"ok": True, "aoi_role": role, "file": os.path.basename(path)}
 
@@ -550,7 +552,7 @@ def export_zip(area: str, request: Request, authorization: str | None = Header(d
                 full = os.path.join(root, f)
                 z.write(full, os.path.relpath(full, d))
     return Response(buf.getvalue(), media_type="application/zip",
-                    headers={"Content-Disposition": f'attachment; filename="nc-recon-{area}-responder.zip"'})
+                    headers={"Content-Disposition": f'attachment; filename="groma-{area}-responder.zip"'})
 
 
 # --------------------------------------------------------------------------- #
@@ -586,29 +588,97 @@ def create_event(req: EventReq, request: Request, authorization: str | None = He
     return ev.to_summary()
 
 
+@router.get("/hazards")
+def hazard_profiles():
+    """Hazard profiles (config/hazards.yaml): label, evidence channels and
+    footprint sources per hazard, and the FEMA incident-type mapping."""
+    from . import hazards as hz
+
+    p = hz.profiles()
+    return {"hazards": {k: {"label": v.get("label", k), "channels": v.get("channels", []),
+                            "footprint": v.get("footprint") or {}, "post_days": v.get("post_days")}
+                        for k, v in (p.get("hazards") or {}).items()},
+            "incident_types": p.get("incident_types") or {}}
+
+
+@router.get("/areas/{area}/references")
+def area_references(area: str, request: Request, authorization: str | None = Header(default=None)):
+    """Every stored comparison with published damage records for this area
+    (CAL FIRE DINS, FEMA, NEMAC, SARCOP, lidar ground change), summaries only.
+    Responder-only; produced by the run.py commands, never computed here."""
+    _responder(request, authorization)
+    _load(area)
+    audit.record("view_references", request, area)
+    out = []
+    for suffix in ("field_reference", "sarcop_reference", "ground_change"):
+        p = os.path.join(OPS_OUT, f"{_area(area)}.{suffix}.json")
+        if not os.path.exists(p):
+            continue
+        with open(p, encoding="utf-8") as fh:
+            d = json.load(fh)
+        d.pop("pairs", None)
+        d.pop("flagged", None)
+        d.setdefault("source", {"sarcop_reference": "sarcop", "ground_change": "lidar"}.get(suffix, suffix))
+        out.append(d)
+    return {"area": area, "references": out}
+
+
+class FemaEventReq(BaseModel):
+    disaster_number: int = Field(ge=1, le=9999)
+    write: bool = False
+
+
+@router.post("/events/from-fema")
+def event_from_fema(req: FemaEventReq, request: Request, authorization: str | None = Header(default=None)):
+    """Draft (write=false) or register an event for any US disaster from its
+    FEMA number: incident date, hazards, imagery window and matching imagery."""
+    from .plan.bootstrap import create_from_declaration, draft_from_declaration
+
+    _responder(request, authorization)
+    try:
+        if req.write:
+            ev, d = create_from_declaration(req.disaster_number)
+            audit.record("create_event", request, None, event=ev.id)
+            return {"event": ev.to_summary(), "draft": d.to_dict()}
+        return {"event": None, "draft": draft_from_declaration(req.disaster_number).to_dict()}
+    except (ValueError, LookupError) as ex:
+        raise HTTPException(400, str(ex)) from ex
+    except Exception as ex:  # noqa: BLE001 - OpenFEMA down, schema change
+        raise HTTPException(502, f"could not read the declaration: {str(ex)[:200]}") from ex
+
+
 @router.get("/coverage")
-def coverage(event: str, lon: float, lat: float):
-    """Which post-event imagery would be used at this point (no data returned)."""
-    from .geodesy import in_nc
-    from .jobs import choose_post_source
+def coverage(event: str, lon: float, lat: float, request: Request, authorization: str | None = Header(default=None)):
+    """Which post-event imagery would be used at this point (no data returned).
+    Responder-only: one call fans out to several upstream catalogs."""
+    _responder(request, authorization)
+    from .geodesy import in_us
+    from .jobs import choose_post_source, choose_pre_source
     from .plan.events import load_events
 
     evs = load_events()
     if event not in evs:
         raise HTTPException(404, "unknown event")
-    if not in_nc(lon, lat, pad=0.1):
-        return {"covered": False, "reason": "outside North Carolina"}
+    if not in_us(lon, lat, pad=0.1):
+        return {"covered": False, "reason": "outside the United States"}
     try:
-        return {"covered": True, "post_source": choose_post_source(evs[event], lon, lat)}
+        post = choose_post_source(evs[event], lon, lat)
     except LookupError as ex:
         return {"covered": False, "reason": str(ex)}
+    if post == "maxar":
+        return {"covered": True, "post_source": post}
+    try:
+        pre = choose_pre_source(evs[event], lon, lat)
+    except LookupError as ex:
+        return {"covered": False, "post_source": post, "reason": str(ex)}
+    return {"covered": True, "post_source": post, "pre_source": pre}
 
 
 class AssessReq(BaseModel):
     event: str = Field(max_length=40)
     name: str = Field(min_length=2, max_length=60)
-    lon: float = Field(ge=-85, le=-75)
-    lat: float = Field(ge=33, le=37)
+    lon: float = Field(ge=-180, le=-64)    # US states and territories (checked again in jobs)
+    lat: float = Field(ge=17, le=72)
     half_m: float = Field(default=800, ge=200, le=1500)
 
     @field_validator("name")

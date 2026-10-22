@@ -1238,7 +1238,7 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
       </div>
 
       <div ref={titleRef} className="demo-title" hidden>
-        <img ref={titleLogoRef} className="demo-title-logo" alt="NC Recon" />
+        <img ref={titleLogoRef} className="demo-title-logo" alt="Groma" />
         <div ref={titleRuleRef} className="demo-title-rule" />
       </div>
     </div>

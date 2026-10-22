@@ -20,14 +20,15 @@ import numpy as np
 from shapely.ops import transform as shapely_transform
 
 from . import DATA_DIR, DISCLAIMER, PIPELINE_ROOT
-from .analyze import calibration, channels, flood
+from . import hazards as hz
+from .analyze import calibration, channels, flood, hazard_prior
 from .analyze.classes import FEMA, FEMA_DB_LEVEL, crosswalks
 from .analyze.evidence import aoi_radiometry, measure
 from .analyze.fusion import decide, rules
 from .cachekey import code_version
 from .collect.nsi import NSI
 from .counties import county_of
-from .geodesy import transformer, usng
+from .geodesy import transformer, usng, utm_for
 from .plan.events import area_name, check_image_pair, event_for_area
 from .process import coreg, imagery
 from .process.structures import RESIDENTIAL, conflate, unmatched_nsi
@@ -238,6 +239,7 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
     except Exception as ex:  # noqa: BLE001 - occupancy is context, not the damage call
         warnings.append(f"USACE NSI unavailable ({str(ex)[:120]}): no occupancy/foundation data; "
                         "occupants from USA Structures only; flood depth (E5) unavailable")
+        nsi_feats, nsi_prov = [], {"source": "USACE National Structure Inventory", "status": "unavailable"}
     # water-surface elevations for E5: the event's published crests on the
     # town's reaches (a secondary source: never allowed to cost the assessment)
     wse_prov: list[dict] = []
@@ -250,7 +252,6 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
         if wse_sources:
             warnings.append(f"flood depth (E5) from {len(wse_sources)} published crest(s): "
                             + "; ".join(s.ref for s in wse_sources))
-        nsi_feats, nsi_prov = [], {"source": "USACE National Structure Inventory", "status": "unavailable"}
     structs = conflate(polys_ll, srcs, ids, nsi_feats, attrs)
     seen_ids: set[str] = set()
     for st in structs:
@@ -260,6 +261,42 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
             raise RuntimeError(f"duplicate structure id {st.ncr_id} ({st.source_ids})")
         seen_ids.add(st.ncr_id)
     missing = unmatched_nsi(structs, nsi_feats)
+
+    # which evidence applies to this event's hazards (config/hazards.yaml), and
+    # where the hazard reached (channel H; context, never fatal)
+    applicable = hz.channels_for(ev.hazards)
+    hctx = None
+    to_m = transformer("storage", utm_for((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2)).transform
+    if "H" in applicable:
+        hctx = hazard_prior.build_context(ev, bbox, to_m)
+        for h, why in hctx.unavailable.items():
+            warnings.append(f"hazard footprint ({h}) unavailable: {why}")
+        for h, f_ in hctx.footprints.items():
+            warnings.append(f"hazard footprint ({h}) from {f_.provenance.source}: {f_.summary}")
+
+    # E6: post-event lidar ground change (NC 2025 QL1 vs 3DEP), a secondary
+    # source like the crests behind E5: no raster for the county or any fetch
+    # failure leaves E6 unavailable and never costs the assessment
+    gc: dict[str, Any] | None = None
+    gc_prov: dict[str, Any] | None = None
+    gc_reason = "NOT_APPLICABLE_FOR_HAZARD"
+    if "E6" in applicable:
+        gc_reason = "NO_POST_EVENT_LIDAR"
+        if ev.state == "NC" and aoi.county:
+            try:
+                from .analyze import ground_change
+
+                gfeats = [{"type": "Feature", "properties": {"ncr_id": st.ncr_id},
+                           "geometry": {"type": "Polygon", "coordinates": [list(st.footprint_ll.exterior.coords)]}}
+                          for st in structs]
+                gc = ground_change.measure(gfeats, aoi.county)
+                gc_prov = gc.get("provenance")
+                warnings.append(f"lidar ground change (E6): {len(gc['flags'])} building(s) flagged, "
+                                f"typical change {gc['typical_m']} m")
+            except Exception as ex:  # noqa: BLE001 - secondary source
+                gc = None
+                gc_reason = "LIDAR_UNAVAILABLE"
+                warnings.append(f"lidar ground change (E6) unavailable: {str(ex)[:160]}")
     if missing:
         warnings.append(f"{len(missing)} NSI structure points have no footprint in any source "
                         "(not assessed from imagery; listed in the run manifest)")
@@ -327,12 +364,15 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
             channels.e1(ev_b, None if logits is None else logits[i], T)
             if cnn_err is None else channels.Channel("E1", False, unavailable_reason=cnn_err),
             channels.e2(ev_b, pair["e2_geometry_weight"], e2_base),
-            channels.e4(ev_b),
+            channels.e4(ev_b) if "E4" in applicable
+            else channels.Channel("E4", False, unavailable_reason="NOT_APPLICABLE_FOR_HAZARD"),
         ]
         cx, cy = st.footprint_ll.centroid.x, st.footprint_ll.centroid.y
         nsi = st.nsi or {}
         src = flood.pick_source(cx, cy, wse_sources or [])
-        if src is None:
+        if "E5" not in applicable:
+            chs.append(channels.e5_unavailable("NOT_APPLICABLE_FOR_HAZARD"))
+        elif src is None:
             chs.append(channels.e5_unavailable("NO_WSE_SOURCE_ON_REACH"))
         elif nsi.get("grnd_elv_m") is None or nsi.get("found_ht") is None:
             chs.append(channels.e5_unavailable("NO_GROUND_OR_FOUNDATION_HEIGHT"))
@@ -344,6 +384,15 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
                 s.wse, sig, Elevation.of(nsi["grnd_elv_m"]), 0.5,
                 Depth.of(nsi["found_ht"], "ft"), 0.3, st.flags["manufactured_home"], seed=i)
             chs.append(channels.e5(probs, depth, s.ref))
+        if gc is not None:
+            from .analyze.ground_change import LIKELIHOOD as GC_L
+
+            chs.append(channels.e6(gc["stats"].get(st.ncr_id), gc["flags"].get(st.ncr_id), GC_L))
+        else:
+            chs.append(channels.Channel("E6", False, unavailable_reason=gc_reason))
+        if hctx is not None:
+            hm = hazard_prior.measure(hctx, shapely_transform(to_m, st.footprint_ll), (cx, cy))
+            chs.append(hazard_prior.channel(hctx, hm))
         v = decide(chs, T=T_fusion, qhat=qhat, extra_reasons=list(ev_b.reasons),
                    calibrated=T is not None and T_fusion is not None)
         ring = [[round(x, 7), round(y, 7)] for x, y in st.footprint_ll.exterior.coords]
@@ -380,7 +429,7 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
                 "EVENT_NAME": ev.name,
                 "EVENT_DATE": ev.incident_begin.isoformat(),
                 "DIS_NUMBER": ",".join(d.fema_id for d in ev.declarations),
-                "SOURCE": "NC Recon (decision support, unofficial)",
+                "SOURCE": "Groma (decision support, unofficial)",
                 "USNG": usng(cx, cy, 10),
             },
         }
@@ -466,7 +515,10 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
              "source_url": "https://overpass-api.de/", "count": fp["counts"]["osm_only"]},
         ],
         "structures": nsi_prov,
-        "declaration": ev.declarations[0].provenance.to_dict(),
+        "hazards": {"event_hazards": list(ev.hazards), "channels_applied": sorted(applicable),
+                    "footprints": hctx.to_dict() if hctx is not None else None,
+                    "lidar_ground_change": gc_prov},
+        "declaration": ev.declarations[0].provenance.to_dict() if ev.declarations else None,
         "model": {
             "id": MODEL_ID,
             "runtime": "onnxruntime (CPU)" if os.path.exists(ONNX) else "keras (TF conda env)",
@@ -521,7 +573,7 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
     with open(os.path.join(OUT, f"{area}.responder.json"), "w", encoding="utf-8") as fh:
         json.dump({"run_id": run_id, "access": "responder-only (contains addresses)",
                    "structures": responder}, fh)
-    _manifest(run_id, area, out_path, pre_info, post_info, timings, warnings, missing, ctx_rules)
+    _manifest(run_id, area, out_path, pre_info, post_info, timings, warnings, missing, ctx_rules, wse_prov)
     print(f"[ops] {area}: {len(feats)} structures, {n_review} need review, counts {counts} "
           f"in {fc['properties']['runtime_sec']}s -> {out_path}")
     return fc
@@ -552,7 +604,8 @@ def _sha256(path: str) -> str:
     return h.hexdigest()
 
 
-def _manifest(run_id, area, out_path, pre, post, timings, warnings, missing, ctx_rules) -> None:
+def _manifest(run_id, area, out_path, pre, post, timings, warnings, missing, ctx_rules,
+              wse_prov: list[dict] | None = None) -> None:
     import importlib.metadata as md
 
     d = os.path.join(RUNS, run_id)

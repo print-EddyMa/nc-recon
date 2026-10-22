@@ -27,7 +27,7 @@ from ..provenance import Provenance, utc_now
 # Federal APIs (weather.gov in particular) ask for a User-Agent that names the
 # application and a way to reach its operator. A deployment sets NCR_CONTACT
 # (an email or URL); the project page is the fallback.
-USER_AGENT = "NCRecon/2.0 (NC disaster damage decision support; {})".format(
+USER_AGENT = "Groma/2.0 (disaster damage decision support; {})".format(
     os.environ.get("NCR_CONTACT", "").strip() or "+https://github.com/print-EddyMa/nc-recon")
 
 
@@ -114,6 +114,8 @@ class DiskCache:
         os.makedirs(self.dir, exist_ok=True)
 
     def path(self, key: str) -> str:
+        if not key or "/" in key or "\\" in key or ".." in key or "\x00" in key:
+            raise ValueError(f"bad cache key {key!r}")
         return os.path.join(self.dir, f"{key}.json")
 
     def get(self, key: str, max_age_s: float | None = None) -> Any | None:
@@ -130,10 +132,18 @@ class DiskCache:
         return time.time() - os.path.getmtime(p) if os.path.exists(p) else None
 
     def put(self, key: str, value: Any) -> None:
-        tmp = self.path(key) + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as fh:
-            json.dump(value, fh)
-        os.replace(tmp, self.path(key))
+        import tempfile
+
+        dst = self.path(key)
+        fd, tmp = tempfile.mkstemp(dir=self.dir, suffix=".tmp")   # unique: concurrent writers never share it
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                json.dump(value, fh)
+            os.replace(tmp, dst)
+        except BaseException:
+            if os.path.exists(tmp):
+                os.remove(tmp)
+            raise
 
 
 def parse_utc(s: str | None) -> datetime | None:

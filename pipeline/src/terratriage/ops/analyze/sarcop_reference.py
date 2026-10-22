@@ -1,4 +1,4 @@
-"""NC Recon's calls beside the Helene search-and-rescue field categories:
+"""Groma's calls beside the Helene search-and-rescue field categories:
 `run.py ops-sarcop --area X`.
 
 During Helene, urban search-and-rescue teams logged a FEMA damage category
@@ -6,11 +6,11 @@ for each structure they passed (SARCOP waypoints, collected with QuickCapture
 from 2024-09-27). Buncombe County published its extract as a public ArcGIS
 layer (12,891 waypoints, FEMA levels including "unaffected"). That is the only
 public structure-level Helene damage record with negatives found so far, so it
-is the first thing an NC Recon area in Buncombe can be held up against.
+is the first thing a Groma area in Buncombe can be held up against.
 
 What this is and is not:
 * A comparison, not validation. SAR categories are windshield calls made
-  under pressure in the first days; NC Recon reads imagery taken at a
+  under pressure in the first days; Groma reads imagery taken at a
   different time (for Swannanoa, NC OneMap's spring 2025 orthos, months
   later, after demolition and repair had begun). Disagreement is expected
   for both reasons, and the output says so.
@@ -49,7 +49,7 @@ SEVERE = ("major", "destroyed")
 HOMES = ("single_family", "multi_family", "manufactured_home")   # SARCOP program_type values for dwellings
 CAVEATS = [
     "SAR categories are rapid windshield calls by search teams, not engineering inspections or FEMA's PDA.",
-    "The imagery NC Recon read may be months from the SAR visit; structures repaired or demolished in "
+    "The imagery Groma read may be months from the SAR visit; structures repaired or demolished in "
     "between disagree for that reason alone.",
     "SAR teams logged a subset of structures, weighted toward the visibly damaged, so this sample is not "
     "the area's damage distribution.",
@@ -274,7 +274,7 @@ def compare_area(area: str, *, allow_test: bool = False, write: bool = True) -> 
                       "note": "personal fields on the public layer are not fetched"},
         "ncr_imagery": imagery,
         "match_rule": f"waypoint inside a footprint, else nearest footprint within {MATCH_M:g} m; latest visit wins",
-        "credible_set": f"smallest set of levels holding {int(MASS * 100)}% of NC Recon's probability",
+        "credible_set": f"smallest set of levels holding {int(MASS * 100)}% of Groma's probability",
         "counts": counts,
         "summary": summarise(pairs),
         # FEMA IA counts homes; the teams also logged shops, churches and the like
@@ -307,10 +307,10 @@ def format_summary(r: dict[str, Any]) -> str:
         lines += [
             f"  same level {s['same_level']:.0%}, within one level {s['within_one_level']:.0%}, "
             f"kappa {s['kappa']}, linear-weighted kappa {s['kappa_linear_weighted']}",
-            f"  SAR level inside NC Recon's 80% set {s['sar_level_in_80pct_set']:.0%}",
-            f"  Major or Destroyed: SAR {m['sar_count']}, NC Recon most likely {m['ncr_most_likely_count']}, "
+            f"  SAR level inside Groma's 80% set {s['sar_level_in_80pct_set']:.0%}",
+            f"  Major or Destroyed: SAR {m['sar_count']}, Groma most likely {m['ncr_most_likely_count']}, "
             f"expected {m['ncr_expected_count']}; precision {m['precision']}, recall {m['recall']}, F1 {m['f1']}",
-            "  rows = SAR, columns = NC Recon: " + json.dumps(s["confusion_rows_sar_cols_ncr"]),
+            "  rows = SAR, columns = Groma: " + json.dumps(s["confusion_rows_sar_cols_ncr"]),
         ]
         h = r.get("summary_homes") or {}
         if h.get("n"):

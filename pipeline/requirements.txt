@@ -1,4 +1,4 @@
-# NC Recon pipeline + ops service runtime (pinned from the tested venv, Python 3.13).
+# Groma pipeline + ops service runtime (pinned from the tested venv, Python 3.13).
 # Dev/test extras: requirements-dev.txt. Legacy segmentation path (torch) and the
 # TF conda env are NOT needed to run ops mode.
 fastapi==0.141.1
@@ -12,7 +12,7 @@ geopandas==1.1.4
 pyogrio==0.13.0
 pandas==3.0.5
 mercantile==1.2.1
-Pillow==12.3.0
+Pillow==13.0.0
 PyYAML==6.0.3
 mgrs==1.5.4
 scipy==1.18.1

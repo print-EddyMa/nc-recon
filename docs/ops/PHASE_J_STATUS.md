@@ -103,9 +103,9 @@ development machine; CI builds it). Still to do by hand: **Run again** on
 Marion, and `run.py ops-assess --area spruce_pine`, to clear the duplicate
 structure ids in their stored outputs.
 
-## NC Recon Verify: the ground-truth engine (2026-10-21)
+## Groma Verify: the ground-truth engine (2026-10-21)
 
-Concept: `docs/truth/README.md`. NC Recon makes calls; Verify turns them into
+Concept: `docs/truth/README.md`. Groma makes calls; Verify turns them into
 verified labels and keeps them as data. `ops/truth.py`:
 
 * **Tasks by value of information:** model uncertainty (normalised entropy)
@@ -155,7 +155,7 @@ verified labels and keeps them as data. `ops/truth.py`:
   public SARCOP extract has FEMA-level categories, negatives included; only
   non-personal fields are requested. Swannanoa (TUNE): 370 waypoints, 262
   matched to an assessed structure (inside the footprint or within 10 m),
-  same level 36%, within one level 56%, kappa 0.02. When NC Recon's most likely
+  same level 36%, within one level 56%, kappa 0.02. When Groma's most likely
   level was Major or Destroyed, the teams agreed 22 of 27 times; it found 22 of
   the 114 buildings the teams called Major or Destroyed. Homes only (178 of the
   262; the rest are shops, churches and the like): agreed 15 of 19, found 15

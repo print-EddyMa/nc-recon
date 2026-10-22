@@ -1,4 +1,4 @@
-"""Assessment service for NC Recon.
+"""Assessment service for Groma.
 
 The web app reads GeoJSON + tiles + the event registry as static files and needs
 no backend. This service adds on-demand assessment of a North Carolina area:
@@ -100,7 +100,7 @@ async def _lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="NC Recon", version="1.2", lifespan=_lifespan)
+app = FastAPI(title="Groma", version="1.2", lifespan=_lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS or ["http://localhost:5173"],
@@ -110,8 +110,12 @@ app.add_middleware(
 
 from terratriage.ops import guard  # noqa: E402
 from terratriage.ops.api import router as ops_router  # noqa: E402
+from terratriage.ops.photos_api import router as photos_router  # noqa: E402
+from terratriage.ops.response_api import router as response_router  # noqa: E402
 
 app.include_router(ops_router)
+app.include_router(photos_router)
+app.include_router(response_router)
 
 
 @app.middleware("http")

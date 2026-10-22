@@ -69,6 +69,44 @@ channels:
   E5:
     name: flood depth -> FEMA matrix
     weight: 1.0
+  E6:
+    name: lidar ground change around the building (analyze/ground_change.py)
+    # Post-event bare-earth lidar minus the 3DEP baseline, on a ring 2-10 m
+    # outside the walls. Independent of the imagery (a different sensor and
+    # survey), so not weighted down for correlation with E2. Likelihood rows
+    # live in ground_change.LIKELIHOOD; no flag is no evidence.
+    weight: 0.8
+  H:
+    name: hazard footprint (where the hazard reached, how hard)
+    # Context, not an observation of the building: it says what the hazard
+    # could have done here. Rows are likelihoods over [no damage, affected,
+    # minor, major, destroyed], hand-set from definitions; provisional until
+    # fit on TUNE labels. Which hazards apply comes from config/hazards.yaml.
+    wildfire:
+      weight: 0.6
+      # perimeters are mapped from aircraft and satellites; within this band of
+      # the line the building could be on either side, so no evidence
+      edge_m: 60
+      inside: [0.30, 0.55, 0.65, 0.85, 1.00]    # many homes inside a perimeter survive
+      # well outside, fire damage is unlikely (wind can still do damage, so not decisive)
+      outside_beyond_m: 150
+      outside: [1.00, 0.25, 0.08, 0.04, 0.02]
+    earthquake:
+      weight: 0.5
+      mmi_bins: [6.0, 7.0, 8.0]                 # ShakeMap MMI at the building
+      likelihood:
+        - [1.00, 0.35, 0.12, 0.04, 0.02]        # below VI: structural damage rare
+        - [1.00, 0.75, 0.45, 0.20, 0.08]        # VI-VII: light damage common
+        - [0.70, 0.90, 1.00, 0.70, 0.40]        # VII-VIII: moderate damage
+        - [0.40, 0.70, 1.00, 1.00, 0.90]        # VIII and above: heavy damage, collapse
+    landslide:
+      # NCGS digitised most Helene polygons on the 2025 UNC Collaboratory
+      # orthos, the same post imagery E2 reads, so the two are correlated:
+      # weighted down rather than counted as independent evidence
+      weight: 0.5
+      # a building inside a mapped source, transport or deposit zone of this
+      # storm's slides; outside is no evidence (inventories are incomplete)
+      inside: [0.10, 0.35, 0.65, 1.00, 1.00]
 
 fusion:
   prior: config                 # crosswalks.yaml class_prior

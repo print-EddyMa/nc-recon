@@ -460,7 +460,7 @@ async function _ncFiman(): Promise<NCResult<NCPointFC>> {
     data,
     stale: !live,
     disabled: n === 0,
-    reason: n === 0 ? "Needs the NC Recon server: NCEM's FIMAN service has no browser access." : undefined,
+    reason: n === 0 ? "Needs the Groma server: NCEM's FIMAN service has no browser access." : undefined,
     source: `NCEM FIMAN · ${live ? "live" : snapLabel(asOf)}`,
     fetchedAt: now,
     headline: !n
@@ -483,7 +483,7 @@ async function _ncPower(): Promise<NCResult<NCGeomFC>> {
     data,
     stale: !live,
     disabled: !live && data.features.length === 0,
-    reason: !live ? "Needs the NC Recon server for Duke Energy's outage service." : undefined,
+    reason: !live ? "Needs the Groma server for Duke Energy's outage service." : undefined,
     source: `Duke Energy outage map · ${live ? "live" : snapLabel(asOf)}`,
     fetchedAt: now,
     headline: live
@@ -507,7 +507,7 @@ async function _ncShelters(): Promise<NCResult<NCPointFC>> {
     data,
     stale: !live,
     disabled: !live && n === 0,
-    reason: !live ? "Needs the NC Recon server for FEMA's shelter list." : undefined,
+    reason: !live ? "Needs the Groma server for FEMA's shelter list." : undefined,
     source: `FEMA ESF6 shelters · ${live ? "live" : snapLabel(asOf)}`,
     fetchedAt: now,
     headline: live ? (n ? `${n} open · ${pop.toLocaleString()} sheltered` : "no open shelters") : undefined,

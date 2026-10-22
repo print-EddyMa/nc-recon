@@ -1,9 +1,11 @@
-"""Build a co-gridded pre/post image pair for any WNC point (ops mode).
+"""Build a co-gridded pre/post image pair for any US point (ops mode).
 
 `run.py ops-fetch --area chimney_rock --lon -82.249 --lat 35.432`
 
 Sources:
   pre   nc_2020_2023   NC Orthoimagery Program, leaf-off, 6 in (analysis service)
+        naip           USDA NAIP, latest statewide collection, leaf-on, 0.3-0.6 m
+                       (every other state; must predate the incident)
   post  nc_helene_2025 NC Collaboratory post-Helene, spring 2025, leaf-off, 6 in
         eri            NOAA ERI Oct 2024 aerials, ~15 cm (mosaicked from tiles)
 
@@ -35,7 +37,7 @@ RES = 0.3
 
 
 def grid_for(lon: float, lat: float, half_m: float) -> tuple[int, tuple[float, float, float, float]]:
-    epsg = utm_for(lon)
+    epsg = utm_for(lon, lat)
     x, y = transformer("storage", epsg).transform(lon, lat)
     x0 = math.floor((x - half_m) / RES) * RES
     y1 = math.ceil((y + half_m) / RES) * RES
@@ -65,10 +67,15 @@ def _eri_mosaic(bounds_xy, epsg: int, eri_prefix: str) -> tuple[np.ndarray, dict
                GDAL_HTTP_MULTIRANGE="YES", GDAL_HTTP_MERGE_CONSECUTIVE_RANGES="YES")
     with rasterio.Env(**env):
         for t in tiles:
-            with rasterio.open("/vsicurl/" + t["url"]) as src:
-                tb = src.bounds
+            with rasterio.open("/vsicurl/" + t["url"]) as src0:
+                tb = src0.bounds
                 if tb.right < w or tb.left > e or tb.top < s or tb.bottom > n:
                     continue
+                level = _overview_level(src0, RES)
+            # read the coarsest internal overview that is still finer than the
+            # analysis grid: newer ERI tiles are ~7.5 cm and 1.5 GB each, and
+            # warping from full resolution moves ~16x the bytes the grid needs
+            with rasterio.open("/vsicurl/" + t["url"], **({} if level is None else {"overview_level": level})) as src:
                 with WarpedVRT(src, crs=f"EPSG:{epsg}", transform=tr, width=W, height=H,
                                resampling=Resampling.average) as vrt:
                     arr = vrt.read(indexes=[1, 2, 3])
@@ -82,6 +89,19 @@ def _eri_mosaic(bounds_xy, epsg: int, eri_prefix: str) -> tuple[np.ndarray, dict
     dates = sorted({t["flight_date"] for t in used})
     return out, {"flights": sorted({t["flight"] for t in used}), "dates": dates,
                  "tiles": [t["key"] for t in used]}
+
+
+def _overview_level(src, res_m: float) -> int | None:
+    """Index of the coarsest overview whose pixel is no larger than `res_m`
+    (None: read full resolution)."""
+    px = abs(src.res[0])
+    if src.crs and src.crs.is_geographic:
+        px *= 111320.0 * math.cos(math.radians((src.bounds.top + src.bounds.bottom) / 2))
+    best = None
+    for i, f in enumerate(src.overviews(1)):
+        if px * f <= res_m * 1.01:
+            best = i
+    return best
 
 
 def _span(lo: str, hi: str) -> str:
@@ -137,7 +157,7 @@ def fetch_pair(area: str, lon: float, lat: float, *, half_m: float = 800.0,
                         "date_source": "ERI flight ids", "date_label": f"ERI flights {', '.join(info['flights'])}",
                         "season": "transition", "eri": info,
                         "provenance": {"source": "NOAA NGS Emergency Response Imagery",
-                                       "source_url": "https://noaa-eri-pds.s3.amazonaws.com/2024_Hurricane_Helene/",
+                                       "source_url": f"https://noaa-eri-pds.s3.amazonaws.com/{eri_prefix}/",
                                        "license": "US Government work (NOAA NGS)", "crs": "EPSG:4326 tiles",
                                        "horizontal_datum": "per NOAA ERI metadata"}}
     else:

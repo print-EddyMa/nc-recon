@@ -389,7 +389,7 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
         { t0: B.plunge.t0 + 150, t1: B.plunge.t1 - 100, text: "Every building in its path has to be checked." },
         { t0: B.reveal.t0 + 250, t1: B.reveal.t0 + 2950, text: "The picture already knows.", sub: `Maxar Open Data · ${f.name}, ${f.county} County` },
         { t0: B.reveal.t0 + 3050, t1: B.widen.t1 - 150, text: "Nobody has had time to read it." },
-        { t0: B.read.t0 + 100, t1: B.read.t1 - 150, text: "NC Recon reads it.", sub: "Before and after imagery, every structure in the inventory" },
+        { t0: B.read.t0 + 100, t1: B.read.t1 - 150, text: "Groma reads it.", sub: "Before and after imagery, every structure in the inventory" },
         { t0: B.rise.t0 + 150, t1: B.rise.t1 - 150, text: "Each structure gets a FEMA damage level, with a probability." },
         { t0: B.review.t0 + 150, t1: B.review.t1 - 200, text: "And it says what it is not sure of.", sub: "Uncertain and severe calls go to a human review queue" },
         {
@@ -905,7 +905,7 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
         <svg viewBox="0 0 300 96" aria-hidden="true">
           <path d={NC_MARK} />
         </svg>
-        <span>NC Recon</span>
+        <span>Groma</span>
       </div>
 
       <div ref={telRef} className="intro-tel">
@@ -945,7 +945,7 @@ const Stage = forwardRef<StageHandle, Props>(function Stage(
           <circle cx="198.09" cy="28.24" r="6" className="intro-title-dot" />
         </svg>
         <div ref={wordRef} className="intro-title-word">
-          NC Recon
+          Groma
         </div>
         <div ref={descRef} className="intro-title-desc">
           Disaster damage decision support for North Carolina emergency management.

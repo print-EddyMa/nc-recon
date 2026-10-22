@@ -1,42 +1,55 @@
-/* self-hosted (bundled by Vite): the UI renders the same with no internet, which
-   an EOC on a satellite link or a field laptop cannot take for granted */
-@import "@fontsource-variable/source-serif-4/opsz.css";
-@import "@fontsource-variable/geist";
-@import "@fontsource-variable/geist-mono";
+/* Hallmark · system: Groma operations console (amends DESIGN.md, 2026-10-22)
+ * genre: utilitarian instrument · theme: custom (basalt / limestone, verdigris, bronze)
+ * display: Marcellus (wordmark only) · body: Public Sans (USWDS) · figures: IBM Plex Mono
+ * Self-hosted (bundled by Vite): the UI renders the same with no internet, which
+ * an EOC on a satellite link or a field laptop cannot take for granted. */
+@import "@fontsource-variable/public-sans/wght.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+@import "@fontsource/marcellus/400.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  /* -------- light theme (default) -------- */
+  /* -------- light theme: limestone (daylight, field laptops, print) -------- */
   :root {
     color-scheme: light;
 
-    --canvas: 250 249 246;
-    --surface: 255 255 255;
-    --surface-2: 244 243 239;
-    --line: 227 224 217;
-    --line-strong: 200 197 188;
-    --ink: 28 29 33;
-    --ink-dim: 92 96 104;
-    --ink-faint: 138 142 150;
-    --accent: 37 99 235;
-    --accent-soft: 224 234 254;
+    --canvas: 236 238 234;
+    --surface: 250 251 248;
+    --surface-2: 229 232 227;
+    --line: 214 219 213;
+    --line-strong: 183 190 184;
+    --ink: 22 27 29;
+    --ink-dim: 76 85 82;
+    --ink-faint: 104 113 109;
+    /* verdigris: interaction and "this is live". Never severity. */
+    --accent: 44 122 102;
+    --accent-soft: 214 232 225;
     --accent-ink: 255 255 255;
-    --meter: 71 85 105;
-    --shadow: 30 34 44;
+    /* bronze: the brand mark only */
+    --brand: 142 95 39;
+    /* needs-review outline: a blue that stays legible over aerial imagery
+       and is off the damage ramp */
+    --review: 37 99 235;
+    --meter: 76 85 82;
+    --shadow: 22 27 29;
+
+    /* FEMA Community Lifelines status (stabilized / stabilizing / not / unknown) */
+    --st-ok: 46 125 78;
+    --st-warn: 176 120 0;
+    --st-bad: 178 34 52;
+    --st-unknown: 120 128 124;
 
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
-    /* type scale - restrained, report register, not magazine.
-       Display caps at ~2.75rem so a headline never becomes drama on a
-       1280-1440px operations screen. */
-    --text-display: clamp(1.9rem, 2.4vw + 1rem, 2.6rem);
-    --text-display-s: clamp(1.55rem, 1.4vw + 1rem, 1.9rem);
+    --text-display: clamp(1.6rem, 1.4vw + 1rem, 2.1rem);
+    --text-display-s: clamp(1.3rem, 0.9vw + 1rem, 1.6rem);
 
-    /* spacing - 4px base, named by role */
     --space-3xs: 0.125rem;
     --space-2xs: 0.25rem;
     --space-xs: 0.5rem;
@@ -48,40 +61,52 @@
     --space-3xl: 6rem;
   }
 
-  /* -------- dark theme -------- */
+  /* -------- dark theme: basalt (EOC wall, night shift) -------- */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --canvas: 15 17 21;
-      --surface: 23 25 30;
-      --surface-2: 32 35 41;
-      --line: 42 46 54;
-      --line-strong: 62 67 78;
-      --ink: 233 234 232;
-      --ink-dim: 158 161 168;
-      --ink-faint: 108 112 121;
-      --accent: 74 128 246;
-      --accent-soft: 28 42 74;
-      --accent-ink: 255 255 255;
-      --meter: 132 148 168;
+      --canvas: 13 16 18;
+      --surface: 20 25 27;
+      --surface-2: 28 34 37;
+      --line: 39 47 51;
+      --line-strong: 58 69 74;
+      --ink: 233 231 224;
+      --ink-dim: 164 169 163;
+      --ink-faint: 124 131 127;
+      --accent: 99 181 156;
+      --accent-soft: 27 48 42;
+      --accent-ink: 13 26 22;
+      --brand: 201 149 75;
+      --review: 96 165 250;
+      --meter: 164 169 163;
       --shadow: 0 0 0;
+      --st-ok: 87 171 115;
+      --st-warn: 226 177 60;
+      --st-bad: 232 93 104;
+      --st-unknown: 124 131 127;
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --canvas: 15 17 21;
-    --surface: 23 25 30;
-    --surface-2: 32 35 41;
-    --line: 42 46 54;
-    --line-strong: 62 67 78;
-    --ink: 233 234 232;
-    --ink-dim: 158 161 168;
-    --ink-faint: 108 112 121;
-    --accent: 74 128 246;
-    --accent-soft: 28 42 74;
-    --accent-ink: 255 255 255;
-    --meter: 132 148 168;
+    --canvas: 13 16 18;
+    --surface: 20 25 27;
+    --surface-2: 28 34 37;
+    --line: 39 47 51;
+    --line-strong: 58 69 74;
+    --ink: 233 231 224;
+    --ink-dim: 164 169 163;
+    --ink-faint: 124 131 127;
+    --accent: 99 181 156;
+    --accent-soft: 27 48 42;
+    --accent-ink: 13 26 22;
+    --brand: 201 149 75;
+    --review: 96 165 250;
+    --meter: 164 169 163;
     --shadow: 0 0 0;
+    --st-ok: 87 171 115;
+    --st-warn: 226 177 60;
+    --st-bad: 232 93 104;
+    --st-unknown: 124 131 127;
   }
 
   html {
@@ -98,7 +123,7 @@
     background: rgb(var(--canvas));
     color: rgb(var(--ink));
     font-family: theme("fontFamily.sans");
-    font-feature-settings: "cv11", "ss01";
+    font-size: 14px;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -114,14 +139,16 @@
     border-radius: 3px;
   }
 
+  /* Headings are the body face at weight: in a dense console a second
+     typeface on every heading reads as decoration. Marcellus is kept for the
+     wordmark and document titles (.title-display). */
   h1,
   h2,
   h3 {
-    font-family: theme("fontFamily.display");
-    font-weight: 600;
-    line-height: 1.16;
-    letter-spacing: -0.006em;
-    font-optical-sizing: auto;
+    font-family: theme("fontFamily.sans");
+    font-weight: 650;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
     text-wrap: balance;
     color: rgb(var(--ink));
   }
@@ -172,6 +199,45 @@
     background: rgb(var(--surface));
     border: 1px solid rgb(var(--line));
     border-radius: 10px;
+  }
+
+  /* one text-field style for every form in the app */
+  .field {
+    display: block;
+    width: 100%;
+    height: 2rem;
+    border-radius: 6px;
+    border: 1px solid rgb(var(--line-strong));
+    background: rgb(var(--canvas));
+    padding: 0 0.625rem;
+    font-size: 0.875rem;
+    color: rgb(var(--ink));
+  }
+  .field::placeholder {
+    color: rgb(var(--ink-faint));
+  }
+  .field:hover {
+    border-color: rgb(var(--ink-faint));
+  }
+  select.field {
+    padding-right: 1.75rem;
+  }
+  .field[aria-invalid="true"] {
+    border-color: rgb(var(--st-bad));
+  }
+
+  /* the wordmark and document titles: Roman inscriptional capitals */
+  .title-display {
+    font-family: theme("fontFamily.display");
+    font-weight: 400;
+    letter-spacing: 0.01em;
+  }
+
+  /* a section label inside a panel: small, sentence case, quiet */
+  .label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgb(var(--ink-dim));
   }
 
   /* a full-width hairline rule between blocks in a document */

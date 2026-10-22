@@ -22,6 +22,10 @@ from collections import deque
 WRITE_PER_MIN = int(os.environ.get("NCR_RATE_WRITE_PER_MIN", "30"))
 READ_PER_MIN = int(os.environ.get("NCR_RATE_READ_PER_MIN", "600"))
 FEED_PER_MIN = int(os.environ.get("NCR_RATE_FEED_PER_MIN", "120"))
+# routes that make this server call outside services on the client's behalf
+# (imagery catalogs, a 15-20 MB photo download): cheap to ask for, expensive to
+# answer, and the upstreams may block us if we relay a flood
+UPSTREAM_PER_MIN = int(os.environ.get("NCR_RATE_UPSTREAM_PER_MIN", "30"))
 WINDOW_S = 60.0
 EXEMPT_PATHS = ("/health",)
 
@@ -76,9 +80,15 @@ class RateLimiter:
 LIMITER = RateLimiter()
 
 
+def _upstream(path: str) -> bool:
+    return path == "/ops/coverage" or (path.startswith("/ops/photos/") and "/thumb/" in path)
+
+
 def limit_for(method: str, path: str) -> tuple[str, int]:
     """(bucket, requests per minute) for a request. One bucket per class so a
     burst of map reads cannot lock an analyst out of submitting a label."""
+    if _upstream(path):
+        return "upstream", UPSTREAM_PER_MIN
     if method in ("POST", "PUT", "PATCH", "DELETE"):
         return "write", WRITE_PER_MIN
     if path.startswith("/feed/"):
@@ -93,6 +103,31 @@ def check(request) -> float:
         return 0.0
     bucket, limit = limit_for(request.method, path)
     return LIMITER.hit(f"{bucket}:{client_ip(request)}", limit)
+
+
+# --------------------------------------------------------------------------- #
+# CSV output hygiene
+# --------------------------------------------------------------------------- #
+_FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
+
+
+def csv_cell(v):
+    """A value safe to put in a CSV that someone will open in a spreadsheet.
+
+    A text cell starting with = + - @ (or a tab / carriage return) is run as a
+    formula by Excel, LibreOffice and Google Sheets ("CSV injection"): a label
+    note or an address read from a third-party layer could otherwise execute
+    on an analyst's machine. Such cells get a leading apostrophe (OWASP's
+    recommendation); numbers and other types pass through unchanged, and so
+    does a string that is just a number ("-82.4012" in a coordinate column is
+    a number to a spreadsheet, never a formula, and GIS imports need it as is)."""
+    if isinstance(v, str) and v.startswith(_FORMULA_START):
+        try:
+            float(v)
+            return v
+        except ValueError:
+            return "'" + v
+    return v
 
 
 # --------------------------------------------------------------------------- #

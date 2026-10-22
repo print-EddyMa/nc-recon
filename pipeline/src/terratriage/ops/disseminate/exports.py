@@ -31,6 +31,7 @@ from typing import Any
 
 from .. import DATA_DIR, DISCLAIMER
 from ..analyze.classes import FEMA, FEMA_LABEL
+from ..guard import csv_cell
 from ..provenance import utc_now
 
 OPS_OUT = os.path.join(DATA_DIR, "output", "ops")
@@ -55,7 +56,7 @@ License obligations for this export
 
 
 FEMA_IA_LEVELS = ("unaffected", "affected", "minor", "major", "destroyed", "inaccessible")
-# NC Recon level -> FEMA IA survey choice (code values as the survey stores them)
+# Groma level -> FEMA IA survey choice (code values as the survey stores them)
 IA_LEVEL = {"no_damage": "unaffected", "affected": "affected", "minor": "minor",
             "major": "major", "destroyed": "destroyed"}
 # Field names exactly as a deployed FEMA "Damage Assessment form V2.7 for
@@ -75,7 +76,7 @@ FEMA_IA_NOTE = """FEMA IA layout (<area>_fema_ia.csv / .geojson)
 ---------------------------------------------
 Residential structures only, one point each, with the question names of FEMA's
 Individual Assistance damage assessment survey as deployed in Survey123
-(form V2.7), plus NC Recon columns prefixed ncr_. Every row is a remote call:
+(form V2.7), plus Groma columns prefixed ncr_. Every row is a remote call:
 "level_of_damage_assessed" is the most likely level from imagery, never a
 field observation; owner/renter, insurance, occupancy and utilities are
 "unknown" because imagery cannot see them. Rows marked ncr_needs_review = yes
@@ -133,7 +134,7 @@ def _fema_ia(area: str, fc: dict[str, Any], rows: list[dict[str, Any]], d: str) 
         probs = p.get("damage_probs") or {}
         reasons = [r.replace("_", " ").lower() for r in (p.get("review_reasons") or [])]
         if lvl:
-            narrative = (f"Remote assessment by NC Recon from imagery dated "
+            narrative = (f"Remote assessment by Groma from imagery dated "
                          f"{fema.get('IMG_DATE') or fema.get('IMG_DATE_RANGE') or 'unknown'}; "
                          f"P({FEMA_LABEL.get(lvl, lvl)}) = {round(100 * (probs.get(lvl) or 0))}%"
                          + (f"; verify first: {', '.join(reasons)}" if p.get("needs_review") else "")
@@ -183,7 +184,7 @@ def _fema_ia(area: str, fc: dict[str, Any], rows: list[dict[str, Any]], d: str) 
     with open(csv_path, "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=cols)
         w.writeheader()
-        w.writerows(out_rows)
+        w.writerows({k: csv_cell(v) for k, v in r.items()} for r in out_rows)
     gj_path = os.path.join(d, f"{area}_fema_ia.geojson")
     with open(gj_path, "w", encoding="utf-8") as fh:
         json.dump({"type": "FeatureCollection", "features": feats}, fh)
@@ -287,7 +288,7 @@ def export_area(area: str, mode: str = "responder", out_dir: str | None = None) 
     with open(p, "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
         w.writeheader()
-        w.writerows(rows)
+        w.writerows({k: csv_cell(v) for k, v in r.items()} for r in rows)
     paths["csv"] = p
 
     gdf = gpd.GeoDataFrame(rows, geometry=geoms, crs="EPSG:4326")
@@ -332,7 +333,7 @@ def export_area(area: str, mode: str = "responder", out_dir: str | None = None) 
         json.dump(prov, fh, indent=2)
     paths["provenance"] = p
     with open(os.path.join(d, "README.txt"), "w", encoding="utf-8") as fh:
-        fh.write(f"NC Recon export: {area}\n\n{DISCLAIMER}\n\n"
+        fh.write(f"Groma export: {area}\n\n{DISCLAIMER}\n\n"
                  "Contains street addresses (responder mode). Do not post publicly.\n\n"
                  f"{LICENSE_TEXT}\n{FEMA_IA_NOTE}\nSee {area}.provenance.json for sources, dates and processing.\n")
     print(f"[export] {area}: {len(rows)} rows -> {d}")
@@ -348,7 +349,7 @@ def _kml(area, rows, geoms, path) -> str:
 
     out = ['<?xml version="1.0" encoding="UTF-8"?>',
            '<kml xmlns="http://www.opengis.net/kml/2.2"><Document>',
-           f"<name>NC Recon {escape(area)}</name><description>{escape(DISCLAIMER)}</description>"]
+           f"<name>Groma {escape(area)}</name><description>{escape(DISCLAIMER)}</description>"]
     for lvl, hexc in COLORS.items():
         sid = lvl or "not_assessed"
         out.append(f'<Style id="{sid}"><LineStyle><color>{kcol(hexc, "ff")}</color><width>1.5</width></LineStyle>'
@@ -383,8 +384,8 @@ def _survey123(area, rows, d) -> str:
                     "needs_review", "field_damage_category", "field_notes", "accessible", "gnss_fix_type",
                     "gnss_accuracy_m"])
         for r in ordered:
-            w.writerow([r["ncr_id"], r["usng_10m"], r["lat"], r["lon"], r.get("address") or "",
-                        r["damage_level"], r["confidence"], r["needs_review"], "", "", "", "", ""])
+            w.writerow([csv_cell(x) for x in [r["ncr_id"], r["usng_10m"], r["lat"], r["lon"], r.get("address") or "",
+                                              r["damage_level"], r["confidence"], r["needs_review"], "", "", "", "", ""]])
     with open(os.path.join(d, "survey123_choices.csv"), "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
         w.writerow(["list_name", "name", "label"])

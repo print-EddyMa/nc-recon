@@ -1,6 +1,6 @@
 # The intro (`/intro.html`)
 
-A self-running ~38 s opening for NC Recon: Helene on radar, the plunge into
+A self-running ~38 s opening for Groma: Helene on radar, the plunge into
 Old Fort, the before / after, the read, the FEMA levels rising, what went to a
 person, every assessed town, the title card with a way into the app.
 
@@ -64,5 +64,5 @@ the plunge are the demo's own path, everything at Old Fort is at zoom 14 or
 closer, and the regional shot is a cut at zoom below 9. A new close-up
 somewhere else needs those tiles baked first.
 
-"Open NC Recon" goes to `VITE_APP_URL`, else the app's dev server in
+"Open Groma" goes to `VITE_APP_URL`, else the app's dev server in
 development and `/` in a build.

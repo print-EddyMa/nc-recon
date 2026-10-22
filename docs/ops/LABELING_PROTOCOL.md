@@ -1,6 +1,6 @@
 # Ground-truth labeling protocol (`ncr-label-v1`)
 
-Labels are the only thing that turns NC Recon's probabilities into validated
+Labels are the only thing that turns Groma's probabilities into validated
 numbers. Until enough exist, `run.py ops-eval` reports **no accuracy figure**.
 
 ## Where

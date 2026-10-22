@@ -8,8 +8,8 @@ Rules enforced here:
   * every Transformer is built with always_xy=True (lon/lat, easting/northing)
   * distances and areas are never computed in EPSG:3857
   * the canonical storage/exchange frame is EPSG:4326 lon/lat (RFC 7946)
-  * statewide metric work is EPSG:6542, per-tile metric work is UTM 17N/18N
-    (NAD83(2011)), equal-area statistics are EPSG:5070
+  * statewide metric work is EPSG:6542, per-tile metric work is the point's
+    NAD83(2011) UTM zone (17N/18N in NC), equal-area statistics are EPSG:5070
 
 CRS choices come from `config/crs.yaml` when present so the NSRS 2022 frames
 (NATRF2022 / SPCS2022) can be swapped in by config, not by code edits.
@@ -107,14 +107,47 @@ def assert_measurable(c) -> None:
         raise ValueError(f"refusing to measure in a geographic CRS ({cc.name}); project first")
 
 
-def utm_for(lon: float) -> int:
-    """NAD83(2011) UTM zone EPSG for an NC longitude (17N west of 78W)."""
-    return registry()["utm17"] if lon < -78.0 else registry()["utm18"]
+def utm_for(lon: float, lat: float = 1.0) -> int:
+    """NAD83(2011) UTM zone EPSG for a longitude (17N west of 78W in NC).
+
+    NAD83(2011) defines UTM 1N-19N as EPSG 6330-6348 (the US and its
+    territories north of the equator); anywhere else falls back to WGS 84 UTM.
+    Zones 17 and 18 come from the registry so config can swap NSRS frames.
+    """
+    zone = min(60, int((lon + 180.0) // 6) + 1)
+    if zone == 17 and lat >= 0:
+        return registry()["utm17"]
+    if zone == 18 and lat >= 0:
+        return registry()["utm18"]
+    if 1 <= zone <= 19 and lat >= 0:
+        return 6329 + zone
+    return (32600 if lat >= 0 else 32700) + zone
 
 
 def in_nc(lon: float, lat: float, pad: float = 0.0) -> bool:
     w, s, e, n = NC_BBOX
     return (w - pad) <= lon <= (e + pad) and (s - pad) <= lat <= (n + pad)
+
+
+US_BBOXES = (
+    (-125.0, 24.0, -66.5, 49.6),    # contiguous states
+    (-180.0, 51.0, -129.0, 71.6),   # Alaska
+    (-161.0, 18.5, -154.0, 22.6),   # Hawaii
+    (-68.2, 17.5, -64.3, 18.7),     # Puerto Rico and US Virgin Islands
+)
+
+
+def in_us(lon: float, lat: float, pad: float = 0.0) -> bool:
+    return any((w - pad) <= lon <= (e + pad) and (s - pad) <= lat <= (n + pad)
+               for w, s, e, n in US_BBOXES)
+
+
+def assert_lonlat_in_us(lon: float, lat: float) -> None:
+    """Axis-order guard for any US point: a swapped pair lands far outside."""
+    if not in_us(lon, lat, pad=0.5):
+        if in_us(lat, lon, pad=0.5):
+            raise ValueError(f"({lon}, {lat}) looks like (lat, lon): axis order swapped")
+        raise ValueError(f"({lon}, {lat}) is not in the United States")
 
 
 def assert_lonlat_in_nc(lon: float, lat: float) -> None:

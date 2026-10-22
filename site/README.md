@@ -1,6 +1,6 @@
 # Groma website
 
-Static, self-contained site for Groma and its first program, NC Recon.
+Static, self-contained site for Groma.
 
 * Edit `template.html`, then run `python3 site/build.py`.
 * `index.html` is the complete page: drag the `site/` folder onto Netlify (or

@@ -1,298 +1,203 @@
-# Design - NC Recon
+# Design - Groma
 
-> **Operational build (2026-09-26) supersedes the demo-era parts of this file.**
-> The product is now three screens (Operations, Conditions, Help) built for
-> emergency use: the damage vocabulary is the 5-level FEMA scale on ColorBrewer
-> YlOrRd (grey = no damage, dark grey = not assessed, blue outline = needs
-> review, fill opacity = confidence); body text is 14 px; there is no hero,
-> count-up, 3-D extrusion, auto-tilt or command palette; the live-aircraft
-> and TomTom traffic layers described below were removed (the latter is a paid
-> service beyond its free tier). The tokens, fonts and light/dark system below
-> still apply. The xView2 4-class ramp survives only in the offline pitch demo.
+Locked design system for the Groma web app (`web/`) and site (`site/`).
+`web/src/index.css` `:root` and `web/tailwind.config.js` are the source of
+truth; amend there and here together. Screens **share** this system: a new
+screen uses the kit in `web/src/components/ui/kit.tsx`, not its own look.
 
-Locked design system. This file is transcribed from the shipped implementation
-(`web/src/index.css`, `web/tailwind.config.js`, `web/src/lib/damage.ts`,
-`web/src/lib/nc.ts`) - it is a record of the system, not a redesign of it.
-`web/src/index.css` `:root` is the source of truth; amend there and here together.
-
-Future design passes read this file first. Pages **share** this system - they do
-not each get a different look.
+Last full pass: 2026-10-22 (Groma rename, operations-console redesign). The
+research behind it (FEMA lifelines toolkit, WCAG 2.2, NASA Worldview, NN/g,
+USWDS) is summarised at the end.
 
 ---
 
 ## Direction
 
-**Emergency-response cartography.** The reference points are real government
-mapping tools - USGS topo conventions, NOAA storm-tracking dashboards, FEMA
-damage-assessment sheets - not decorative landing-page design. The interface is
-a working instrument: a reader should be able to tell primary from secondary
-from tertiary at a glance, and every mark on a map should mean one specific
-thing. Warm paper, one blue accent, a fixed four-step damage ramp borrowed from
-xView2/xBD. No mood, no atmosphere, no decoration that isn't carrying data.
+**A working instrument for people acting on a disaster.** County and state
+emergency managers in an EOC, National Guard planners, search teams, insurers.
+Every mark means one thing; every number carries its uncertainty and an
+absolute as-of time; every screen says what to do next. The brand is the
+Roman surveyor's groma: an instrument that measures the same way every time.
 
-- **Genre** · utilitarian / technical, modern-minimal dashboard
-- **Macrostructure** · Workbench - persistent top bar, map canvas, docked panels
-- **Mode** · light default, full dark theme. Dark is a real second surface
-  (map basemap swaps positron ↔ dark-matter), not a reflex - an operator on a
-  night shift in an EOC is a real user.
+- **Genre** · utilitarian instrument (operations console), not a dashboard of
+  KPI cards
+- **Macrostructure** · Workbench: top bar, rail (list) · map · inspector
+  (tabs), status bar at the bottom
+- **Mode** · light (limestone) and dark (basalt), both first-class; system
+  default. Dark is for the EOC wall and night shift (a dimmable dark theme, not
+  a red-light mode: night-vision practice moved away from red).
 
----
+## The frame (App shell)
+
+- **Top bar, 48 px.** Groma mark + GROMA wordmark; the four jobs: **Assess**,
+  **Verify**, **Conditions**, **Help** (icon + label, accent underline on the
+  current one); right side: data-source status (one dot summarising every
+  feed, list on click), responder access (key), theme.
+- **Status bar, bottom.** The standing disclaimer (`DISCLAIMER` in
+  `lib/ops.ts`, never hard-coded) and the service connection. Always visible,
+  never a yellow banner across the work.
+- System panels (sources, access, accuracy) live in the frame, one click
+  away, not at the bottom of a list.
+
+## Assess (Operations)
+
+| Column | Job | Primary action |
+|---|---|---|
+| Rail (288 px) | Which areas, worst first, grouped by event; jobs in progress | New assessment (`N`) |
+| Map | What this area looks like, with its own imagery | Pick a structure |
+| Inspector (408 px) | What to do next: Overview · Review · Respond · People · Checks | The next step, written out |
+
+- **Area rows**: name, role tag (TEST / TUNE only), a damage strip of expected
+  counts, `~N ≥ Major` and the review count in mono. Active row: accent-soft
+  fill with a hairline ring (never a side stripe).
+- **Overview tab**: two figures with ranges, the level table with inline
+  bars, **Next steps** (review, brief, GIS), caveats folded.
+- **Review tab**: queue rows carry the level as text and swatch (never colour
+  alone), grid reference, probability and people; structure view with
+  before/after chips, probability bar, why it needs a person, keyed label
+  buttons.
+- **Respond tab**: lifelines (status shape + colour), who is cut off (three
+  scenarios), search priority by USNG 1 km square, landing candidates, supplies,
+  losses and debris, KML plan. Its map layers appear only while it is open.
+- **Checks tab**: every published field record or measurement that covers the
+  area, each in the shape its data supports (agreement both ways, positives
+  found, ground change), caveats always one click away.
+- **New assessment**: four numbered steps beside the map (event, place,
+  size, check and run); the event step can start from a FEMA disaster number
+  and shows the draft before anything is registered.
+- **Map controls**: imagery bar top-left (After · Before · **Swipe** · Map,
+  with the capture date; hold `B` to flicker to before); legend bottom-left
+  that is also the filter (click a level to hide it; "needs review only").
 
 ## Colour
 
-Tokens are space-separated `R G B` triples on `:root` in `index.css`, re-declared
-for dark under `@media (prefers-color-scheme: dark) :root:not([data-theme=light])`
-and `:root[data-theme=dark]`. Tailwind reads them as `rgb(var(--x) / <alpha>)`.
+Tokens are space-separated `R G B` triples on `:root`, redeclared for dark
+under `@media (prefers-color-scheme: dark) :root:not([data-theme=light])` and
+`:root[data-theme=dark]`. Tailwind reads them as `rgb(var(--x) / <alpha>)`.
 
-| Token | Light | Dark | Role |
-| --- | --- | --- | --- |
-| `--canvas` | `#FAF9F6` | `#0F1115` | page ground (warm paper / near-black) |
-| `--surface` | `#FFFFFF` | `#17191E` | panels, cards, top bar |
-| `--surface-2` | `#F4F3EF` | `#202329` | insets, skeletons, form fields |
-| `--line` | `#E3E0D9` | `#2A2E36` | hairline borders |
-| `--line-strong` | `#C8C5BC` | `#3E434E` | dashed drop-zones, slider track |
-| `--ink` | `#1C1D21` | `#E9EAE8` | primary text, headlines |
-| `--ink-dim` | `#5C6068` | `#9EA1A8` | secondary text, labels |
-| `--ink-faint` | `#8A8E96` | `#6C7079` | captions, metadata |
-| `--accent` | `#2563EB` | `#4A80F6` | the one accent - links, primary buttons, active nav, selected building |
-| `--accent-soft` | `#E0EAFE` | `#1C2A4A` | accent fills behind text |
-| `--accent-ink` | `#FFFFFF` | `#FFFFFF` | text on an accent fill |
-| `--meter` | `#475569` | `#8494A8` | neutral gauge / bar fill (non-severity) |
+| Token | Light (limestone) | Dark (basalt) | Role |
+|---|---|---|---|
+| `--canvas` | `#ECEEEA` | `#0D1012` | page ground |
+| `--surface` | `#FAFBF8` | `#14191B` | panels, bars |
+| `--surface-2` | `#E5E8E3` | `#1C2225` | insets, tracks, skeletons |
+| `--line` / `--line-strong` | `#D6DBD5` / `#B7BEB8` | `#272F33` / `#3A454A` | hairlines |
+| `--ink` / `-dim` / `-faint` | `#161B1D` / `#4C5552` / `#68716D` | `#E9E7E0` / `#A4A9A3` / `#7C837F` | text |
+| `--accent` | `#2C7A66` verdigris | `#63B59C` | interaction and "this is live" only |
+| `--brand` | `#8E5F27` bronze | `#C9954B` | the mark's plumb bobs only |
+| `--review` | `#2563EB` | `#60A5FA` | needs-review outline: off the damage ramp, legible on imagery |
+| `--st-ok/warn/bad/unknown` | green / amber / red / grey | lighter for dark | system and lifeline status in UI chrome |
 
-**Accent discipline.** Blue is for interaction and "this is live", never for
-severity. It stays well under ~5 % of any viewport. There is no second accent,
-no gradient, no accent-on-accent.
+**Accent discipline.** Verdigris is interaction, never severity, under ~5 % of
+any view. No gradients, no glow, no glass.
 
-### Damage ramp - fixed, theme-independent
+### Damage scale (data, identical in both themes)
 
-From `web/src/lib/damage.ts` / `tailwind.config.js`. This is the xView2 four-level
-scale; it does not change between light and dark because it is data, not chrome.
+FEMA five levels on ColorBrewer YlOrRd with a grey base: No damage `#9E9E9E`,
+Affected `#FECC5C`, Minor `#FD8D3C`, Major `#F03B20`, Destroyed `#BD0026`;
+Not assessed `#555555`. One sequential lightness ramp, so order survives every
+colour-vision deficiency; adjacent levels are still close, so the level is
+always also written as text. Fill opacity is confidence. Blue outline = needs
+review.
 
-| Class | Hex | Meaning |
-| --- | --- | --- |
-| `dmg0` | `#3FA06D` green | no damage |
-| `dmg1` | `#EFB036` amber | minor damage |
-| `dmg2` | `#E56A2B` orange | major damage |
-| `dmg3` | `#A81B38` red | destroyed |
+### Lifeline status (Respond)
 
-Green base means any damage reads instantly against it on the 3-D map, the
-Summary bars, and the Home cards.
+FEMA Community Lifelines Toolkit v2.1 colours, each paired with the shape
+DHS S&T's lifeline tool uses, because FEMA red and green are hard to tell
+apart for deuteranopes: Stable `#5E9C42` square · Strained `#FBBA16`
+triangle · Disrupted `#C52038` inverted triangle · Unknown `#919395` circle
+with "?". **Grey is unknown, never fine**, and is counted, not hidden.
+FEMA's administrative blue is never used as a status.
 
-### Live severity ramp - NC monitor
+### Conditions ramp (live feeds)
 
-From `web/src/lib/nc.ts` `NC_SEV_COLOR`, used for flood / streamflow / alert
-marks on the Live map and Home hero. Deliberately a **different, cooler** ramp
-from the damage ramp so a flood gauge is never confused with a destroyed
-building: `-1` offline `#5A6673` · `0` normal `#5A7C86` · `1` watch `#F5D76E` ·
-`2` elevated `#E8894A` · `3` severe `#D1495B`. Road closures and cameras sit
-**off** this ramp on fixed marks - they are ground-truth references, not risk.
-
----
+The cooler `NC_SEV_COLOR` ramp in `lib/nc.ts` stays separate from damage so
+a flood gauge is never read as a destroyed building.
 
 ## Type
 
-`@import` from Google Fonts in `index.css`; the families live in
-`tailwind.config.js` `theme.extend.fontFamily` (`display` / `sans` / `mono`) and
-are reached in CSS via `theme("fontFamily.display")`, in markup via
-`font-display` / `font-sans` / `font-mono`. A deliberate pairing - a text serif
-for headings against a clean grotesque for body and UI - the register US
-government statistical and hazard products use (Census, BLS, USWDS default,
-weather.gov product pages). Headlines read as an official instrument, not a
-generated landing page; the body stays quiet at small sizes on a dense screen.
+Bundled with `@fontsource` (works offline on a field laptop).
 
-- `fontFamily.display` · **Source Serif 4** (400 / 600 / 700, optical-size
-  8-60) - `h1`-`h3`, wordmark. Always roman. `letter-spacing: -0.006em`,
-  `line-height: 1.16`, `font-optical-sizing: auto`, `text-wrap: balance`.
-  Headline weight 600. Restrained sizes: `--text-display` clamps at ~2.6rem so a
-  headline never becomes drama on a 1280-1440 px operations screen.
-- `fontFamily.sans` · **Geist** (400 / 450 / 500 / 600) - all body and UI text,
-  `.section-title`, `.cap`, `.eyebrow`, and the `body` default.
-  `font-feature-settings: "cv11", "ss01"`.
-- `fontFamily.mono` · **Geist Mono** (400 / 500) - every figure that sits in a
-  column or next to another figure (`.tnum` first) and inline CLI snippets.
+- **Public Sans** (variable) - all UI and body text; the US Web Design System
+  face the government users already read. Headings are Public Sans at weight
+  650, not a second typeface.
+- **IBM Plex Mono** (400/500/600) - every figure in a column, grid references,
+  times, keys. `.tnum` on anything that lines up.
+- **Marcellus** - the GROMA wordmark and document titles only (`.title-display`).
+  Roman inscriptional capitals: the brand's surveyor lineage. Never body text,
+  never italic.
 
-Scale: Tailwind's default plus `text-2xs` (`0.6875rem` / `1rem`, the panel
-caption size), `text-display` and `text-display-s` (the two clamps above).
-`.cap` (11 px / 500 / `--ink-faint`) is the quiet sentence-case micro-label -
-a legend key or a figure caption, never a section eyebrow. `.eyebrow` (12 px /
-500 / `--ink-faint`, sans) names *where you are* ("Summary · Old Fort"); it is
-an ordinal/context tag, stacked above its heading, never beside it. `.section-
-title` (14 px / 600 / `--ink`, sans) is a run-in heading inside a panel or
-document block - sans so it reads as structure, not a second serif headline.
-
-**No italic display type.** Emphasis is weight, `--accent`, or a drawn rule.
-
----
+Sizes: body 14 px, dense panels 13 px, captions 11-12 px, inspector titles
+18 px, figures 28 px mono. USNG at the precision the data supports (10 m for
+an outline centroid, 1 km for sectors), never 1 m on a modelled point.
 
 ## Space, radius, elevation
 
-- **Spacing** · Tailwind's 4 px scale, unextended. No arbitrary pixel gaps.
-- **Radius** · `sm 4 · DEFAULT 6 · md 8 · lg 10 · xl 14` (px). `.panel` is 10.
-  Corners are tight on purpose - this is closer to a map legend than a SaaS card.
-- **Border** · always a single hairline `1px solid var(--line)`, all four sides.
-  No thick side-stripes, no card nested inside a card.
-- **Containers** · two only. `.panel` (hairline + one soft shadow) is for a
-  container that *floats over live map imagery or a scrim* - the deck.gl
-  tooltip, the map-screen side panels, the two modal overlays. `.card` (hairline,
-  **no shadow**) is for every container on a plain surface - the content screens.
-  Depth on a content screen comes from weight, size, and spacing, not elevation.
-  Never nest a card in a card.
-- **Elevation** · `.panel` = `0 1px 2px /.08, 0 6px 20px /.10` of `--shadow`.
-  **No `backdrop-blur` as decoration.** Dark mode conveys elevation with surface
-  lightness, not glow.
-- **Data bars** · `.bar-track` (surface-2, 3 px radius) + `.bar-fill` (4 px
-  rounded data-end, `--ease-out` width transition). Adjacent fills in a stacked
-  bar carry a 1 px `--surface` gap (`box-shadow: 1px 0 0`). Distribution and
-  confidence bars on Summary, the area cards, and History use this.
+- 4 px grid; controls 28 or 32 px tall; radius 6 px (4 px tags).
+- `.panel` (hairline + soft shadow) only for things floating over the map;
+  everything else is hairline-separated sections, no card-in-card.
+- Dark mode elevation is surface lightness, not glow.
 
----
+## Components (`web/src/components/ui/kit.tsx`)
+
+`Button` (primary · secondary · ghost · danger; `kbd` hint; `busy`),
+`Tag`, `Dot` (status), `Tabs` (arrow-key navigation, counts), `Segmented`,
+`Disclosure`, `Popover` (outside click and Esc close), `Empty` (says what is
+missing and the one next action), `DamageStrip`, `Swatch`, `Figure` (value +
+80% range), `Kbd`, `Spinner`, `Icon` (hand-drawn 16 px set, 1.5 stroke,
+currentColor). Form fields use `.field`.
+
+Shared panels: `components/ops/SystemPanels.tsx` (sources, access, accuracy),
+`components/ops/References.tsx` (Checks), `components/ops/Respond.tsx`,
+`components/map/SwipeCompare.tsx`.
 
 ## Motion
 
-Easings (`index.css` + `tailwind.config.js`): `--ease-out`
-`cubic-bezier(0.23, 1, 0.32, 1)` for almost everything; `--ease-drawer`
-`cubic-bezier(0.32, 0.72, 0, 1)` for sheets. Never the bare browser `ease`,
-never overshoot/bounce on UI state.
+- `--ease-out` for nearly everything, 130-450 ms; `transform`, `opacity`,
+  `width` of data bars only.
+- Map camera eases (350-450 ms) when the inspector asks it to look somewhere.
+- Spinners only for work in flight; progress bars for jobs.
+- Focus rings instant. `prefers-reduced-motion` drops everything to ~0 ms.
+- No scroll-triggered fades, no count-ups on the operations screens, no motion
+  library, no smooth-scroll library (the map owns the wheel).
 
-**What animates**
+## Interaction
 
-- `.pressable` - `transform` + colour, 130-150 ms `--ease-out`; `:active`
-  `scale(0.975)`. On every button.
-- Nav active-tab indicator - `transform` + `width`, 300 ms `--ease-out`.
-- Hero map - `opacity` fade-in, 700 ms, once.
-- Live NEXRAD radar - 300-600 ms raster cross-fade; a 2 s ambient loop on the
-  Home hero. Pauses on a hidden tab and under `prefers-reduced-motion`.
-- Skeletons - 1.4 s shimmer while a feed loads.
-- **Stat figures count up** to their value (~600 ms `--ease-out`, `useCountUp`,
-  no library) - Home status tiles, Summary headline figure, Review backlog
-  count. First paint only; a value that changes later just updates.
-- **One orchestrated entrance.** On the Home dashboard's first paint the status
-  tiles and the assessed-area cards reveal in a short stagger (`opacity` + 4px
-  `translateY`, ~50 ms apart, CSS `@keyframes` + `animation-delay`). It runs
-  once, on Home only. No other screen has an entrance animation.
-
-**What does not**
-
-- No element fades in on scroll. Once a screen is mounted, its content is just
-  there.
-- Focus rings appear **instantly** (`:focus-visible`, 2px `--accent`,
-  `outline-offset: 2px`) - never transitioned.
-- `prefers-reduced-motion: reduce` drops every animation and transition to
-  ~0 ms (global rule in `index.css`) and stops the radar loop.
-
-**Interaction stance**
-
-- Silent success. Toasts are for failures, background jobs, and "link copied"
-  (an effect the user can't see) - not for actions whose result is on screen.
-- Optimistic update + Undo over a confirm dialog. Review-queue overrides apply
-  immediately.
-- Hover tooltips delay ~800 ms; focus shows them at 0 ms.
-
-### Smooth-scroll libraries - deliberately declined
-
-**No Lenis, no GSAP ScrollTrigger.** This is a dashboard, not a scrolling
-marketing site. Four surfaces own the wheel - the MapLibre `scrollZoom` on the
-Home hero, the Live map, Assess, and the Damage map - plus the History
-timeline's hand-rolled non-passive wheel-zoom-to-cursor. A global smooth-scroll
-layer would fight all five and add perceptible input lag, which is the opposite
-of the goal. Scroll is native and owned by the map layer.
-`html { scroll-behavior: smooth }` (already set) covers anchor jumps.
-
-**No motion library at all.** Every animation in the app is CSS `@keyframes` /
-`transition` plus one ~30-line `useCountUp` hook. `motion` / `framer-motion` /
-`gsap` / `lenis` are not dependencies. Nothing here needs them, and the Home
-bundle stays lean (gzip ~390 KB) without them.
-
----
-
-### God's Eye View (2026-09) - what was borrowed, what was declined
-
-[bilawalsidhu/gods-eye-view](https://github.com/bilawalsidhu/gods-eye-view)
-went open source and inspired a look at what it does that would genuinely help
-NC disaster response, on the app's own stack - not a rewrite onto its stack.
-
-**Borrowed: live aircraft, NC-clipped.** A `NCDashboard` layer (off by
-default, like DOT cameras/closures) pulling `adsb.lol`'s keyless point API
-through the existing `/feed` proxy (`lib/nc.ts` `ncAircraft`, `server.py`
-`_FEEDS["aircraft"]`). One 250nm query centred on the state covers it edge to
-edge. Guard rotary-wing, medevac, and post-storm aerial survey flights read
-the same as any other traffic - real disaster-response signal, not a demo.
-
-**Declined - Cesium / Google Photorealistic 3D Tiles.** Metered (Google
-Maps), fights the `maplibre-gl` v5 pin this app needs for deck.gl's
-`MapboxOverlay` (see Phase B gotcha above), and a second map engine would
-blow the Home bundle budget for a "wow" the 3-D extruded damage map already
-delivers cheaply.
-
-**Declined - OpenAI Realtime voice control.** Metered, and a new third-party
-credential surface for a Congressional App Challenge entry with no clear
-disaster-response job to do here.
-
-**Declined - the rest of the 13-layer catalogue** (ships, satellites,
-earthquakes, radio, bikeshare, space missions, global CCTV). This app
-deliberately narrowed to NC-only (see the NC-only rebuild note in the project
-history) - a layer only earns a place if it's NC disaster-response signal,
-not global trivia. DriveNC's 1,141 NC cameras already beat a ~800 global CCTV
-list for this state.
-
-**Follow-up, same day - pushed further, held to "real data only."** The user
-asked to use God's Eye View "to the max," with one hard constraint: real
-data/tracking, not a demo effect. That constraint did the scoping:
-
-- **Traffic - checked the source before building anything.** God's Eye
-  View's own docs: *"without `TOMTOM_API_KEY` the traffic layer runs its
-  built-in simulation"* - and even with a key, TomTom's flow data is
-  aggregate vectors, not individual vehicles, so the "moving cars" are always
-  an animation, never tracked traffic. Declined the animation outright; built
-  the honest version instead - `nc-traffic` raster layer, TomTom's real
-  relative-flow tiles (`/traffic/map/4/tile/flow/relative0[-dark]`), key-gated
-  like CLOUDS, CORS-enabled so no server proxy needed. Road colour = real live
-  speed vs free-flow, per segment.
-- **Live camera video - checked for a documented feed, found none.**
-  DriveNC's own site clearly streams a refreshing per-camera still image
-  (`data-refresh-rate` + a `t=` cache-buster on a real `<img>`, confirmed by
-  reading the page's JS), but the image URL is populated by an internal AJAX
-  call with no documented API, unlike Austin/Caltrans/TfL in God's Eye View's
-  own source list, which all publish one. Didn't reverse-engineer it: an
-  undocumented state-government endpoint, and even found, `server.py`'s
-  `/feed` proxy is a fixed-URL whitelist by design (`_FEEDS`, not a
-  parameterized passthrough) - a per-camera image proxy is exactly the SSRF
-  surface that file was hardened against. Instead: clicking a camera links out
-  to the real drivenc.gov image ("View live camera image ↗" - see
-  `linkLabel` in `NCDashboard.tsx`), and `About.tsx` says why plainly.
-- **"Highly detailed, Google Maps feel" - real building geometry, not a new
-  map engine.** CARTO's positron/dark-matter styles already carry a
-  `building` source-layer (OSM-derived); the default style just renders it
-  flat. Added `nc-building-depth`, a modest `fill-extrusion` at zoom ≥14 in
-  `useMapLibre.ts` (shared by every screen), re-added after every style swap
-  the same way the theme toggle already re-triggers style loads. This is
-  texture, not a height dataset - `render_height` is used where the tile
-  carries it, else a flat 8 m block - so it's framed as depth, not surveyed
-  height, the same honesty bar as the traffic call above.
-
----
-
-## Components
-
-- `.panel` / `.card` - the two containers (see Space § Containers). `.panel`
-  floats over a map; `.card` sits on a content screen with no shadow. Everything
-  docks in one or sits directly on `--canvas`.
-- `.section-title` - Geist 14px / 600 / `--ink`, run-in panel/block header.
-  `.eyebrow` - Geist 12px / 500 / `--ink-faint`, the "where you are" tag, always
-  stacked above its heading. **Neither is a decorative kicker**; there are no
-  `01 · SECTION` numbers and no tag-left / heading-right split heads.
-- Primary button - `bg-accent text-accent-ink`, radius `md`, `.pressable`.
-- Secondary button - `border-line bg-surface text-ink-dim`, same radius,
-  `hover:text-ink`.
-- Damage bar - a flex row of `dmg0`-`dmg3` spans sized by count share.
-- Icons - hand-built inline SVG at 12-16px, `stroke-width` 1.4-1.6, currentColor.
-  One exception: the ⌘K palette uses `lucide-react` at caption size for its row
-  glyphs. No emoji as functional icons anywhere.
-
----
+- Keyboard: `N` new assessment, hold `B` before image, `0`-`4` label,
+  `x` can't tell, `j`/`k` next/previous, `Esc` close or cancel.
+- Silent success where the result is visible; toasts for background jobs,
+  failures and effects you cannot see.
+- Teach in empty states, not tours.
+- Touch targets at least 24 px (WCAG 2.5.8); phone layout scrolls as one
+  column with the map first and the legend folded.
 
 ## Copy
 
-Plain, specific, sentence case. Names the real source ("NOAA NWPS", "xView2 CMU
-baseline classifier"), the real number, the real date. No marketing register, no
-invented metrics, no em dashes (purged; use `.` before a capital, else `,`).
+Plain, specific, sentence case; the real source name, the real number, the
+real date. No em dashes. FEMA vocabulary for damage and lifelines. Estimates
+say they are estimates where it matters: landing zones are reconnaissance
+candidates, never approved LZs; the worst-case access scenario is a planning
+bound, not a finding.
+
+## Declined, and why
+
+- Command palette, 3-D extrusion, auto-tilt, count-ups: decoration on an
+  instrument.
+- Cesium / Google 3D tiles and paid traffic: metered services and a second map
+  engine.
+- Red-only night mode: current night-vision practice; the dark theme is the
+  night mode.
+
+## Research behind this pass (2026-10-22)
+
+- FEMA Community Lifelines Toolkit v2.1 (status colours p61, component
+  analysis p23-24, grey = unknown p25):
+  https://www.fema.gov/sites/default/files/documents/fema_lifelines-toolkit-v2.1_2023.pdf
+- DHS S&T next-generation EOC and lifeline status shapes:
+  https://www.dhs.gov/science-and-technology/news/2024/09/12/feature-article-how-st-supports-next-generation-emergency-operations-center
+- WCAG 2.2 non-text contrast (3:1) and target size:
+  https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html
+- NASA Worldview comparison (swipe default):
+  https://www.earthdata.nasa.gov/news/blog/introducing-worldviews-comparison-feature
+- NN/g on empty states: https://www.nngroup.com/articles/empty-state-interface-design/
+- USNG reading conventions: https://www.fgdc.gov/usng/how-to-read-usng
+- USWDS colour grades and Public Sans: https://designsystem.digital.gov/design-tokens/color/overview/

@@ -1,7 +1,7 @@
-"""NC Recon operational mode (Phase J).
+"""Groma operational mode (Phase J).
 
 Everything under `terratriage.ops` is the "operational GEOINT" path: outputs an
-NC emergency-management analyst can rely on because each one is located
+emergency-management analyst can rely on because each one is located
 correctly, traceable to a named source and time, checked against ground truth,
 and honest about its uncertainty.
 
@@ -21,7 +21,7 @@ from __future__ import annotations
 import os
 
 DISCLAIMER = (
-    "Decision-support tool. Not an official FEMA or NC Emergency Management "
+    "Decision-support tool. Not an official FEMA or state emergency management "
     "damage assessment. Verify on the ground."
 )
 

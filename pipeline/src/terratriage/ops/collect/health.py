@@ -15,6 +15,8 @@ from .. import DATA_DIR
 from ..provenance import utc_now
 from .base import Connector, Health, SchemaError, http_json, parse_utc
 from . import nc_feeds
+from .cap_photos import CAPPhotos
+from .nc_lidar import NCLidar
 from .ncem_peak_stage import NCEMPeakStage
 from .eri import ERI
 from .nc_orthos import NCOrthos
@@ -192,7 +194,7 @@ class DamageModel(Connector):
 
 def connectors() -> list[Connector]:
     return [DamageModel(), USGSWater(), NWPS(), FIMAN(), NWSAlerts(), OpenFEMA(), NSI(), USAStructures(), NCOrthos(),
-            ERI(), NCEMPeakStage(), DukeOutages(), FEMAShelters(), USGSLegacy(), GEE(), Earthdata()]
+            ERI(), NCEMPeakStage(), CAPPhotos(), NCLidar(), DukeOutages(), FEMAShelters(), USGSLegacy(), GEE(), Earthdata()]
 
 
 def run(write: bool = True) -> list[Health]:

@@ -257,7 +257,7 @@ const jobs = [
     () =>
       getJSON("https://api.weather.gov/alerts/active?area=NC", {
         headers: {
-          "User-Agent": "NCRecon/1.0 (NC disaster monitor; contact via project repo)",
+          "User-Agent": "Groma/1.0 (disaster assessment; contact via project repo)",
           Accept: "application/geo+json",
         },
       }).then(nwsSnapshot),

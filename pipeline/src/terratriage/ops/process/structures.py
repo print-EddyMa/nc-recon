@@ -61,8 +61,8 @@ def conflate(
 ) -> list[Structure]:
     if not footprints_ll:
         return []
-    lon0 = footprints_ll[0].centroid.x
-    fwd = transformer("storage", utm_for(lon0))
+    c0 = footprints_ll[0].centroid
+    fwd = transformer("storage", utm_for(c0.x, c0.y))
 
     def to_m(g):
         from shapely.ops import transform as st

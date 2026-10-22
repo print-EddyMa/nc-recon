@@ -1,4 +1,4 @@
-# NC Recon Verify: a ground-truth engine for disaster damage
+# Groma Verify: a ground-truth engine for disaster damage
 
 *Concept and first build, 2026-10-21.*
 
@@ -13,7 +13,7 @@ free (GAO), and no public, structure-level, field-verified damage dataset exists
 for the event. Models are getting cheap (Google Earth AI and similar); verified
 truth is not.
 
-**NC Recon Verify** turns NC Recon from a tool that makes calls into an engine
+**Groma Verify** turns Groma from a tool that makes calls into an engine
 that makes *verified* calls, and keeps every verification as data:
 
 1. **Pick what matters.** After an assessment, rank every building by how much a
@@ -40,7 +40,7 @@ that makes *verified* calls, and keeps every verification as data:
 
 ## Why this can grow
 
-* **It runs wherever the pipeline runs.** Any town NC Recon can assess becomes a
+* **It runs wherever the pipeline runs.** Any town Groma can assess becomes a
   verification job. Bring your own disaster.
 * **It compounds.** Each event adds labels with negatives; each label makes the
   next event's calls better calibrated; better calls mean fewer buildings need
@@ -80,6 +80,14 @@ that makes *verified* calls, and keeps every verification as data:
   `GET /ops/truth/areas/{area}`, `GET /ops/truth/metrics`, `GET /ops/truth/export.zip`.
 * CLI: `truth-status`, `truth-release`, `truth-export`.
 * Web: a Verify screen (`#/verify`), keyboard-first, blind.
+* Civil Air Patrol photos beside each building (`collect/cap_photos.py`,
+  `GET /ops/photos/{area}/{ncr_id}`): up to three obliques shot toward the
+  building and one overhead frame, taken days after the event (Swannanoa:
+  2024-09-28 and 29, months before the spring-2025 orthos). The building is
+  not marked; a dashed line shows its direction from the camera's bearing and
+  lens. The server fetches each 15 to 20 MB original once and serves a
+  1,600 px copy. Reviewer context only: the photos never reach the damage call,
+  and they reveal nothing about the model's answer.
 
 ## Next
 

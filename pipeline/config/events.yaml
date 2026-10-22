@@ -1,4 +1,4 @@
-# NC Recon ops event registry.
+# Groma ops event registry.
 #
 # Incident dates are NOT written here: they are pulled from OpenFEMA
 # DisasterDeclarationsSummaries by disaster number (see ops/plan/events.py) and
@@ -20,6 +20,8 @@ events:
     hazards: [riverine_flood, flash_flood, landslide, wind]
     maxar_event: HurricaneHelene-Oct24
     eri_prefix: 2024_Hurricane_Helene
+    # NCGS landslide inventory polygons tagged with this storm (channel H)
+    landslide_storm: Helene
     # post-event imagery, in order of preference, for new operational areas
     post_sources: [nc_helene_2025, eri, maxar]
     windows:
@@ -67,3 +69,25 @@ events:
         county: Yancey
         center: [-82.3009, 35.9173]
         imagery: nc_2020_2023 -> nc_helene_2025
+
+  wildfire-2025-ca-dr4856:
+    # second hazard, second state: the any-disaster engine on a wildfire.
+    # Drafted with `run.py ops-event-from-fema --disaster 4856`.
+    name: Wildfires and Straight-Line Winds (CA, DR-4856-CA)
+    disaster_numbers: [4856]
+    state: CA
+    hazards: [wildfire]
+    maxar_event: WildFires-LosAngeles-Jan-2025
+    eri_prefix: 2025_California_Fires
+    post_sources: [eri]
+    windows:
+      pre_days: [-1500, -1]
+      post_days: [0, 180]
+    aois:
+      altadena:
+        # Eaton fire. Held out from the start: assessed and compared with
+        # CAL FIRE's inspections in aggregate; chips never opened, nothing tuned.
+        role: TEST
+        county: Los Angeles
+        center: [-118.145, 34.19]
+        imagery: naip -> eri

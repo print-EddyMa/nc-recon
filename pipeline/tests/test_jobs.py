@@ -32,6 +32,7 @@ def _job(**kw):
 
 def _stub_plan(monkeypatch):
     monkeypatch.setattr(jobs, "choose_post_source", lambda ev, lon, lat: "nc_helene_2025")
+    monkeypatch.setattr(jobs, "choose_pre_source", lambda ev, lon, lat: "nc_2020_2023")
     monkeypatch.setattr("terratriage.ops.plan.events.load_events", lambda: {"helene-2024-nc": _Ev()})
     monkeypatch.setattr("terratriage.ops.plan.events.add_ops_area", lambda *a, **k: None)
 

@@ -29,7 +29,7 @@ nc_field_to_fema:
     survey and the Helene SARCOP waypoints use FEMA's levels (unaffected,
     affected, minor, major, destroyed); "Moderate" is accepted only for older
     or out-of-state forms and maps to Minor-or-Major. Reports carry both the
-    lower and upper bound mapping; this matrix is the midpoint. NC Recon never
+    lower and upper bound mapping; this matrix is the midpoint. Groma never
     offers "Moderate" to a field team.
   source_labels: [unaffected, affected, minor, moderate, major, destroyed]
   matrix:

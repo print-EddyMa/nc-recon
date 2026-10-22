@@ -135,7 +135,7 @@ def test_assess_requires_auth_and_validates(client, monkeypatch):
     body = {"event": "helene-2024-nc", "name": "Test", "lon": -82.2, "lat": 35.6}
     assert client.post("/ops/assess", json=body).status_code == 403
     monkeypatch.setenv("NCR_DEV_OPEN", "1")
-    bad = dict(body, lon=-90.0)
+    bad = dict(body, lon=2.35, lat=48.86)   # Paris: outside the US
     assert client.post("/ops/assess", json=bad).status_code == 422
     unknown = dict(body, event="nope")
     assert client.post("/ops/assess", json=unknown).status_code == 400

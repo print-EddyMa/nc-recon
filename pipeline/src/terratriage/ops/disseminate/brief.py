@@ -71,7 +71,7 @@ def brief(area: str) -> str:
     from ..counties import county_of
 
     county = P["aoi"].get("county") or county_of(f["properties"].get("cbfips_2010") for f in fc["features"])
-    where = f"{name} ({county} Co.)" if county else name
+    where = html.escape(f"{name} ({county} Co.)" if county else name)
     bluf = (f"{where}: about <b>{round(sev)}</b> of {assessed:,} assessed "
             f"structures are likely Major or Destroyed (80% range {sev_lo}-{sev_hi}). "
             f"{P['n_needs_review']:,} calls need human verification before use.")

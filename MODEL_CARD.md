@@ -1,4 +1,4 @@
-# Model card: NC Recon damage assessment (ops mode, fusion v1)
+# Model card: Groma damage assessment (ops mode, fusion v1)
 
 *Format after Mitchell et al. 2019. Last updated 2026-09-26.*
 
@@ -14,7 +14,7 @@
 
 ## Intended use
 
-Decision support for NC emergency-management analysts after a declared
+Decision support for emergency-management analysts after a declared
 disaster: triage where to send damage-assessment teams, and a draft
 structure-level layer to verify. **Not** an official FEMA / NCEM damage
 assessment, not an eligibility determination.

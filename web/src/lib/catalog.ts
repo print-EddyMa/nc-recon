@@ -1,7 +1,7 @@
 /**
  * The Maxar Open Data catalogue (~55 events) + the on-demand assessment bridge.
- * NC Recon is North Carolina-only: the catalogue is filtered to events whose
- * coverage touches NC (`intersectsNC`), and an AOI can be assessed on the spot
+ * The live catalogue is filtered to events whose coverage touches NC
+ * (`intersectsNC`), the state the Conditions layers cover, and an AOI can be assessed on the spot
  * when the pipeline service is reachable.
  *
  * With no service the Assess screen falls back to showing the exact `run.py`

@@ -1,4 +1,4 @@
-# NC Recon: one container = ops API + assessment worker + web app (same origin).
+# Groma: one container = ops API + assessment worker + web app (same origin).
 #
 #   docker compose up -d --build            (see docker-compose.yml, docs/ops/DEPLOYMENT.md)
 #

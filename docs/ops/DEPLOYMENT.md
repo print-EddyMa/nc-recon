@@ -1,4 +1,4 @@
-# Deploying NC Recon
+# Deploying Groma
 
 One container runs everything: the web app, the API and the assessment worker.
 Caddy sits in front for HTTPS. No paid services or keys are required.
@@ -101,7 +101,7 @@ docker compose cp ncrecon:/app/data/backup.tar.gz ./ncrecon-backup-$(date +%F).t
 
 ## When sources are down
 
-Federal services fail during disasters. NC Recon degrades rather than stops:
+Federal services fail during disasters. Groma degrades rather than stops:
 
 | Source down | Effect |
 |---|---|

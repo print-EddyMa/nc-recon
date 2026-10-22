@@ -1,4 +1,4 @@
-# NC Recon behind Caddy (automatic HTTPS). Copy .env.example to .env first.
+# Groma behind Caddy (automatic HTTPS). Copy .env.example to .env first.
 #   docker compose up -d --build
 services:
   ncrecon:

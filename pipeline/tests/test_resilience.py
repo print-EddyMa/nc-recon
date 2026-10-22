@@ -21,6 +21,7 @@ def _job():
 def test_secondary_step_failure_keeps_assessment(monkeypatch):
     calls, deleted = [], []
     monkeypatch.setattr(jobs, "choose_post_source", lambda ev, lon, lat: "nc_helene_2025")
+    monkeypatch.setattr(jobs, "choose_pre_source", lambda ev, lon, lat: "nc_2020_2023")
     monkeypatch.setattr("terratriage.ops.plan.events.load_events", lambda: {"helene-2024-nc": _Ev()})
     monkeypatch.setattr("terratriage.ops.plan.events.add_ops_area", lambda *a, **k: None)
     monkeypatch.setattr(jobs, "delete_area", lambda a: deleted.append(a))
@@ -40,6 +41,7 @@ def test_secondary_step_failure_keeps_assessment(monkeypatch):
 def test_assess_failure_fails_and_cleans(monkeypatch):
     deleted = []
     monkeypatch.setattr(jobs, "choose_post_source", lambda ev, lon, lat: "nc_helene_2025")
+    monkeypatch.setattr(jobs, "choose_pre_source", lambda ev, lon, lat: "nc_2020_2023")
     monkeypatch.setattr("terratriage.ops.plan.events.load_events", lambda: {"helene-2024-nc": _Ev()})
     monkeypatch.setattr("terratriage.ops.plan.events.add_ops_area", lambda *a, **k: None)
     monkeypatch.setattr(jobs, "delete_area", lambda a: deleted.append(a))

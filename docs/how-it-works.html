@@ -1,5 +1,5 @@
-<title>Inside NC Recon</title>
-<meta name="description" content="A walkthrough of how NC Recon scores every building after a disaster, using real satellite crops and real numbers from a Hurricane Helene run over Old Fort, North Carolina." />
+<title>Inside Groma</title>
+<meta name="description" content="A walkthrough of how Groma scores every building after a disaster, using real satellite crops and real numbers from a Hurricane Helene run over Old Fort, North Carolina." />
 <style>
   @import url("https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Geist:wght@400;450;500;600&family=Geist+Mono:wght@400;500&display=swap");
 
@@ -127,7 +127,7 @@
   .hero-meta b { color: rgb(var(--ink)); font-weight: 600; }
   .eyebrow { display: flex; align-items: center; gap: 10px; }
   .eyebrow::before { content: ""; width: 22px; height: 2px; background: rgb(var(--accent)); flex: none; }
-  /* the hero eyebrow carries the NC Recon brand mark instead of the bar */
+  /* the hero eyebrow carries the Groma brand mark instead of the bar */
   .hero .eyebrow::before { display: none; }
   .eyebrow-mark { height: 17px; width: auto; flex: none; color: rgb(var(--ink-dim)); }
 
@@ -316,12 +316,12 @@
         </g>
         <circle cx="198.09" cy="28.24" r="6" fill="rgb(var(--accent))"/>
       </svg>
-      <span>NC Recon &middot; how it works</span>
+      <span>Groma &middot; how it works</span>
     </div>
     <h1>Scoring every building after the storm</h1>
     <p class="lede">
       When a hurricane clears North Carolina, the question is which buildings to reach first.
-      NC Recon answers it one structure at a time, from satellite imagery, and is honest about
+      Groma answers it one structure at a time, from satellite imagery, and is honest about
       the calls it is not sure of. Here is the whole method, with the numbers from a real run over
       Old Fort after Hurricane Helene.
     </p>
@@ -412,7 +412,7 @@
       <p>
         Nothing is trained from scratch. The classifier learned on <strong>xBD</strong>, the
         xView2 dataset: about <strong>850,000</strong> hand-labeled building polygons across
-        <strong>19</strong> disasters, on this same four-level scale. NC Recon runs the
+        <strong>19</strong> disasters, on this same four-level scale. Groma runs the
         pretrained <strong>xView2 CMU baseline</strong> (a ResNet50 classifier) at inference time.
       </p>
       <div class="tilegrid reveal">
@@ -468,7 +468,7 @@
     <section class="act" id="unknowns">
       <div class="act-head"><span class="act-n">03</span><h2>Knowing the unknowns</h2></div>
       <p class="act-sub">
-        There is no ground truth on the day. Instead of trusting one model, NC Recon runs a
+        There is no ground truth on the day. Instead of trusting one model, Groma runs a
         second, independent read and compares them. Where they disagree, the building is not
         published as certain. It goes to a person.
       </p>
@@ -641,7 +641,7 @@
       <p>
         Read next to the risk layer and the thirty-year timeline, the pieces cover a disaster
         end to end: the first flood forecast, the radar coming ashore, the road closures, and
-        the building damage. Built for North Carolina, structured to run anywhere Maxar
+        the building damage. First run in North Carolina, structured to run anywhere Maxar
         publishes imagery.
       </p>
     </section>
@@ -659,7 +659,7 @@
       Damage model: the xView2 CMU baseline classifier, fused with an independent
       change-detection pass and North Carolina context priors.
     </p>
-    <p>Every figure here is measured from an actual NC Recon run. Nothing is placeholder.</p>
+    <p>Every figure here is measured from an actual Groma run. Nothing is placeholder.</p>
   </div>
 </footer>
 

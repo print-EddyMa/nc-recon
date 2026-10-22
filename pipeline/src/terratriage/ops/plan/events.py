@@ -41,6 +41,7 @@ class Declaration:
     designated_areas: tuple[str, ...]
     ia_areas: tuple[str, ...]
     provenance: Provenance
+    state: str = ""
 
 
 @dataclass(frozen=True)
@@ -80,6 +81,7 @@ class Event:
     eri_prefix: str | None = None          # NOAA ERI folder for this event
     post_sources: tuple[str, ...] = ("eri", "maxar")
     provisional: bool = False
+    landslide_storm: str | None = None     # NCGS inventory AssociatedStorm keyword
 
     @property
     def incident_begin(self) -> date:
@@ -90,7 +92,7 @@ class Event:
         return self.manual_begin
 
     def to_summary(self) -> dict[str, Any]:
-        return {"id": self.id, "name": self.name, "state": self.state,
+        return {"id": self.id, "name": self.name, "state": self.state, "hazards": list(self.hazards),
                 "declarations": [d.fema_id for d in self.declarations],
                 "incident_begin": self.incident_begin.isoformat(), "provisional": self.provisional,
                 "pre_window": [self.pre.start.isoformat(), self.pre.end.isoformat()],
@@ -174,6 +176,7 @@ def parse_declaration(rows: list[dict[str, Any]], retrieved_url: str) -> Declara
             license="US Government work; FEMA OpenFEMA terms (no endorsement)",
             crs="n/a", horizontal_datum="n/a",
         ),
+        state=r0.get("state", ""),
     )
 
 
@@ -234,6 +237,7 @@ def build_event(eid: str, spec: dict[str, Any], declarations: list[Declaration])
         eri_prefix=spec.get("eri_prefix"),
         post_sources=tuple(spec.get("post_sources") or ("eri", "maxar")),
         provisional=not declarations,
+        landslide_storm=spec.get("landslide_storm"),
     )
     seen: dict[str, str] = {}
     for aid, a in (spec.get("aois") or {}).items():
@@ -347,7 +351,8 @@ def remove_ops_area(area_id: str) -> bool:
 def add_provisional_event(event_id: str, name: str, incident_begin: str, *, state: str = "NC",
                           hazards: list[str] | None = None, eri_prefix: str | None = None,
                           post_sources: list[str] | None = None, pre_days=(-1500, -1),
-                          post_days=(0, 120), disaster_numbers: list[int] | None = None) -> Event:
+                          post_days=(0, 120), disaster_numbers: list[int] | None = None,
+                          maxar_event: str | None = None) -> Event:
     """T-72 h step: register an event before (or after) its declaration."""
     import fcntl
 
@@ -367,6 +372,8 @@ def add_provisional_event(event_id: str, name: str, incident_begin: str, *, stat
             spec["incident_begin"] = incident_begin
         if eri_prefix:
             spec["eri_prefix"] = eri_prefix
+        if maxar_event:
+            spec["maxar_event"] = maxar_event
         build_event(event_id, spec, [fetch_declaration(int(n)) for n in (disaster_numbers or [])])
         reg.setdefault("events", {})[event_id] = spec
         tmp = path + ".tmp"

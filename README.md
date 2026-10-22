@@ -1,9 +1,9 @@
-# NC Recon
+# Groma
 
-Disaster damage decision support for North Carolina emergency management.
+Building-by-building disaster damage assessment for emergency management.
 
-After a declared (or provisional) event, point NC Recon at a town in North
-Carolina. It pulls before- and after-event imagery (NC OneMap orthos, NOAA
+After a declared (or provisional) event, point Groma at a town. Its first
+proving ground is Hurricane Helene in western North Carolina. It pulls before- and after-event imagery (NC OneMap orthos, NOAA
 emergency aerials or Maxar Open Data), finds every structure (FEMA USA
 Structures, OpenStreetMap, USACE National Structure Inventory), and estimates
 each structure's **FEMA damage level with a probability**. Uncertain and

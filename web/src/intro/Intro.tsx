@@ -15,7 +15,7 @@ const FIXED = params.has("fixed");
 const DENSE = params.has("prewarm");
 const CLEAN = params.has("clean");
 const DEBUG0 = params.has("debug");
-// Where "Open NC Recon" goes. The intro is built with the pitch demo's pinned
+// Where "Open Groma" goes. The intro is built with the pitch demo's pinned
 // map stack, so the app is never on this dev server: in development it is the
 // app's own dev server; in a build it is the site root unless VITE_APP_URL
 // says otherwise.
@@ -175,7 +175,7 @@ export default function Intro() {
       {chrome && phase === "ended" && (
         <div className="intro-actions">
           <a className="intro-btn intro-btn-primary" href={APP_URL}>
-            Open NC Recon
+            Open Groma
           </a>
           <button className="intro-btn" onClick={restart}>
             {REDUCED && ms >= TOTAL ? "Play intro" : "Replay"}

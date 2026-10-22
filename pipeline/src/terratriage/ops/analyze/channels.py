@@ -90,6 +90,19 @@ def e4(ev: BuildingEvidence) -> Channel:
                    detail={"tarp_frac_new": t})
 
 
+def e6(stats: dict[str, Any] | None, flag: str | None, likelihood: dict[str, list[float]]) -> Channel:
+    """Lidar ground change: a deposit or scour flag is evidence; a measured
+    ring with no flag is recorded with weight 0 (no evidence either way)."""
+    if stats is None:
+        return Channel("E6", False, unavailable_reason="NOT_MEASURED")
+    detail = {k: stats[k] for k in ("median_m", "p10_m", "p90_m") if k in stats}
+    if flag is None:
+        return Channel("E6", True, np.ones(len(FEMA)) / len(FEMA), 0.0, "provisional", [], detail=detail)
+    L = np.asarray(likelihood[flag], float)
+    return Channel("E6", True, L / L.sum(), rules()["channels"]["E6"]["weight"], "provisional",
+                   [f"E6_LIDAR_{flag.upper()}"], detail=detail)
+
+
 def e5_unavailable(reason: str) -> Channel:
     return Channel("E5", False, unavailable_reason=reason)
 

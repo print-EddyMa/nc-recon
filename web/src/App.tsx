@@ -1,16 +1,16 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { Toaster } from "sonner";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { AccessButton, SourcesButton } from "./components/ops/SystemPanels";
+import { Icon, type IconName } from "./components/ui/kit";
 import { useTheme } from "./lib/theme";
 import { API_URL } from "./lib/catalog";
 import { DISCLAIMER } from "./lib/ops";
 
-// NC Recon, operational build. Three screens, no decoration:
-//   Operations  damage assessments, review queue, exports, new assessments
-//   Conditions  live rivers / alerts / roads / storms across NC
-//   Help        how to read and use the outputs, limits, sources
-// The earlier demo screens (xView2 4-class map, review, summary, 3-D hero)
-// are not part of this build; the pitch demo lives in demo.html.
+// Groma, operational build. The frame is three bands:
+//   top     brand, the four jobs (Assess, Verify, Conditions, Help), system state
+//   middle  the screen
+//   bottom  the standing disclaimer and the service connection, always visible
 const Ops = lazy(() => import("./screens/Ops"));
 const NCDashboard = lazy(() => import("./screens/NCDashboard"));
 const Help = lazy(() => import("./screens/Help"));
@@ -28,42 +28,28 @@ function parseHash(): { screen: Screen; area: string | null } {
   return { screen: "ops", area: null };
 }
 
-/** NC Recon brand mark - the real North Carolina outline with a scan-ring
- * signal over the Triangle. `currentColor` fills the state; the rings and
- * signal dot use the app's one accent ("this is live"), so the mark tracks
- * the light / dark theme with everything else. */
-function Mark({ uid, className }: { uid: string; className?: string }) {
-  const nc =
-    "M 92.04,0.0 L 294.65,1.34 L 298.66,15.28 L 288.92,13.94 L 274.03,19.67 L 266.2,20.24 L 266.58,22.72 L 287.97,20.81 L 291.41,24.06 L 297.71,22.72 L 300.0,31.13 L 297.9,35.14 L 293.7,35.52 L 284.91,44.11 L 273.27,44.49 L 271.36,50.41 L 276.32,56.33 L 280.33,57.48 L 272.88,67.22 L 266.58,66.07 L 247.87,69.13 L 235.84,75.81 L 226.29,84.6 L 221.32,95.67 L 214.07,93.19 L 201.46,95.48 L 161.94,62.25 L 122.79,61.68 L 123.36,57.67 L 118.01,51.75 L 114.39,53.85 L 114.19,50.22 L 71.23,48.5 L 42.2,55.38 L 0.0,55.76 L 0.95,47.55 L 7.83,46.79 L 10.5,41.06 L 19.1,35.9 L 28.64,35.71 L 37.24,30.36 L 46.21,28.45 L 53.85,20.62 L 58.63,18.33 L 59.58,21.77 L 73.33,15.09 L 79.63,16.42 L 84.02,9.93 L 90.52,8.21 L 92.04,0.0 Z";
-  // accent parts go through `style` so the CSS var() resolves (var() is not
-  // valid in a bare SVG presentation attribute)
-  const stroke = { stroke: "rgb(var(--accent))" };
-  const fill = { fill: "rgb(var(--accent))" };
+const NAV: { id: Screen; label: string; icon: IconName; hint: string }[] = [
+  { id: "ops", label: "Assess", icon: "map", hint: "Damage assessments: areas, review, exports" },
+  { id: "verify", label: "Verify", icon: "check", hint: "Blind checks of uncertain calls" },
+  { id: "conditions", label: "Conditions", icon: "signal", hint: "Live rivers, alerts, power, shelters, storms" },
+  { id: "help", label: "Help", icon: "book", hint: "How to read and use every output" },
+];
+
+/** The groma: a Roman surveyor's staff, cross-arm and plumb lines. Strokes
+ * follow the text colour; the plumb bobs and finial are the bronze brand. */
+export function GromaMark({ className }: { className?: string }) {
+  const bronze = { fill: "rgb(var(--brand))" };
   return (
-    <svg viewBox="0 0 300 96" fill="none" aria-hidden className={className}>
-      <clipPath id={`ncmark-${uid}`}>
-        <path d={nc} />
-      </clipPath>
-      <path d={nc} fill="currentColor" />
-      <g clipPath={`url(#ncmark-${uid})`}>
-        <circle
-          cx="198.09"
-          cy="28.24"
-          r="20"
-          fill="none"
-          style={stroke}
-          strokeWidth="3.5"
-        />
-        <circle
-          cx="198.09"
-          cy="28.24"
-          r="38"
-          fill="none"
-          style={stroke}
-          strokeWidth="3.5"
-        />
+    <svg viewBox="0 0 64 64" className={className} aria-hidden>
+      <g fill="none" stroke="currentColor" strokeLinecap="round">
+        <line x1="32" y1="9" x2="32" y2="55" strokeWidth="3.6" />
+        <line x1="9" y1="15" x2="55" y2="15" strokeWidth="3.6" />
+        <line x1="6" y1="56" x2="58" y2="56" strokeWidth="3.6" />
+        <line x1="12" y1="15" x2="12" y2="39" strokeWidth="1.8" />
+        <line x1="52" y1="15" x2="52" y2="39" strokeWidth="1.8" />
       </g>
-      <circle cx="198.09" cy="28.24" r="6" style={fill} />
+      <path d="M12 38.5l-3.6 3.4 3.6 6 3.6-6zM52 38.5l-3.6 3.4 3.6 6 3.6-6z" style={bronze} />
+      <circle cx="32" cy="9" r="2.8" style={bronze} />
     </svg>
   );
 }
@@ -89,69 +75,67 @@ export default function App() {
         Skip to content
       </a>
       <Toaster
-        position="top-right"
+        position="bottom-right"
+        offset={40}
         toastOptions={{
           style: {
             background: "rgb(var(--surface))",
-            border: "1px solid rgb(var(--line))",
+            border: "1px solid rgb(var(--line-strong))",
             color: "rgb(var(--ink))",
-            fontFamily: '"Geist", ui-sans-serif, system-ui, sans-serif',
-            fontSize: "14px",
+            fontFamily: '"Public Sans Variable", ui-sans-serif, system-ui, sans-serif',
+            fontSize: "13px",
+            borderRadius: "6px",
           },
         }}
       />
       <div className="flex h-full flex-col">
-        <header className="flex shrink-0 items-center gap-2 border-b border-line bg-surface px-3 py-2 sm:gap-4 sm:px-4">
-          <a href="#/" className="flex items-center gap-2 text-ink" aria-label="NC Recon, operations">
-            <Mark uid="hdr" className="h-5 w-[62px]" />
-            <span className="hidden font-display text-base font-semibold sm:inline">NC Recon</span>
+        <header className="flex h-12 shrink-0 items-center gap-1.5 border-b border-line bg-surface px-2 sm:gap-5 sm:px-4">
+          <a
+            href="#/"
+            onClick={(e) => {
+              e.preventDefault();
+              go("ops");
+            }}
+            className="flex items-center gap-2 rounded text-ink"
+            aria-label="Groma, assessments"
+          >
+            <GromaMark className="h-6 w-6 shrink-0 sm:h-7 sm:w-7" />
+            <span className="title-display hidden text-[17px] tracking-[0.22em] sm:inline">GROMA</span>
           </a>
-          <nav aria-label="Main" className="flex items-center gap-1">
-            {(
-              [
-                ["ops", "Operations"],
-                ["conditions", "Conditions"],
-                ["verify", "Verify"],
-                ["help", "Help"],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                onClick={() => go(id)}
-                aria-current={screen === id ? "page" : undefined}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                  screen === id
-                    ? "bg-ink text-canvas"
-                    : "text-ink-dim hover:bg-surface-2 hover:text-ink"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+          <nav aria-label="Main" className="flex h-full items-stretch gap-0.5">
+            {NAV.map((n) => {
+              const on = screen === n.id;
+              return (
+                <button
+                  key={n.id}
+                  onClick={() => go(n.id)}
+                  aria-current={on ? "page" : undefined}
+                  title={n.hint}
+                  aria-label={n.label}
+                  className={`relative inline-flex items-center gap-1.5 px-2 text-[13px] sm:px-3 sm:text-sm ${
+                    on ? "font-semibold text-ink" : "text-ink-dim hover:text-ink"
+                  }`}
+                >
+                  <Icon name={n.icon} className={`min-[400px]:max-sm:hidden ${on ? "text-accent" : ""}`} />
+                  <span className="max-[399px]:sr-only">{n.label}</span>
+                  {on && <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-t bg-accent" aria-hidden />}
+                </button>
+              );
+            })}
           </nav>
-          <div className="ml-auto flex items-center gap-3">
-            {!API_URL && (
-              <span className="rounded-sm bg-dmg1/20 px-2 py-0.5 text-xs text-ink">
-                No assessment service connected
-              </span>
-            )}
+          <div className="ml-auto flex items-center gap-1">
+            <SourcesButton />
+            <AccessButton />
             <ThemeToggle />
           </div>
         </header>
-        <div
-          role="note"
-          className="shrink-0 border-b border-line bg-warn px-4 py-1 text-center text-sm font-medium text-warn-ink"
-        >
-          {DISCLAIMER}
-        </div>
+
         <main id="main" className="relative min-h-0 flex-1 overflow-hidden">
           <Suspense
-            fallback={
-              <div className="grid h-full place-items-center text-sm text-ink-dim">Loading…</div>
-            }
+            fallback={<div className="grid h-full place-items-center text-sm text-ink-dim">Loading…</div>}
           >
             {screen === "ops" && (
-              <ErrorBoundary label="The operations view">
+              <ErrorBoundary label="The assessment view">
                 <Ops key={area ?? "none"} areaId={area} onPickArea={(a) => go("ops", a)} />
               </ErrorBoundary>
             )}
@@ -172,8 +156,51 @@ export default function App() {
             )}
           </Suspense>
         </main>
+
+        <footer
+          role="note"
+          className="flex min-h-7 shrink-0 flex-wrap items-center gap-x-4 gap-y-0.5 border-t border-line bg-surface px-3 py-1 text-[12px] text-ink-dim sm:px-4"
+        >
+          <Disclaimer />
+          <span className="ml-auto hidden items-center gap-1.5 sm:inline-flex">
+            {API_URL ? (
+              <>
+                <span className="h-1.5 w-1.5 rounded-full bg-st-ok" aria-hidden />
+                Assessment service connected
+              </>
+            ) : (
+              <>
+                <span className="h-1.5 w-1.5 rounded-full bg-st-unknown" aria-hidden />
+                No assessment service connected
+              </>
+            )}
+          </span>
+        </footer>
       </div>
     </>
+  );
+}
+
+/** The standing disclaimer: in full on wide screens; on a phone one line,
+ * with the full text a tap away. */
+function Disclaimer() {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="inline-flex min-w-0 flex-1 items-start gap-1.5 sm:flex-none">
+      <Icon name="shield" className="mt-px h-3.5 w-3.5 text-st-warn" />
+      <span className={`min-w-0 text-ink ${open ? "" : "max-sm:truncate"}`}>
+        <span className="sm:hidden">{open ? DISCLAIMER : "Decision support, not an official assessment."}</span>
+        <span className="max-sm:hidden">{DISCLAIMER}</span>
+      </span>
+      <button
+        className="shrink-0 text-ink-faint hover:text-ink sm:hidden"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-label={open ? "Show less" : "Read the full disclaimer"}
+      >
+        <Icon name={open ? "x" : "info"} className="h-3.5 w-3.5" />
+      </button>
+    </span>
   );
 }
 
@@ -182,23 +209,17 @@ function ThemeToggle() {
   return (
     <button
       onClick={cycle}
-      className="pressable grid h-8 w-8 place-items-center rounded-md border border-line bg-surface-2 text-ink-faint hover:text-ink"
+      className="pressable grid h-8 w-8 place-items-center rounded border border-line bg-surface text-ink-dim hover:text-ink"
       aria-label={`Switch to ${effective === "dark" ? "light" : "dark"} mode`}
       title={`Switch to ${effective === "dark" ? "light" : "dark"} mode`}
     >
       {effective === "dark" ? (
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-          <circle
-            cx="8"
-            cy="8"
-            r="3.2"
-            stroke="currentColor"
-            strokeWidth="1.4"
-          />
+          <circle cx="8" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.5" />
           <path
             d="M8 1.5v1.6M8 12.9v1.6M14.5 8h-1.6M3.1 8H1.5M12.6 3.4l-1.1 1.1M4.5 11.5l-1.1 1.1M12.6 12.6l-1.1-1.1M4.5 4.5L3.4 3.4"
             stroke="currentColor"
-            strokeWidth="1.4"
+            strokeWidth="1.5"
             strokeLinecap="round"
           />
         </svg>
@@ -207,7 +228,7 @@ function ThemeToggle() {
           <path
             d="M13.2 9.4A5.5 5.5 0 016.6 2.8a5.5 5.5 0 106.6 6.6z"
             stroke="currentColor"
-            strokeWidth="1.4"
+            strokeWidth="1.5"
             strokeLinejoin="round"
           />
         </svg>

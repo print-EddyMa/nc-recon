@@ -226,6 +226,30 @@ def cmd_ops_assess(a):
     run_area(a.area, limit=a.limit, night=not a.day)
 
 
+def cmd_ops_event_from_fema(a):
+    from terratriage.ops.plan.bootstrap import create_from_declaration, draft_from_declaration
+
+    if a.write:
+        ev, d = create_from_declaration(a.disaster, a.id)
+        print(f"registered {ev.id}: {ev.name}, hazards {', '.join(ev.hazards)}, "
+              f"post sources {', '.join(ev.post_sources)}")
+    else:
+        d = draft_from_declaration(a.disaster)
+    print(json.dumps(d.to_dict(), indent=2))
+
+
+def cmd_ops_field_reference(a):
+    from terratriage.ops.analyze.field_reference import compare_area, format_summary
+
+    print(format_summary(compare_area(a.area, a.source, allow_test=a.allow_test)))
+
+
+def cmd_ops_ground_change(a):
+    from terratriage.ops.analyze import ground_change
+
+    ground_change.main(["--area", a.area] + (["--allow-test"] if a.allow_test else []))
+
+
 def cmd_ops_fetch(a):
     from terratriage.ops.collect.imagery_fetch import fetch_pair
 
@@ -413,12 +437,19 @@ def main():
     o.add_argument("--day", action="store_true", help="use daytime occupant estimates (default: night)")
     o.set_defaults(fn=cmd_ops_assess)
 
-    of = sub.add_parser("ops-fetch", help="ops mode: co-gridded pre/post pair from NC orthos / NOAA ERI")
+    oe = sub.add_parser("ops-event-from-fema",
+                        help="ops mode: draft (or --write) an event for any disaster from its FEMA number")
+    oe.add_argument("--disaster", type=int, required=True, help="FEMA disaster number, e.g. 4856")
+    oe.add_argument("--id", default=None, help="event id (default: <hazard>-<year>-<state>-dr<number>)")
+    oe.add_argument("--write", action="store_true", help="register the event in the ops registry")
+    oe.set_defaults(fn=cmd_ops_event_from_fema)
+
+    of = sub.add_parser("ops-fetch", help="ops mode: co-gridded pre/post pair (NC orthos or NAIP -> NC orthos or NOAA ERI)")
     of.add_argument("--area", required=True)
     of.add_argument("--lon", type=float, required=True)
     of.add_argument("--lat", type=float, required=True)
     of.add_argument("--half-m", type=float, default=800.0)
-    of.add_argument("--pre", default="nc_2020_2023", choices=["nc_2020_2023"])
+    of.add_argument("--pre", default="nc_2020_2023", choices=["nc_2020_2023", "naip"])
     of.add_argument("--post", default="nc_helene_2025", choices=["nc_helene_2025", "eri"])
     of.add_argument("--eri-prefix", default=None, help="NOAA ERI event folder, e.g. 2024_Hurricane_Helene")
     of.set_defaults(fn=cmd_ops_fetch)
@@ -436,20 +467,32 @@ def main():
     ob = sub.add_parser("ops-brief", help="ops mode: one-page situation brief (HTML + text)")
     ob.add_argument("--area", required=True)
     ob.set_defaults(fn=cmd_ops_brief)
-    tv = sub.add_parser("truth-status", help="NC Recon Verify: verification progress (one area or all)")
+    tv = sub.add_parser("truth-status", help="Groma Verify: verification progress (one area or all)")
     tv.add_argument("--area")
     tv.set_defaults(fn=cmd_truth_status)
-    tr = sub.add_parser("truth-release", help="NC Recon Verify: write verified consensus into the protocol label file")
+    tr = sub.add_parser("truth-release", help="Groma Verify: write verified consensus into the protocol label file")
     tr.add_argument("--area", required=True)
     tr.set_defaults(fn=cmd_truth_release)
-    te = sub.add_parser("truth-export", help="NC Recon Verify: dataset of verified labels + datasheet (zip)")
+    te = sub.add_parser("truth-export", help="Groma Verify: dataset of verified labels + datasheet (zip)")
     te.add_argument("--area")
     te.add_argument("--out")
     te.set_defaults(fn=cmd_truth_export)
-    sp_sar = sub.add_parser("ops-sarcop", help="ops mode: NC Recon calls beside Buncombe's Helene SAR field categories (comparison, not validation)")
+    sp_sar = sub.add_parser("ops-sarcop", help="ops mode: Groma calls beside Buncombe's Helene SAR field categories (comparison, not validation)")
     sp_sar.add_argument("--area", required=True)
     sp_sar.add_argument("--allow-test", action="store_true", help="permit a TEST (hold-out) area")
     sp_sar.set_defaults(fn=cmd_ops_sarcop)
+    ofr = sub.add_parser("ops-field-reference",
+                         help="ops mode: calls beside published building damage records (CAL FIRE DINS, FEMA, NEMAC, SARCOP)")
+    ofr.add_argument("--area", required=True)
+    ofr.add_argument("--source", default=None, choices=["dins", "fema_hgda", "nemac", "sarcop"],
+                     help="default: chosen from the event's hazard, state and year")
+    ofr.add_argument("--allow-test", action="store_true", help="permit a TEST (hold-out) area")
+    ofr.set_defaults(fn=cmd_ops_field_reference)
+    ogc = sub.add_parser("ops-ground-change",
+                         help="ops mode: lidar ground change around each building (NC 2025 QL1 vs 3DEP)")
+    ogc.add_argument("--area", required=True)
+    ogc.add_argument("--allow-test", action="store_true", help="permit a TEST (hold-out) area")
+    ogc.set_defaults(fn=cmd_ops_ground_change)
     orf = sub.add_parser("ops-reference", help="ops mode: FEMA housing assistance by ZIP beside the assessment")
     orf.add_argument("--area", required=True)
     orf.set_defaults(fn=cmd_ops_reference)

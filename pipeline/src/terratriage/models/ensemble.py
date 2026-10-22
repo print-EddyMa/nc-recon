@@ -69,7 +69,16 @@ def _strip_module(sd: dict) -> dict:
 
 
 def load_checkpoint(model: torch.nn.Module, path: str) -> torch.nn.Module:
-    ckpt = torch.load(path, map_location="cpu", weights_only=False)
+    # third-party checkpoints (the xView2 weights zip): never unpickle arbitrary
+    # objects, which would run code embedded in the file. Old checkpoints carry
+    # numpy scalars (best score, epoch) beside the tensors; allow exactly those.
+    try:
+        ckpt = torch.load(path, map_location="cpu", weights_only=True)
+    except Exception:  # noqa: BLE001 - UnpicklingError for the numpy globals
+        safe = [np.dtype, np.float64, np.float32, np.int64]
+        scalar = getattr(getattr(np, "_core", np.core), "multiarray").scalar
+        with torch.serialization.safe_globals([scalar, *safe, *(type(np.dtype(t)) for t in ("f8", "f4", "i8"))]):
+            ckpt = torch.load(path, map_location="cpu", weights_only=True)
     loaded = _strip_module(ckpt["state_dict"] if "state_dict" in ckpt else ckpt)
     tgt = model.state_dict()
     kept = 0
