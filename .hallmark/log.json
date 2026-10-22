@@ -1,3 +1,20 @@
 [
-  { "date": "2026-10-21", "macrostructure": "Split Studio", "theme": "custom", "theme_axes": "dark / classical-serif / chromatic-other (verdigris)", "vibe": "Roman surveyor, basalt, verdigris, bronze", "enrichment": "real imagery plate + Blender line render", "brief": "Groma site redesign: three buyer paths" }
+  {
+    "date": "2026-10-22",
+    "macrostructure": "Map / Diagram",
+    "theme": "custom",
+    "theme_axes": "light / condensed-grotesk / cool (hydro)",
+    "vibe": "USGS quadrangle, survey field kit, highway signage",
+    "enrichment": "live WebGL terrain from real 3DEP + NC OneMap data; CSS 3D exploded anatomy",
+    "brief": "Groma site: interactive 3D explorer, anatomy of a call, usable downloads"
+  },
+  {
+    "date": "2026-10-21",
+    "macrostructure": "Split Studio",
+    "theme": "custom",
+    "theme_axes": "dark / classical-serif / chromatic-other (verdigris)",
+    "vibe": "Roman surveyor, basalt, verdigris, bronze",
+    "enrichment": "real imagery plate + Blender line render",
+    "brief": "Groma site redesign: three buyer paths"
+  }
 ]

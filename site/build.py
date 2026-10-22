@@ -1,13 +1,16 @@
 """Build the Groma website: `python3 site/build.py`.
 
-Writes two copies from template.html + assets/chips.json:
+Writes two copies from template.html, assets/chips.json and assets/terrain/
+(baked from real public data by assets/prep_terrain.py):
   site/index.html     a complete static page (drop the folder on any static host)
   site/artifact.html  the same page without the document wrapper, for publishing
 
 Set CONTACT before launch (an email or URL shown in the pilot section).
 """
+import base64
 import json
 import os
+import re
 import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -42,7 +45,23 @@ def main() -> None:
     ins = json.load(open(os.path.join(HERE, "assets", "instrument.json"), encoding="utf-8"))
     instrument = (f'<figure class="instrument" aria-hidden="true" style="aspect-ratio:{ins["w"]}/{ins["h"]}">'
                   f'<i class="br" style="--m:url({ins["bronze"]})"></i><i class="ln" style="--m:url({ins["lines"]})"></i></figure>')
+    terr = os.path.join(HERE, "assets", "terrain")
+
+    def uri(name: str, mime: str) -> str:
+        with open(os.path.join(terr, name), "rb") as fh:
+            return f"data:{mime};base64," + base64.b64encode(fh.read()).decode()
+
+    layers = json.load(open(os.path.join(terr, "layers.json"), encoding="utf-8"))
+    with open(os.path.join(terr, "dem.u16"), "rb") as fh:
+        dem = base64.b64encode(fh.read()).decode()
+    assets = {"post": uri("post.jpg", "image/jpeg"), "pre": uri("pre.jpg", "image/jpeg"),
+              "heat": uri("heat.png", "image/png"), "ground": uri("ground.png", "image/png"), "dem": dem}
+    as_json = lambda o: json.dumps(o, separators=(",", ":")).replace("</", "<\\/")  # noqa: E731
     subs = {
+        "__LAYERS__": as_json(layers), "__ASSETS__": as_json(assets),
+        "__POSTER__": uri("poster.jpg", "image/jpeg"), "__ANAT_CHANGE__": uri("anatomy_change.jpg", "image/jpeg"),
+        "__ANAT_GROUND__": uri("anatomy_ground.png", "image/png"),
+        "__N_STRUCT__": f"{layers['structures']:,}", "__USNG__": layers["anatomy"]["usng"],
         "__MARK_INNER__": MARK_INNER, "__MARK__": MARK,
         "__FAVICON__": urllib.parse.quote(favicon.split("<title>")[0] + favicon.split("</title>")[1]),
         "__PRE__": rec["pre"], "__POST__": rec["post"],
@@ -56,7 +75,8 @@ def main() -> None:
     }
     for k, v in subs.items():
         t = t.replace(k, v)
-    assert "__" not in t.replace("__init__", ""), [w for w in t.split() if "__" in w][:5]
+    left = re.findall(r"__[A-Z][A-Z_]+__", t)
+    assert not left, left[:5]
     assert "—" not in t, "no em dashes"
     with open(os.path.join(HERE, "artifact.html"), "w", encoding="utf-8") as fh:
         fh.write(t)
