@@ -19,6 +19,7 @@ import {
   type VerifyTask,
 } from "../lib/ops";
 import { Kbd, Segmented, Spinner, Swatch } from "../components/ui/kit";
+import { useOffline } from "../lib/offline";
 
 // Groma Verify (docs/truth/README.md). One building at a time, before and
 // after imagery only. Deliberately blind: this screen never shows the model's
@@ -158,6 +159,7 @@ export default function Verify() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(0);
   const started = useRef(0);
+  const off = useOffline();
 
   useEffect(() => {
     loadOpsAreas()
@@ -228,6 +230,11 @@ export default function Verify() {
           <p className="mt-1 text-[13px] text-ink-dim">
             Judge one building at a time from its imagery. You never see the model's call.
           </p>
+          {off?.offline && off.labels && (
+            <p className="mt-3 rounded border border-st-warn/40 bg-st-warn/10 px-2.5 py-2 text-xs leading-relaxed text-ink">
+              {off.labels}
+            </p>
+          )}
           <div className="mt-4 flex flex-wrap items-end gap-3 border-b border-line pb-4">
             <label className="text-xs font-medium text-ink-dim">
               Your name

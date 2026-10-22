@@ -123,6 +123,159 @@ chips centred on the DINS points, which skips footprint matching and its
 errors. A like-for-like comparison runs this model inside the pipeline on the
 same footprints. That is the next step before it can replace E1.
 
+## Pre-registered evaluation: M1 on the pipeline's footprints (Altadena)
+
+Written 2026-10-22, before the run. One run; its result is reported
+whatever it shows, and nothing below changes after it.
+
+**Question.** On the wildfire TEST area Altadena, using the same buildings,
+the same CAL FIRE DINS records and the same matching rule as the pipeline's
+current comparison, is v0 (as evidence channel M1) better than the current
+optical chain? If so, M1 replaces E1 in the wildfire hazard profile.
+
+**Mode evaluated: replace, in its plainest form.** M1's own call stands in
+for the optical chain's call. M1 is not fused with E2, H or the rest, and
+"alongside" is not evaluated here.
+
+**Exclusion statement.** No Eaton or Altadena structure, label or imagery was
+used for training, feature or chip-size choice, checkpoint selection,
+thresholds or temperature; all of these were fixed on Palisades. (v0 has no
+temperature. Its regularisation strength was also fixed on Palisades.)
+
+**What is already known (disclosed).** Before this pre-registration, v0 was
+scored once on Eaton chips centred on DINS points (Major-or-Destroyed F1
+0.95, above). That score chose nothing: the weights, chip size and features
+were all fixed on Palisades. This run asks a different question: v0 on the
+pipeline's own footprints and matching.
+
+**Frozen inputs (sha256).**
+
+| Item | sha256 |
+|---|---|
+| `data/model/weights/groma-dmg-v0.npz` | 5abdb8362259713af9ff074a93129e897b228b41f914ce9d9c7e4af05d2e7222 |
+| `data/model/weights/groma-dmg-v0.json` | 3c92fa924d0f59553c8d7316691a0c7d1fcb789dec1fd699ba50b00b9012b77c |
+| torchvision `resnet18-f37072fd.pth` (frozen encoder) | f37072fd47e89c5e827621c5baffa7500819f7896bbacec160b1a16c560e07ec |
+| `data/raw/altadena/pre_2022-05-05_2022-05-11.tif` | 5a4590edc3e3cdf67694e9e8f877f8e383092949044990d13e4dc45200712808 |
+| `data/raw/altadena/post_2025-01-28.tif` | 60703e449388d93e3bb94a290e48a2886c526321d9b281328f2c9791dc2b4164 |
+| `data/output/ops/altadena.geojson` (the pipeline's footprints and calls) | 28dc55775cd551ce5ebee6cd7f26dc69cc038ccfc2e9d690df7fafb53138e5b3 |
+| `data/output/ops/altadena.field_reference.json` (baseline) | 1ab2d3f6918ae17d7a3c903a1ad56cff91293e63a3bf16ed1e6f9570c83cbbb6 |
+| `ops/model/channel.py` | 32b847e68b2d827bd942142b478c26664a0aa855d8f2211a56106e51944d6daa |
+| `ops/model/linear.py` | e6abe6f6012e99988bd2679dd10b0f03059b297514b2667035f38b06158044a1 |
+| `ops/model/dataset.py` | c720604e6005080ced484c18d944b86b8b3b30bd5aaa836de44a2b22c1414a4f |
+| `ops/analyze/field_reference.py` | 9252bf2d6d5f6187ab98012318cfd35ceec5b3fd6c197b2bc5821831759093d7 |
+| `ops/analyze/sarcop_reference.py` | bdcd9bc43292b2fb7f056c4c0e9de683830bb1f63143d8582229fd22ba3791a6 |
+
+The two comparison files differ from HEAD 5117723 only in where they read
+their output folder (`NCR_OPS_OUT`). Their matching logic is the logic that
+produced the baseline.
+
+**Procedure.**
+1. **Scratch environment.** Set NCR_OPS_OUT, NCR_OPS_REGISTRY, NCR_JOBS_FILE,
+   NCR_LABELS_DIR, NCR_TRUTH_DIR and NCR_AUDIT_LOG to a fresh scratch
+   directory. Copy `altadena.geojson` there. The live data/output/ops is only
+   read, and is checked byte-identical afterwards.
+2. **Score.** For every building with a footprint, call
+   `channel.m1_probs(pre, post, footprints)`. Chips are 32 m at 64 px, centred on
+   the footprint centroid, with no per-building shift and max no-data 0.2.
+3. **Replace the calls.** In the scratch copy, replace each building's
+   `damage_probs` with M1's probabilities and `damage_level` with their
+   argmax. This is M1 standalone, with no fusion and no abstention. A building
+   with no usable M1 chip keeps the pipeline's call, so the matched set
+   stays identical.
+4. **Compare.** Run `field_reference.compare_area("altadena", "dins",
+   allow_test=True)` on the scratch copy. That reuses the cached DINS points
+   (same event and bounding box key), the 15 m match and "latest record wins".
+
+**Measures.**
+- **Primary:** Major-or-Destroyed F1 over all matched structures
+  (`summary.major_or_destroyed.f1`).
+- **Also reported:** that measure's precision and recall, and five-level
+  agreement (`summary.same_level`).
+- **Fallback count (reported, decides nothing):** the number and share of
+  matched buildings with no usable M1 chip, which kept the pipeline's call.
+- **Baseline:** F1 0.839 (precision 0.906, recall 0.781), five-level agreement
+  0.747, 2,246 matched.
+
+**Decision rule (wildfire only, fixed now).**
+- **Replace E1 with M1 in the wildfire profile** if both hold: M1's F1 ≥
+  0.869 (baseline + 0.03), and M1's precision ≥ 0.886 (baseline − 0.02).
+- **Otherwise keep E1.**
+- Homes-only F1, same-level agreement and kappa are reported but decide
+  nothing.
+
+**What a "replace" does and does not claim.** It compares M1 alone with the
+current fused chain on one TEST area. A pipeline with M1 fused in must still
+be scored on a fresh fire before any accuracy claim.
+
+**After this run, Altadena is no longer a clean hold-out** for M1's next
+version or for any fused pipeline that uses it.
+
+### Result (run once, 2026-10-22)
+
+| Measure | M1 standalone | Current chain (baseline) |
+|---|---|---|
+| Matched structures | 2,246 | 2,246 |
+| Major or Destroyed precision | **0.957** | 0.906 |
+| Major or Destroyed recall | **0.942** | 0.781 |
+| Major or Destroyed F1 (primary) | **0.949** | 0.839 |
+| Five-level agreement | 0.824 | 0.747 |
+| Kappa | 0.613 | 0.459 |
+| Homes only (1,533): Major or Destroyed F1 | 0.962 (P 0.969, R 0.955) | 0.855 (P 0.934, R 0.789) |
+| Homes only: five-level agreement | 0.834 | 0.763 |
+
+**Fallback:** 14 of 2,246 matched buildings (0.6%) had no usable M1 chip and
+kept the pipeline's call. Across all 2,558 assessed buildings, 24 had no
+usable chip.
+
+**Decision under the pre-registered rule:** F1 0.949 ≥ 0.869 and precision
+0.957 ≥ 0.886, so the decision is **replace**. M1 replaces E1 in the wildfire
+hazard profile.
+
+Where M1 still misses, by DINS level (rows) and M1's call (columns):
+- **DINS No Damage (544):** 310 called No Damage, 135 Affected, 56 Minor,
+  6 Major, 37 Destroyed.
+- **DINS Destroyed (1,602):** 1,515 called Destroyed, 31 No Damage, 36 Affected,
+  20 Minor.
+- **The middle levels stay weak**, as on Palisades.
+
+**Run record:**
+- The result is in `data/model/weights/groma-dmg-v0.prereg.altadena.json`
+  (sha256 74979064a90ac93525487a8ebc7d19dff55c132f1d44774c22dcdbe73129abc3).
+- The run happened in a scratch output folder. The live `data/output/ops` (37
+  files) had identical sha256 hashes before and after.
+
+**What this does not show:**
+- It is M1 alone against the fused chain on one TEST area, which shares the
+  windstorm, the ERI flight and the NAIP vintage with the training fire.
+- The fused pipeline with M1 in "replace" mode still has to be scored on a
+  fresh wildfire before any accuracy claim.
+- Altadena is now spent as a hold-out for M1.
+
+## Encoder weights
+
+- **Where they come from:** v0's frozen encoder is torchvision's ImageNet
+  ResNet-18, file `resnet18-f37072fd.pth` (sha256
+  f37072fd47e89c5e827621c5baffa7500819f7896bbacec160b1a16c560e07ec, about
+  45 MB). It is not in the repository: it is torchvision's file, under its
+  own terms.
+- **No download while assessing.** `channel.load()` looks for the file only on
+  disk (`$TORCH_HOME/hub/checkpoints/`, else `~/.cache/torch/hub/checkpoints/`)
+  and checks its sha256. When the file is absent or wrong it raises
+  FileNotFoundError ("resnet18 encoder weights not on this machine"), and the
+  pipeline marks M1 unavailable (`M1_WEIGHTS_MISSING`); E1 then carries the
+  optical evidence.
+- **Staging a machine:** once, on a networked machine:
+
+  ```
+  python -m terratriage.ops.model.fetch_encoder
+  ```
+
+  It downloads the file and installs it only if the sha256 matches. To stage
+  an offline laptop or an offline pack, copy the file into the same folder
+  there.
+- **Unchanged features:** loading from the local file gives the same
+  features as before; the maximum difference on test input was 0.0.
+
 ## Limits
 
 - **One hazard, one region:** wildfire, Southern California, one post-event
@@ -141,8 +294,9 @@ same footprints. That is the next step before it can replace E1.
 - **The resolutions differ.** NAIP before (0.6 m, leaf-on) and ERI after
   (0.3 m resampled to 0.5 m) come from different sensors. Colour and gain
   augmentation stand in for that, and only partly.
-- **It is uncalibrated outside Palisades:** the temperature was fitted on
-  Palisades validation.
+- **Its probabilities are fitted on Palisades:** the logistic regression was
+  fit there with balanced class weights, and they are not calibrated
+  elsewhere.
 
 ## Next
 

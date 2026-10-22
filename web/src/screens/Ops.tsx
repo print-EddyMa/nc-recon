@@ -66,8 +66,10 @@ import {
   type OpsProps,
 } from "../lib/ops";
 import { API_URL } from "../lib/catalog";
+import { loadOffline, offlineReason, useOffline } from "../lib/offline";
 import { AccuracyNote } from "../components/ops/SystemPanels";
 import SwipeCompare from "../components/map/SwipeCompare";
+import { heightOf, useBuildings3D } from "../components/map/useBuildings3D";
 import References from "../components/ops/References";
 import Respond from "../components/ops/Respond";
 import {
@@ -186,6 +188,12 @@ export default function Ops({
   const [picking, setPicking] = useState(false);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [imagery, setImagery] = useState<ImageryMode>("post");
+  // 3D is a toggle, never the default; terrain is a further opt-in inside it
+  const [view3d, setView3d] = useState(false);
+  const [terrain, setTerrain] = useState(false);
+  // offline: no new assessments (they fetch imagery) and no terrain tiles
+  const off = useOffline();
+  const noNew = off?.offline ? offlineReason(off, /assess/i) : null;
   // hold B: the before-event image, for as long as the key is down
   const [peek, setPeek] = useState(false);
   const [tab, setTab] = useState<Tab>("overview");
@@ -289,7 +297,10 @@ export default function Ops({
         setLabels(m);
       })
       .catch(() => {});
-    loadResponder(areaId)
+    // offline packs leave addresses out (they stay with the EOC), so the
+    // responder file is never there to ask for
+    loadOffline()
+      .then((o) => (o?.offline ? Promise.reject(new Error("offline")) : loadResponder(areaId)))
       .then((d) => {
         if (!live) return;
         const m: Record<string, string> = {};
@@ -358,7 +369,7 @@ export default function Ops({
         return;
       }
       if (!sel) {
-        if (e.key === "n" && API_URL) {
+        if (e.key === "n" && API_URL && !noNew) {
           e.preventDefault();
           setNewOpen(true);
         }
@@ -391,7 +402,7 @@ export default function Ops({
       window.removeEventListener("keyup", onUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, [sel, queue, label, select, fc, imagery]);
+  }, [sel, queue, label, select, fc, imagery, noNew]);
 
   const onSubmitted = useCallback(
     (j: Job) => {
@@ -426,7 +437,8 @@ export default function Ops({
     }
   }, []);
 
-  const shownImagery: ImageryMode = peek && fc ? "pre" : imagery;
+  // swipe compares two flat maps: in 3D the after image stays under the buildings
+  const shownImagery: ImageryMode = peek && fc ? "pre" : view3d && imagery === "swipe" ? "post" : imagery;
   const records = (fc?.properties.provenance?.imagery ?? []) as ImageryRecord[];
 
   return (
@@ -449,8 +461,8 @@ export default function Ops({
             className="ml-auto"
             icon={<Icon name="plus" className="h-3.5 w-3.5" />}
             onClick={() => setNewOpen(true)}
-            disabled={!API_URL}
-            title="New assessment (N)"
+            disabled={!API_URL || !!noNew}
+            title={noNew ?? "New assessment (N)"}
           >
             New assessment
           </Button>
@@ -490,6 +502,8 @@ export default function Ops({
           resp={tab === "respond" ? resp : null}
           focus={focus}
           fitEvent={areaId ? null : fitEvent}
+          view3d={!!areaId && view3d}
+          terrain={terrain && !off?.offline}
           beforeLabel={imageryDate(records.find((r) => r.role === "pre"))}
           afterLabel={imageryDate(records.find((r) => r.role === "post"))}
         />
@@ -501,7 +515,16 @@ export default function Ops({
         )}
         {fc && (
           <div className="absolute left-3 top-3 z-10">
-            <ImageryBar mode={imagery} onMode={setImagery} records={records} peek={peek} />
+            <ImageryBar
+              mode={imagery}
+              onMode={setImagery}
+              records={records}
+              peek={peek}
+              view3d={view3d}
+              onView3d={setView3d}
+              terrain={terrain}
+              onTerrain={setTerrain}
+            />
           </div>
         )}
         {fc && peek && (
@@ -525,6 +548,7 @@ export default function Ops({
               }
               reviewOnly={reviewOnly}
               onReviewOnly={setReviewOnly}
+              view3d={view3d}
             />
           </div>
         )}
@@ -806,6 +830,8 @@ function AreaList({
   onFrame: (eventId: string) => void;
 }) {
   const [q, setQ] = useState("");
+  const off = useOffline();
+  const noNew = off?.offline ? offlineReason(off, /assess/i) : null;
   const groups = useMemo(() => {
     const ql = q.trim().toLowerCase();
     const m = new Map<string, { id: string; name: string; decl: string[]; rows: OpsAreaSummary[] }>();
@@ -839,7 +865,11 @@ function AreaList({
     return (
       <div className="p-3">
         <Empty icon="map" title="No assessments yet">
-          Start one with <b className="text-ink">New assessment</b>, or press <Kbd>N</Kbd>.
+          {noNew ?? (
+            <>
+              Start one with <b className="text-ink">New assessment</b>, or press <Kbd>N</Kbd>.
+            </>
+          )}
         </Empty>
       </div>
     );
@@ -929,6 +959,8 @@ function Overview({
   onNew: () => void;
 }) {
   const rows = useMemo(() => [...(areas ?? [])].sort((a, b) => sevOf(b) - sevOf(a)), [areas]);
+  const off = useOffline();
+  const noNew = off?.offline ? offlineReason(off, /assess/i) : null;
   const total = useMemo(() => {
     const t: Record<FemaClass, number> = { no_damage: 0, affected: 0, minor: 0, major: 0, destroyed: 0 };
     let structures = 0;
@@ -972,9 +1004,10 @@ function Overview({
             </li>
           ))}
           <li>
-            <Button variant="primary" onClick={onNew} kbd="N">
+            <Button variant="primary" onClick={onNew} kbd="N" disabled={!!noNew} title={noNew ?? undefined}>
               New assessment
             </Button>
+            {noNew && <p className="mt-2 text-xs text-ink-dim">{noNew}</p>}
           </li>
         </ol>
       )}
@@ -1093,6 +1126,8 @@ function AreaInspector({
       .catch(() => setHasChecks(false));
   }, [areaId, reload]);
   const brief = () => openBrief(areaId).catch((e: Error) => toast.error(e.message));
+  const off = useOffline();
+  const noRerun = off?.offline ? offlineReason(off, /assess/i) : null;
   const exportGis = async () => {
     setExporting(true);
     try {
@@ -1146,14 +1181,16 @@ function AreaInspector({
                 {p.aoi.role === "OPS" && (
                   <button
                     className="rounded px-2.5 py-1.5 text-left text-ink hover:bg-surface-2 disabled:opacity-45"
-                    disabled={rerunning}
+                    disabled={rerunning || !!noRerun}
                     onClick={() => {
                       close();
                       onRerun();
                     }}
                   >
                     {rerunning ? "Running again…" : "Run again"}
-                    <div className="text-xs text-ink-faint">Same imagery, after a calibration or update. Labels kept.</div>
+                    <div className="text-xs text-ink-faint">
+                      {noRerun ?? "Same imagery, after a calibration or update. Labels kept."}
+                    </div>
                   </button>
                 )}
                 {p.aoi.role === "OPS" && (
@@ -1467,8 +1504,11 @@ const REVIEW_PAGE = 150;
 function FemaPanel({ areaId }: { areaId: string }) {
   const [ref, setRef] = useState<FemaReference | null | "none">(null);
   const [open, setOpen] = useState(false);
+  // OpenFEMA is a network source: offline it is never asked for
+  const off = useOffline();
+  const noFema = off?.offline ? offlineReason(off, /FEMA/) : null;
   useEffect(() => {
-    if (!open || ref !== null) return;
+    if (!open || ref !== null || noFema) return;
     let live = true;
     loadFemaReference(areaId)
       .then((d) => live && setRef(d))
@@ -1476,10 +1516,11 @@ function FemaPanel({ areaId }: { areaId: string }) {
     return () => {
       live = false;
     };
-  }, [open, ref, areaId]);
+  }, [open, ref, areaId, noFema]);
   return (
     <Disclosure title="FEMA assistance by ZIP code" onToggle={setOpen}>
-      {ref === null && <div className="skel h-16" />}
+      {noFema && <p className="text-[13px] text-ink-dim">{noFema}</p>}
+      {ref === null && !noFema && <div className="skel h-16" />}
       {ref === "none" && (
         <p className="text-[13px] text-ink-dim">Not available (needs responder access, or OpenFEMA is unreachable).</p>
       )}
@@ -1564,9 +1605,14 @@ function ReviewList({
   onPick: (id: string) => void;
 }) {
   const [limit, setLimit] = useState(REVIEW_PAGE);
+  const off = useOffline();
+  const note = off?.offline && off.labels ? (
+    <p className="mb-3 rounded border border-st-warn/40 bg-st-warn/10 px-2.5 py-2 text-xs leading-relaxed text-ink">{off.labels}</p>
+  ) : null;
   if (queue.length === 0)
     return (
       <div className="pt-4">
+        {note}
         <Empty icon="check" title="Nothing waiting for review">
           {labeledCount > 0 ? `${labeledCount} calls checked in this area.` : "No call here was flagged for review."}
         </Empty>
@@ -1574,6 +1620,7 @@ function ReviewList({
     );
   return (
     <div className="pt-3">
+      {note}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-dim">
         <span>
           <b className="tnum font-mono text-ink">{queue.length.toLocaleString()}</b> open · {labeledCount} checked · most
@@ -1712,6 +1759,7 @@ function StructureCard({
 }) {
   const p = f.properties;
   const assessed = !!p.damage_level;
+  const offline = !!useOffline()?.offline;
   return (
     <div className="pt-3">
       <div className="flex items-center gap-2">
@@ -1729,7 +1777,11 @@ function StructureCard({
         <div className="tnum font-mono text-[15px] font-semibold text-ink" title="US National Grid, 10 m: the precision of an outline centroid">
           {p.usng_10m}
         </div>
-        {address && <div className="text-[13px] text-ink">{address}</div>}
+        {address ? (
+          <div className="text-[13px] text-ink">{address}</div>
+        ) : (
+          offline && <div className="text-xs text-ink-faint">Addresses are not in this offline pack.</div>
+        )}
         <div className="tnum font-mono text-xs text-ink-faint">
           {p.centroid[1].toFixed(5)}, {p.centroid[0].toFixed(5)}
         </div>
@@ -1882,13 +1934,24 @@ function ImageryBar({
   onMode,
   records,
   peek,
+  view3d,
+  onView3d,
+  terrain,
+  onTerrain,
 }: {
   mode: ImageryMode;
   onMode: (m: ImageryMode) => void;
   records: ImageryRecord[];
   peek: boolean;
+  view3d: boolean;
+  onView3d: (v: boolean) => void;
+  terrain: boolean;
+  onTerrain: (v: boolean) => void;
 }) {
   const rec = records.find((r) => r.role === (peek ? "pre" : mode === "swipe" ? "post" : mode));
+  // terrain tiles come from a public host: never asked for offline
+  const off = useOffline();
+  const noTerrain = off?.offline ? "Terrain needs a network connection; buildings stay on flat ground offline." : null;
   return (
     <div className="panel flex flex-wrap items-center gap-2 p-1.5 pr-2.5">
       <Segmented
@@ -1899,7 +1962,7 @@ function ImageryBar({
         items={[
           { id: "post", label: "After", title: "After-event image under the structures" },
           { id: "pre", label: "Before", title: "Before-event image under the structures" },
-          { id: "swipe", label: "Swipe", title: "Drag a divider between the before and after images" },
+          ...(view3d ? [] : [{ id: "swipe" as const, label: "Swipe", title: "Drag a divider between the before and after images" }]),
           { id: "off", label: "Map", title: "No imagery, base map only" },
         ]}
       />
@@ -1908,10 +1971,36 @@ function ImageryBar({
           {imageryDate(rec)}
         </span>
       )}
-      {(mode === "post" || mode === "pre") && (
+      {(mode === "post" || mode === "pre") && !view3d && (
         <span className="hidden items-center gap-1 text-xs text-ink-faint lg:inline-flex">
           hold <Kbd>B</Kbd> to compare
         </span>
+      )}
+      <span className="mx-0.5 h-5 w-px bg-line" aria-hidden />
+      <Segmented
+        size="sm"
+        label="Map view"
+        value={view3d ? "3d" : "2d"}
+        onChange={(v) => onView3d(v === "3d")}
+        items={[
+          { id: "2d", label: "2D", title: "Flat map (default)" },
+          { id: "3d", label: "3D", title: "Buildings at inventory height; drag with the right button or Ctrl to tilt and turn" },
+        ]}
+      />
+      {view3d && (
+        <label
+          className={`inline-flex items-center gap-1.5 text-xs text-ink-dim ${noTerrain ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+          title={noTerrain ?? "Lay the buildings on the ground's relief (AWS Terrain Tiles)"}
+        >
+          <input
+            type="checkbox"
+            checked={terrain && !noTerrain}
+            disabled={!!noTerrain}
+            onChange={(e) => onTerrain(e.target.checked)}
+            className="accent-[rgb(var(--accent))]"
+          />
+          Terrain
+        </label>
       )}
     </div>
   );
@@ -1921,6 +2010,7 @@ function ImageryBar({
 function LegendFilter({
   fc,
   labels,
+  view3d,
   hidden,
   onToggle,
   reviewOnly,
@@ -1928,6 +2018,7 @@ function LegendFilter({
 }: {
   fc: OpsCollection;
   labels: Record<string, string>;
+  view3d: boolean;
   hidden: Set<LevelKey>;
   onToggle: (k: LevelKey) => void;
   reviewOnly: boolean;
@@ -1937,11 +2028,13 @@ function LegendFilter({
   const counts = useMemo(() => {
     const c: Record<LevelKey, number> = { no_damage: 0, affected: 0, minor: 0, major: 0, destroyed: 0, none: 0 };
     let review = 0;
+    let known = 0;
     for (const f of fc.features) {
       c[f.properties.damage_level ?? "none"]++;
       if (isOpen(f.properties, labels)) review++;
+      if (heightOf(f as OpsFeature) != null) known++;
     }
-    return { c, review };
+    return { c, review, known, unknown: fc.features.length - known };
   }, [fc, labels]);
   if (!open)
     return (
@@ -1982,6 +2075,24 @@ function LegendFilter({
         <span className="flex-1 text-left text-ink">Needs review only</span>
         <span className="tnum font-mono text-[11px] text-ink-faint">{counts.review.toLocaleString()}</span>
       </button>
+      {view3d && (
+        <>
+          <div className="my-1 border-t border-line" />
+          <div className="flex items-center gap-2 px-1.5 py-1 text-[13px] text-ink">
+            <span className="h-3 w-2.5 shrink-0 rounded-[1px] bg-ink-dim" aria-hidden />
+            <span className="flex-1">Inventory height</span>
+            <span className="tnum font-mono text-[11px] text-ink-faint">{counts.known.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center gap-2 px-1.5 py-1 text-[13px] text-ink">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-[1px] border border-dashed border-ink-dim" aria-hidden />
+            <span className="flex-1">Height unknown</span>
+            <span className="tnum font-mono text-[11px] text-ink-faint">{counts.unknown.toLocaleString()}</span>
+          </div>
+          <p className="px-1.5 pb-0.5 text-[11px] leading-snug text-ink-faint">
+            Height is stories × 3 m from the USACE inventory. Unknown heights are drawn flat and dashed, never guessed.
+          </p>
+        </>
+      )}
       <p className="px-1.5 pt-1 text-[11px] leading-snug text-ink-faint">Faint fill: low confidence. Click a level to hide it.</p>
     </div>
   );
@@ -2009,7 +2120,11 @@ function OpsMap({
   resp,
   focus,
   fitEvent,
+  view3d,
+  terrain,
 }: {
+  view3d: boolean;
+  terrain: boolean;
   /** the event whose areas the overview frames */
   fitEvent: string | null;
   resp: ResponseLayers | null;
@@ -2244,6 +2359,20 @@ function OpsMap({
 
   // outlines that must read on both base maps and on imagery
   const dark = effective === "dark";
+
+  // 3D: MapLibre extrusions (they follow the terrain); deck's flat layers step aside
+  useBuildings3D({
+    map: mapRef.current,
+    ready,
+    styleEpoch,
+    on: view3d,
+    terrain,
+    features: data as OpsFeature[],
+    selected,
+    dark,
+    onSelect,
+    onHover: setHoverR,
+  });
   const SELECT: [number, number, number] = dark ? [255, 255, 255] : [12, 14, 16];
   const LABELED: [number, number, number] = dark ? [215, 215, 210] : [40, 40, 40];
 
@@ -2278,7 +2407,7 @@ function OpsMap({
       }),
       new GeoJsonLayer<OpsProps>({
         id: "ops-structures",
-        data: data as OpsFeature[],
+        data: view3d ? [] : (data as OpsFeature[]),
         pickable: !picking,
         stroked: true,
         filled: true,
@@ -2345,20 +2474,36 @@ function OpsMap({
         }),
       );
     }
-    if (resp) out.push(...responseLayers(resp, setHoverR));
+    if (resp && !view3d) out.push(...responseLayers(resp, setHoverR));
     return out;
     // SELECT and LABELED follow `dark`
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, areas, selected, labels, onSelect, picking, preview, shown, dark, resp]);
+  }, [data, areas, selected, labels, onSelect, picking, preview, shown, dark, resp, view3d]);
 
+  // deck.gl's overlay cannot follow MapLibre terrain (it throws reading the
+  // terrain elevation every frame), and in 3D MapLibre draws the buildings
+  // itself: so while terrain is on the overlay is detached, then re-attached
+  const noDeck = view3d && terrain;
   useEffect(() => {
-    if (!ready || !mapRef.current) return;
+    const map = mapRef.current;
+    if (!ready || !map) return;
+    if (noDeck) {
+      if (overlayRef.current) {
+        try {
+          map.removeControl(overlayRef.current as unknown as IControl);
+        } catch {
+          /* torn down */
+        }
+        overlayRef.current = null;
+      }
+      return;
+    }
     if (!overlayRef.current) {
       overlayRef.current = new MapboxOverlay({ interleaved: false, layers: [] });
-      mapRef.current.addControl(overlayRef.current as unknown as IControl);
+      map.addControl(overlayRef.current as unknown as IControl);
     }
     overlayRef.current.setProps({ layers });
-  }, [ready, mapRef, layers]);
+  }, [ready, mapRef, layers, noDeck]);
 
   useEffect(
     () => () => {
@@ -2378,7 +2523,7 @@ function OpsMap({
   return (
     <div className="absolute inset-0">
       <div ref={containerRef} className="h-full w-full" aria-label="Damage map" />
-      {imagery === "swipe" && ready && areaId && fc && mapRef.current && (
+      {imagery === "swipe" && !view3d && ready && areaId && fc && mapRef.current && (
         <SwipeCompare main={mapRef.current} areaId={areaId} beforeLabel={beforeLabel} afterLabel={afterLabel} />
       )}
       {hoverR && !hover && (

@@ -94,7 +94,8 @@ def client():
 
 def test_hazards_route(client):
     r = client.get("/ops/hazards").json()
-    assert r["hazards"]["wildfire"]["channels"] == ["E1", "E2", "H"]
+    assert r["hazards"]["wildfire"]["channels"] == ["E1", "E2", "H", "M1"]
+    assert "M1" not in r["hazards"]["riverine_flood"]["channels"]     # wildfire only for now
     assert r["incident_types"]["Fire"] == ["wildfire"]
 
 

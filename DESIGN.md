@@ -69,6 +69,34 @@ Roman surveyor's groma: an instrument that measures the same way every time.
   with the capture date; hold `B` to flicker to before); legend bottom-left
   that is also the filter (click a level to hide it; "needs review only").
 
+## 3D view (Assess, opt-in)
+
+- A **2D / 3D** toggle in the imagery bar; 2D is the default and the choice
+  is never remembered as a default. Terrain is a further opt-in inside 3D.
+- Buildings are MapLibre fill-extrusions (they follow the terrain): height is
+  inventory stories x 3 m, colour is the most likely FEMA level.
+- **Height unknown** (about half the footprints) is drawn as a faint 0.5 m
+  slab with a dashed outline and counted in the legend: never a default
+  one-storey block.
+- Terrain: AWS Terrain Tiles (terrarium), one constant `TERRAIN_HOST` in
+  `components/map/useBuildings3D.ts`, matched by the server CSP. deck.gl's
+  overlay is detached while terrain is on (it cannot follow MapLibre terrain).
+- Swipe is unavailable in 3D; the camera tilts once, never rotates by itself,
+  and does not animate under reduced motion.
+
+## Offline (field laptop)
+
+- `lib/offline.ts` asks `GET /ops/offline` once at start-up and caches the
+  answer; any failure means online. The map waits for it, so CARTO is never
+  requested from an offline laptop.
+- Base map offline: the packed USGS topo (`basemap.style_url`, its own
+  attribution) or, with none packed, a plain background in the theme's canvas
+  colour. The area's own imagery and 3D buildings work on either.
+- An amber **Offline** chip in the top bar lists what is unavailable, in the
+  server's words. New assessment (button and `N`), Terrain and Conditions are
+  disabled with that reason, never hidden without one. Review and Verify show
+  where offline labels end up. A 503 from the server shows its sentence.
+
 ## Colour
 
 Tokens are space-separated `R G B` triples on `:root`, redeclared for dark
@@ -180,8 +208,8 @@ bound, not a finding.
 
 ## Declined, and why
 
-- Command palette, 3-D extrusion, auto-tilt, count-ups: decoration on an
-  instrument.
+- Command palette, auto-tilt, auto-rotating cameras, count-ups: decoration on
+  an instrument. (3D is an opt-in view, below, never the default.)
 - Cesium / Google 3D tiles and paid traffic: metered services and a second map
   engine.
 - Red-only night mode: current night-vision practice; the dark theme is the

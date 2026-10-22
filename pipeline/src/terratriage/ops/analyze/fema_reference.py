@@ -25,12 +25,11 @@ import os
 import re
 from typing import Any
 
-from .. import DATA_DIR, DISCLAIMER
+from .. import DISCLAIMER, OPS_OUT
 from ..collect.base import SchemaError, SourceUnavailable
 from ..collect.fema_ha import HousingAssistance
 from ..provenance import utc_now
 
-OPS_OUT = os.path.join(DATA_DIR, "output", "ops")
 _ZIP_AT_END = re.compile(r"(\d{5})(?:-\d{4})?\s*$")
 CAVEAT = ("FEMA figures cover the whole ZIP code, which is larger than this area, and count households "
           "that registered and were approved, not structures. Context for the estimate, not a check of it.")

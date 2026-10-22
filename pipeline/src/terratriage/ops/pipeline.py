@@ -19,7 +19,7 @@ from typing import Any
 import numpy as np
 from shapely.ops import transform as shapely_transform
 
-from . import DATA_DIR, DISCLAIMER, PIPELINE_ROOT
+from . import DATA_DIR, DISCLAIMER, OPS_OUT, PIPELINE_ROOT, RAW_DIR
 from . import hazards as hz
 from .analyze import calibration, channels, flood, hazard_prior
 from .analyze.classes import FEMA, FEMA_DB_LEVEL, crosswalks
@@ -35,9 +35,9 @@ from .process.structures import RESIDENTIAL, conflate, unmatched_nsi
 from .process.structures import ncr_id as ncr_id_fn
 from .provenance import Provenance, utc_now
 
-RAW = os.path.join(DATA_DIR, "raw")
+RAW = RAW_DIR
 CACHE = os.path.join(DATA_DIR, "cache")
-OUT = os.path.join(DATA_DIR, "output", "ops")
+OUT = OPS_OUT
 RUNS = os.environ.get("NCR_RUNS_DIR") or os.path.join(PIPELINE_ROOT, "runs")
 MODEL_ID = "xview2_cmu_baseline"
 WEIGHTS = os.path.join(PIPELINE_ROOT, "weights", "classification.hdf5")
@@ -297,6 +297,11 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
                 gc = None
                 gc_reason = "LIDAR_UNAVAILABLE"
                 warnings.append(f"lidar ground change (E6) unavailable: {str(ex)[:160]}")
+
+    # M1: Groma's own damage model, per hazard (hazards.yaml) and per config
+    # mode (context_rules.yaml channels.M1.mode: off | alongside | replace)
+    m1, m1_mode, m1_reason = m1_for_area(applicable, pre_info.path, post_info.path,
+                                         [shapely_transform(to_r, st.footprint_ll) for st in structs], warnings)
     if missing:
         warnings.append(f"{len(missing)} NSI structure points have no footprint in any source "
                         "(not assessed from imagery; listed in the run manifest)")
@@ -393,6 +398,7 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
         if hctx is not None:
             hm = hazard_prior.measure(hctx, shapely_transform(to_m, st.footprint_ll), (cx, cy))
             chs.append(hazard_prior.channel(hctx, hm))
+        add_m1(chs, None if m1 is None else m1[i], m1_mode, m1_reason)
         v = decide(chs, T=T_fusion, qhat=qhat, extra_reasons=list(ev_b.reasons),
                    calibrated=T is not None and T_fusion is not None)
         ring = [[round(x, 7), round(y, 7)] for x, y in st.footprint_ll.exterior.coords]
@@ -592,6 +598,53 @@ def count_interval(probs: np.ndarray, n: int = 2000, seed: int = 0, q=(10, 90)) 
         draws[k] = np.bincount(np.minimum(cls, probs.shape[1] - 1), minlength=probs.shape[1])
     lo, hi = np.percentile(draws, q, axis=0)
     return {c: [int(a), int(b)] for c, a, b in zip(FEMA, lo, hi)}
+
+
+def m1_for_area(applicable: set[str], pre_path: str, post_path: str, footprints_raster_crs: list,
+                warnings: list[str]) -> tuple[list | None, str, str]:
+    """Score every building once with the Groma damage model (ops/model).
+    Returns (one entry per building: None or {"probs": [5], ...}; mode; reason
+    when unavailable). A secondary source: missing weights or any model error
+    leave M1 unavailable with a warning and never cost the assessment."""
+    cfg = rules()["channels"].get("M1") or {}
+    mode = str(cfg.get("mode", "off")).lower()
+    if "M1" not in applicable:
+        return None, mode, "NOT_APPLICABLE_FOR_HAZARD"
+    if mode not in ("alongside", "replace"):
+        return None, mode, "M1_OFF"
+    try:
+        from .model import channel as m1ch
+
+        handle = m1ch.load()
+        preds = list(m1ch.predict(handle, pre_path, post_path, footprints_raster_crs))
+        if len(preds) != len(footprints_raster_crs):
+            raise ValueError(f"model returned {len(preds)} entries for {len(footprints_raster_crs)} buildings")
+    except FileNotFoundError as ex:
+        warnings.append(f"Groma damage model (M1) unavailable: weights not found ({ex})")
+        return None, mode, "M1_WEIGHTS_MISSING"
+    except Exception as ex:  # noqa: BLE001 - secondary source
+        warnings.append(f"Groma damage model (M1) unavailable: {str(ex)[:160]}")
+        return None, mode, "M1_UNAVAILABLE"
+    scored = sum(p is not None for p in preds)
+    warnings.append(f"Groma damage model (M1, {mode}): {scored} of {len(preds)} buildings scored")
+    return preds, mode, ""
+
+
+def add_m1(chs: list, pred: dict | None, mode: str, reason: str) -> None:
+    """Append this building's M1 channel; in replace mode, E1 is recorded as
+    REPLACED_BY_M1 wherever M1 produced a call (it stays where M1 could not)."""
+    if reason:
+        chs.append(channels.Channel("M1", False, unavailable_reason=reason))
+        return
+    from .model.channel import m1_channel
+
+    row = None if pred is None else np.asarray(pred.get("probs"), float)
+    m = m1_channel(row, float((rules()["channels"].get("M1") or {}).get("weight", 1.0)))
+    if mode == "replace" and m.available:
+        for k, c in enumerate(chs):
+            if c.id == "E1":
+                chs[k] = channels.Channel("E1", False, unavailable_reason="REPLACED_BY_M1")
+    chs.append(m)
 
 
 def _sha256(path: str) -> str:

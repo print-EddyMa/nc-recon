@@ -34,3 +34,9 @@ PIPELINE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".
 CONFIG_DIR = os.path.join(PIPELINE_ROOT, "config")
 DATA_DIR = os.path.join(PIPELINE_ROOT, "data")
 OPS_CACHE = os.environ.get("NCR_OPS_CACHE") or os.path.join(DATA_DIR, "cache", "ops")
+# where assessments and their sidecars are written; point at a scratch directory
+# to run the pipeline without touching the outputs a live server is serving
+OPS_OUT = os.environ.get("NCR_OPS_OUT") or os.path.join(DATA_DIR, "output", "ops")
+# fetched imagery per area, and offline basemap tiles (ops/offline); both relocatable
+RAW_DIR = os.environ.get("NCR_RAW_DIR") or os.path.join(DATA_DIR, "raw")
+BASEMAP_DIR = os.environ.get("NCR_BASEMAP_DIR") or os.path.join(DATA_DIR, "basemap")

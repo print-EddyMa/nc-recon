@@ -188,7 +188,7 @@ def train(boxes: list[str], incident: str, *, epochs: int = 12, pretrained: bool
         if score > best["score"]:
             best = {"score": score, "epoch": ep + 1}
             torch.save(model.state_dict(), wpath)
-    model.load_state_dict(torch.load(wpath, map_location=device))
+    model.load_state_dict(torch.load(wpath, map_location=device, weights_only=True))
     T = fit_temperature(lambda t: predict(model, pre[va_idx], post[va_idx], device, T=t), y[va_idx])
     val_m = metrics(y[va_idx], predict(model, pre[va_idx], post[va_idx], device, T=T))
     card = {

@@ -38,6 +38,7 @@ pipeline/data/model/*
 pipeline/data/model/weights/*
 !pipeline/data/model/weights/groma-dmg-v0.npz
 !pipeline/data/model/weights/groma-dmg-v0.json
+!pipeline/data/model/weights/groma-dmg-v0.prereg.altadena.json
 # Groma Verify store: judgments carry verifier names
 pipeline/data/truth/*
 pipeline/vendor_xview2_1st/

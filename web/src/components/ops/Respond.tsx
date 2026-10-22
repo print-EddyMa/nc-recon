@@ -16,6 +16,7 @@ import {
   type ResponseProducts,
 } from "../../lib/ops";
 import { Button, Disclosure, Empty, Icon, Spinner, Tag } from "../ui/kit";
+import { useOffline } from "../../lib/offline";
 
 const n0 = (v: number | null | undefined) => Math.round(v ?? 0).toLocaleString();
 const usd = (v: number) =>
@@ -82,6 +83,8 @@ export default function Respond({
     return () => window.clearInterval(t);
   }, [building, areaId, load]);
 
+  // building fetches roads, sites and lifelines from the network
+  const noBuild = useOffline()?.offline ? "Response products are built from network data; this server is offline." : null;
   const build = async () => {
     try {
       await buildResponse(areaId);
@@ -113,7 +116,7 @@ export default function Respond({
           icon="route"
           title={building ? "Building response products…" : "No response products for this area yet"}
           action={
-            <Button variant="primary" size="sm" onClick={build} busy={building} disabled={building}>
+            <Button variant="primary" size="sm" onClick={build} busy={building} disabled={building || !!noBuild} title={noBuild ?? undefined}>
               Build them now
             </Button>
           }
@@ -132,7 +135,7 @@ export default function Respond({
         <Button size="sm" variant="primary" icon={<Icon name="download" className="h-3.5 w-3.5" />} onClick={kml}>
           Plan for TAK / Google Earth
         </Button>
-        <Button size="sm" variant="ghost" icon={building ? <Spinner /> : <Icon name="refresh" className="h-3.5 w-3.5" />} onClick={build} disabled={building}>
+        <Button size="sm" variant="ghost" icon={building ? <Spinner /> : <Icon name="refresh" className="h-3.5 w-3.5" />} onClick={build} disabled={building || !!noBuild} title={noBuild ?? undefined}>
           {building ? "Rebuilding…" : "Rebuild"}
         </Button>
         <span className="tnum ml-auto font-mono text-xs text-ink-faint" title={r.generated_utc}>

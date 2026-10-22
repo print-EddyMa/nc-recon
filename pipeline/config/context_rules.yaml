@@ -76,6 +76,18 @@ channels:
     # survey), so not weighted down for correlation with E2. Likelihood rows
     # live in ground_change.LIKELIHOOD; no flag is no evidence.
     weight: 0.8
+  M1:
+    name: Groma damage model (ops/model/channel.py)
+    # off       never run
+    # alongside run next to E1 (both vote)
+    # replace   E1 is recorded as REPLACED_BY_M1 wherever M1 produced a call
+    # Missing weights or any model error leave M1 unavailable with a warning.
+    # replace since 2026-10-22, by the rule fixed before the run in
+    # docs/model/MODEL_CARD.md "Pre-registered evaluation: M1 on the
+    # pipeline's footprints (Altadena)". Gated to wildfire in hazards.yaml, so
+    # no other hazard changes. Altadena is now spent as a hold-out for M1.
+    mode: replace
+    weight: 1.0
   H:
     name: hazard footprint (where the hazard reached, how hard)
     # Context, not an observation of the building: it says what the hazard

@@ -26,13 +26,13 @@ import numpy as np
 import rasterio
 from rasterio.transform import from_origin
 
-from .. import DATA_DIR
+from .. import RAW_DIR
 from ..geodesy import transformer, utm_for
 from ..provenance import utc_now
 from . import nc_orthos
 from .eri import ERI
 
-RAW = os.path.join(DATA_DIR, "raw")
+RAW = RAW_DIR
 RES = 0.3
 
 

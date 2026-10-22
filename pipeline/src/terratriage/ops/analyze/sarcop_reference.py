@@ -32,12 +32,11 @@ from typing import Any
 
 import numpy as np
 
-from .. import DATA_DIR, DISCLAIMER
+from .. import DISCLAIMER, OPS_OUT
 from ..collect.base import DiskCache, SchemaError, http_json
 from ..provenance import utc_now
 from .classes import FEMA, FEMA_LABEL
 
-OPS_OUT = os.path.join(DATA_DIR, "output", "ops")
 SARCOP = ("https://services6.arcgis.com/VLA0ImJ33zhtGEaP/arcgis/rest/services/"
           "SARCOP_v9_SIFS_NC_Damage/FeatureServer/0/query")
 FIELDS = "OBJECTID,waypoint,waypoint_cat_cal,program_type,horizontalAccuracy,start_time,data_source"

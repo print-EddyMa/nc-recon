@@ -46,6 +46,12 @@ chosen per point:
 | E5 | flood depth against the first floor (gauge crests) | river and flash flood |
 | E6 | lidar ground change around the building (deposit or scour) | flood, landslide (NC 2025 lidar counties) |
 | H | where the hazard reached: inside or outside a fire perimeter, ShakeMap shaking at the building, inside a mapped landslide | wildfire, earthquake, landslide |
+| M1 | Groma's own damage model (`ops/model`), before and after chips | wildfire, in place of E1 wherever it has a usable chip (`channels.M1.mode: replace`) |
+
+For wildfire, M1 replaces E1 under the rule fixed before its evaluation
+(`docs/model/MODEL_CARD.md`). That evaluation scored M1 on its own; the fused
+pipeline with M1 has not been scored yet and needs a fresh wildfire, because
+Altadena is now spent as a hold-out for M1.
 
 A channel that does not apply is recorded as `NOT_APPLICABLE_FOR_HAZARD`. A
 source that is down or has nothing there is recorded as unavailable with a

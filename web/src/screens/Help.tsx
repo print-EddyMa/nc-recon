@@ -118,6 +118,12 @@ export default function Help() {
               flips to the before image for as long as the key is down. A date shown as a range means the source does
               not publish the exact day.
             </p>
+            <p className="mt-2">
+              <b>2D / 3D</b>: 3D stands each building up at its inventory height (stories × 3 m, USACE National
+              Structure Inventory). About half the buildings have no recorded height: they are drawn flat with a dashed
+              outline, never guessed. <b>Terrain</b> adds the ground's relief. Drag with the right mouse button (or
+              Ctrl) to tilt and turn.
+            </p>
           </Section>
 
           <Section id="numbers" title="Numbers you can report">

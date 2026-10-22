@@ -35,10 +35,9 @@ from typing import Any
 
 import numpy as np
 
-from .. import DATA_DIR, DISCLAIMER
+from .. import DISCLAIMER, OPS_OUT
 from ..provenance import utc_now
 
-OPS_OUT = os.path.join(DATA_DIR, "output", "ops")
 RING_M = (2.0, 10.0)
 THRESH_M = 1.0
 MIN_PIXELS = 20

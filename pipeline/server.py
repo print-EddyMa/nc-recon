@@ -54,7 +54,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
 sys.path.insert(0, SRC)
 OUT = os.path.join(ROOT, "data", "output")
-RAW = os.path.join(ROOT, "data", "raw")
+RAW = os.environ.get("NCR_RAW_DIR") or os.path.join(ROOT, "data", "raw")
 CACHE = os.path.join(ROOT, "data", "cache")
 DATA = os.path.join(ROOT, "data")
 # these mirror scripts/run.py + scripts/make_tiles.py so a container deploy
@@ -112,10 +112,12 @@ from terratriage.ops import guard  # noqa: E402
 from terratriage.ops.api import router as ops_router  # noqa: E402
 from terratriage.ops.photos_api import router as photos_router  # noqa: E402
 from terratriage.ops.response_api import router as response_router  # noqa: E402
+from terratriage.ops.offline.api import router as offline_router  # noqa: E402
 
 app.include_router(ops_router)
 app.include_router(photos_router)
 app.include_router(response_router)
+app.include_router(offline_router)
 
 
 @app.middleware("http")
@@ -129,7 +131,12 @@ async def _guard(request: Request, call_next):
             status_code=429,
             headers={"Retry-After": str(int(wait) + 1)},
         )
-    resp = await call_next(request)
+    if guard.needs_network(request.method, request.url.path):
+        # NCR_OFFLINE=1: refuse routes that would reach the internet, clearly
+        resp = JSONResponse({"detail": "this needs a network; the server is running offline (NCR_OFFLINE=1)"},
+                            status_code=503)
+    else:
+        resp = await call_next(request)
     for k, v in _SECURITY_HEADERS.items():
         resp.headers.setdefault(k, v)
     # API answers are never cached by a browser or a shared proxy; the built

@@ -31,12 +31,11 @@ import time
 from datetime import datetime, timezone
 from typing import Any, Callable
 
-from .. import DATA_DIR, DISCLAIMER
+from .. import DISCLAIMER, OPS_OUT
 from ..collect.base import DiskCache, SchemaError, http_json
 from ..provenance import utc_now
 from . import sarcop_reference as sr
 
-OPS_OUT = os.path.join(DATA_DIR, "output", "ops")
 
 DINS = ("https://services1.arcgis.com/jUJYIo9tSA7EHvfZ/arcgis/rest/services/"
         "POSTFIRE_MASTER_DATA_SHARE/FeatureServer/0/query")

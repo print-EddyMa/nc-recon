@@ -28,7 +28,7 @@ def load(tag: str):
         card = json.load(fh)
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     model = Siamese(len(LEVELS), pretrained=False).to(device)
-    model.load_state_dict(torch.load(os.path.join(wdir, f"{tag}.pt"), map_location=device))
+    model.load_state_dict(torch.load(os.path.join(wdir, f"{tag}.pt"), map_location=device, weights_only=True))
     return model, card, device
 
 

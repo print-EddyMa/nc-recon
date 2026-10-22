@@ -14,11 +14,10 @@ import os
 import re
 from datetime import datetime, timezone
 
-from .. import DATA_DIR, DISCLAIMER
+from .. import DISCLAIMER, OPS_OUT
 from ..analyze.classes import FEMA, FEMA_LABEL
 from .exports import COLORS
 
-OPS_OUT = os.path.join(DATA_DIR, "output", "ops")
 
 
 def _svg_map(fc: dict, w: int = 640, h: int = 420) -> str:

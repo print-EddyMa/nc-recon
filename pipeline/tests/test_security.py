@@ -362,3 +362,13 @@ def test_evaluation_ignores_sidecar_geojson(monkeypatch, tmp_path):
     (tmp_path / "old_fort.response.geojson").write_text("{not json")
     monkeypatch.setattr(evaluate, "OPS_OUT", str(tmp_path))
     evaluate._gather({})                                       # would raise on the sidecar
+
+
+def test_terrain_tiles_are_allowed_only_by_bucket_path():
+    from terratriage.ops import guard
+
+    connect = next(d for d in guard.csp(None).split("; ") if d.startswith("connect-src"))
+    srcs = connect.split()[1:]
+    assert "https://s3.amazonaws.com/elevation-tiles-prod/" in srcs
+    assert not any(x in ("https://s3.amazonaws.com", "https://s3.amazonaws.com/", "https://*.amazonaws.com",
+                         "https:", "*") for x in srcs)

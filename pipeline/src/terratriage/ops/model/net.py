@@ -17,11 +17,17 @@ STD = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
 
 
 class Siamese(nn.Module):
-    def __init__(self, n_classes: int = 5, pretrained: bool = True):
+    def __init__(self, n_classes: int = 5, pretrained: bool = True, encoder_path: str | None = None):
+        """`encoder_path`: load the ImageNet weights from this local file
+        (no network). `pretrained=True` without a path lets torchvision fetch
+        them, for training on a networked machine only."""
         super().__init__()
         from torchvision.models import ResNet18_Weights, resnet18
 
-        enc = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1 if pretrained else None)
+        enc = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1 if pretrained and not encoder_path else None)
+        if encoder_path:
+            sd = torch.load(encoder_path, map_location="cpu", weights_only=True)
+            enc.load_state_dict(sd)
         enc.fc = nn.Identity()
         self.enc = enc
         self.head = nn.Sequential(nn.Linear(1024, 256), nn.ReLU(), nn.Dropout(0.3), nn.Linear(256, n_classes))

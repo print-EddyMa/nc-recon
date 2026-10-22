@@ -25,14 +25,13 @@ from typing import Any
 
 import numpy as np
 
-from .. import DATA_DIR, PIPELINE_ROOT
+from .. import DATA_DIR, OPS_OUT, PIPELINE_ROOT
 from ..plan.events import event_for_area
 from . import metrics
 from .classes import FEMA, K
 
 LABELS = os.environ.get("NCR_LABELS_DIR") or os.path.join(DATA_DIR, "labels")
 REPORTS = os.environ.get("NCR_REPORTS_DIR") or os.path.join(PIPELINE_ROOT, "..", "reports")
-OPS_OUT = os.path.join(DATA_DIR, "output", "ops")
 
 
 def load_labels() -> tuple[dict[str, int], dict[str, Any]]:

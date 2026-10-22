@@ -1,8 +1,9 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { Toaster } from "sonner";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { AccessButton, SourcesButton } from "./components/ops/SystemPanels";
-import { Icon, type IconName } from "./components/ui/kit";
+import { AccessButton, OfflineButton, SourcesButton } from "./components/ops/SystemPanels";
+import { Empty, Icon, type IconName } from "./components/ui/kit";
+import { useOffline } from "./lib/offline";
 import { useTheme } from "./lib/theme";
 import { API_URL } from "./lib/catalog";
 import { DISCLAIMER } from "./lib/ops";
@@ -56,6 +57,9 @@ export function GromaMark({ className }: { className?: string }) {
 
 export default function App() {
   const [{ screen, area }, setRoute] = useState(parseHash);
+  // undefined until the server says; Conditions waits so no live feed is asked
+  // for from an offline laptop
+  const offline = useOffline();
 
   useEffect(() => {
     const onHash = () => setRoute(parseHash());
@@ -124,6 +128,7 @@ export default function App() {
             })}
           </nav>
           <div className="ml-auto flex items-center gap-1">
+            <OfflineButton />
             <SourcesButton />
             <AccessButton />
             <ThemeToggle />
@@ -141,7 +146,13 @@ export default function App() {
             )}
             {screen === "conditions" && (
               <ErrorBoundary label="The conditions map">
-                <NCDashboard onOpenAssess={() => go("ops")} onOpenAbout={() => go("help")} />
+                {offline === undefined ? (
+                  <div className="grid h-full place-items-center text-sm text-ink-dim">Loading…</div>
+                ) : offline?.offline ? (
+                  <OfflineConditions lines={offline.unavailable_offline} />
+                ) : (
+                  <NCDashboard onOpenAssess={() => go("ops")} onOpenAbout={() => go("help")} />
+                )}
               </ErrorBoundary>
             )}
             {screen === "verify" && (
@@ -201,6 +212,20 @@ function Disclaimer() {
         <Icon name={open ? "x" : "info"} className="h-3.5 w-3.5" />
       </button>
     </span>
+  );
+}
+
+/** Offline the live feeds cannot be reached (and must not be asked for), so
+ * Conditions says so instead of drawing an empty map. */
+function OfflineConditions({ lines }: { lines: string[] }) {
+  const live = lines.find((x) => /conditions/i.test(x)) ?? "No live conditions while offline.";
+  return (
+    <div className="mx-auto max-w-md px-4 py-10">
+      <Empty icon="signal" title="Live conditions need a network connection">
+        <p>{live}</p>
+        <p className="mt-2">Assessments in the offline pack still open under Assess.</p>
+      </Empty>
+    </div>
   );
 }
 

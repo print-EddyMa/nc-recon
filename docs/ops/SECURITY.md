@@ -83,9 +83,42 @@ must still do. The checks that keep these properties true are in
 | Low | KML icons over plain HTTP | fixed |
 | Low | New responder reads (photos, response products, references) not audited | fixed: view_photos, view_response, view_response_layers, export_response_kml, build_response, view_references |
 | Low | `pipeline/data/truth/` not in `.gitignore` | fixed |
+| Low | Offline packs could carry addresses onto removable media | designed out: never packed; import refuses them |
 | Low | Vite 8.2.2 (dev server, `launch-editor` command execution advisory); Tailwind 3 dev chain (`braces` denial of service) | Vite: bump to 8.3.5 queued at integration; Tailwind 3 accepted until a Tailwind 4 move (build-time only) |
 | Accepted | ShakeMap `grid.xml` parsed with the standard library (USGS source; Python 3.13 expat resists entity expansion; no external entities resolved) | accepted |
 | Accepted | Responder token stored in the browser's local storage | accepted: CSP forbids injected script; rotate the token if a device is lost |
+
+## Offline packs (beta)
+
+An offline pack carries one assessed area to a laptop with no network
+(docs/ops/OFFLINE.md). The security choices:
+
+* **Addresses are never packed.** `<area>.responder.json` is left out and an
+  import refuses a pack that carries one; there is no flag to include it in
+  version 1 (no encryption library is in the environment, and hand-rolled
+  encryption is worse than none). Labels, Verify judgments, the audit log,
+  the registry and the service token are never packed either.
+* **Integrity.** The manifest lists every file with its sha256 and size;
+  import verifies all of them and refuses any file not in the manifest.
+* **Safe extraction.** A pack tar may hold only regular files and
+  directories under one top-level directory: no absolute paths, no `..`, no
+  links or devices (then Python's `data` extraction filter on top).
+* **No silent overwrite.** A different copy of an area already on the laptop
+  is refused unless `--replace`; labels are never touched.
+* **TEST hold-out areas** are refused unless `--allow-test`.
+* **Offline mode** (`NCR_OFFLINE=1`): the Content Security Policy allows only
+  this server (`connect-src 'self' blob: data:`, `img-src 'self' data: blob:`),
+  routes that need the network answer 503 at once, and upstream health probes
+  are skipped.
+* **Display copies.** Packed rasters are JPEG copies for viewing and review;
+  the manifest and imagery sidecar mark them so nobody re-assesses from them.
+
+Proven 2026-10-22: the automated network-cut test (zero outbound attempts),
+and the Swannanoa pack served under macOS `sandbox-exec` with all outbound
+network denied, where a browser session over the map, 3-D, Review, Respond
+and Verify made 222 requests, all to the local server, with no CSP errors.
+The packed rasters and outputs were built without changing the live outputs
+(41 files, identical sha256 before and after).
 
 ## Operator checklist
 

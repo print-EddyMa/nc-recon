@@ -14,7 +14,7 @@ import yaml
 
 from . import CONFIG_DIR
 
-CHANNELS = ("E1", "E2", "E4", "E5", "E6", "H")
+CHANNELS = ("E1", "E2", "E4", "E5", "E6", "H", "M1")
 
 
 @lru_cache(maxsize=1)

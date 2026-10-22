@@ -11,7 +11,7 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from .. import DATA_DIR
+from .. import OPS_OUT
 from ..provenance import utc_now
 from .base import Connector, Health, SchemaError, http_json, parse_utc
 from . import nc_feeds
@@ -198,13 +198,21 @@ def connectors() -> list[Connector]:
 
 
 def run(write: bool = True) -> list[Health]:
+    from ..offline import offline_mode
+
     cs = connectors()
-    with ThreadPoolExecutor(max_workers=6) as ex:
-        res = list(ex.map(lambda c: c.health(), cs))
+    if offline_mode():
+        # NCR_OFFLINE=1: nothing upstream is probed (each probe would only time
+        # out); the local damage model is still checked
+        res = [c.health() if isinstance(c, DamageModel)
+               else Health(c.name, "offline", None, None, "offline mode: not checked") for c in cs]
+    else:
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            res = list(ex.map(lambda c: c.health(), cs))
     for c, h in zip(cs, res):
         h.detail = h.detail or c.homepage
     if write:
-        out = os.path.join(DATA_DIR, "output", "ops")
+        out = OPS_OUT
         os.makedirs(out, exist_ok=True)
         # atomic: the API serves this file while a refresh is rewriting it
         path = os.path.join(out, "health.json")

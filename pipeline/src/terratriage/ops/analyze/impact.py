@@ -31,11 +31,10 @@ from typing import Any
 
 import numpy as np
 
-from .. import DATA_DIR
+from .. import OPS_OUT
 from ..collect.base import DiskCache, http_json
 from ..cachekey import cache_key
 
-OPS_OUT = os.path.join(DATA_DIR, "output", "ops")
 SVI = ("https://services3.arcgis.com/ZvidGQkLaDJxRSJ2/arcgis/rest/services/"
        "CDC_ATSDR_Social_Vulnerability_Index_2022_USA/FeatureServer/2")
 PARAMS = {"w_minor": 0.10, "w_minor_sensitivity": [0.0, 0.25], "alpha": 1.0}

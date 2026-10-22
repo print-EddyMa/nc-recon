@@ -16,11 +16,10 @@ import os
 from shapely.geometry import Point, shape
 from shapely.strtree import STRtree
 
-from .. import DATA_DIR, DISCLAIMER
+from .. import DISCLAIMER, OPS_OUT
 from ..analyze.classes import FEMA
 from ..analyze.impact import svi_tracts
 
-OPS_OUT = os.path.join(DATA_DIR, "output", "ops")
 SUPPRESS = 5
 
 

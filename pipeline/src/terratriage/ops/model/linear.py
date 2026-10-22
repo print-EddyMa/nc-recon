@@ -51,8 +51,11 @@ def embed(pre: np.ndarray, post: np.ndarray, bs: int = 256) -> np.ndarray:
 
     from .net import Siamese
 
+    from .fetch_encoder import encoder_path
+
     dev = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-    m = Siamese(len(LEVELS), pretrained=True).to(dev).eval()
+    # local file only: no download while assessing (fetch_encoder.py stages it)
+    m = Siamese(len(LEVELS), pretrained=False, encoder_path=encoder_path()).to(dev).eval()
     out = []
     with torch.no_grad():
         for i in range(0, len(pre), bs):

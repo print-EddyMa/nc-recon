@@ -34,7 +34,7 @@ from collections import deque
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-from . import DATA_DIR, PIPELINE_ROOT
+from . import DATA_DIR, PIPELINE_ROOT, RAW_DIR
 
 RUN = os.path.join(PIPELINE_ROOT, "scripts", "run.py")
 STEP_TIMEOUT = int(os.environ.get("NCR_STEP_TIMEOUT_S", "1800"))
@@ -371,10 +371,10 @@ def delete_area(area: str) -> list[str]:
     found = event_for_area(area)
     if found and found[1].role != "OPS":
         raise PermissionError(f"{area} is a {found[1].role} area; edit config/events.yaml instead")
-    from . import DATA_DIR
+    from . import DATA_DIR, OPS_OUT
 
     data = DATA_DIR
-    out = os.path.join(data, "output", "ops")
+    out = OPS_OUT
     removed = []
     for p in (os.path.join(out, f"{area}.geojson"), os.path.join(out, f"{area}.responder.json"),
               os.path.join(out, f"{area}.impact.json")):
@@ -383,11 +383,13 @@ def delete_area(area: str) -> list[str]:
             removed.append(os.path.basename(p))
     from . import OPS_CACHE
 
-    for d in (os.path.join(out, "exports", area), os.path.join(data, "raw", area),
+    for d in (os.path.join(out, "exports", area), os.path.join(RAW_DIR, area),
               os.path.join(OPS_CACHE, "tiles", area)):
-        if os.path.realpath(d).startswith(os.path.realpath(data) + os.sep) and os.path.isdir(d):
+        # only ever delete inside the data, output or raw imagery directory
+        inside = [r for r in (data, out, RAW_DIR) if os.path.realpath(d).startswith(os.path.realpath(r) + os.sep)]
+        if inside and os.path.isdir(d):
             shutil.rmtree(d, ignore_errors=True)
-            removed.append(os.path.relpath(d, data))
+            removed.append(os.path.relpath(d, inside[0]))
     if remove_ops_area(area):
         removed.append("registry entry")
     return removed
@@ -434,7 +436,7 @@ def submit_reassess(area: str) -> Job:
     if aoi.role != "OPS":
         raise PermissionError(f"{area} is a {aoi.role} area: re-run it from the command line "
                               "(scripts/run.py ops-assess) so evaluation areas change deliberately")
-    if not os.path.isdir(os.path.join(DATA_DIR, "raw", area)):
+    if not os.path.isdir(os.path.join(RAW_DIR, area)):
         raise ValueError("the imagery for this area is no longer stored; run a new assessment instead")
     lon, lat = aoi.center
     job = Job(id=uuid.uuid4().hex[:12], area=area, event=ev.id, name=area_name(area), lon=lon, lat=lat,
@@ -465,10 +467,10 @@ def recent(n: int = 20) -> list[Job]:
 def prune_orphans() -> list[str]:
     """At startup: drop OPS registry entries whose assessment never finished
     (e.g. the server restarted mid-job). Nothing runs at that point."""
-    from . import DATA_DIR
+    from . import OPS_OUT
     from .plan.events import load_events
 
-    out = os.path.join(DATA_DIR, "output", "ops")
+    out = OPS_OUT
     removed = []
     try:
         evs = load_events()

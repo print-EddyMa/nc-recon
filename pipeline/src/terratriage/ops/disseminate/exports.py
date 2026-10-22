@@ -29,12 +29,11 @@ import json
 import os
 from typing import Any
 
-from .. import DATA_DIR, DISCLAIMER
+from .. import DISCLAIMER, OPS_OUT
 from ..analyze.classes import FEMA, FEMA_LABEL
 from ..guard import csv_cell
 from ..provenance import utc_now
 
-OPS_OUT = os.path.join(DATA_DIR, "output", "ops")
 # ColorBrewer YlOrRd (colour-blind + print safe); no-damage = neutral grey
 COLORS = {"no_damage": "#9e9e9e", "affected": "#fecc5c", "minor": "#fd8d3c",
           "major": "#f03b20", "destroyed": "#bd0026", None: "#555555"}

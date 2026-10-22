@@ -29,7 +29,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "src"))
 
-RAW = os.path.join(ROOT, "data", "raw")
+from terratriage.ops import RAW_DIR as RAW  # noqa: E402 - NCR_RAW_DIR, default data/raw
 OUT = os.path.join(ROOT, "data", "output")
 CACHE = os.path.join(ROOT, "data", "cache")
 # where the web app (or the hosted service) reads registries + area GeoJSON.

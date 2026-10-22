@@ -153,6 +153,10 @@ _CONNECT = [
     "https://firms.modaps.eosdis.nasa.gov",
     "https://api.climate.ncsu.edu",
     "https://www.fema.gov",
+    # AWS Terrain Tiles (terrarium elevation PNGs) for the optional 3-D terrain;
+    # MapLibre fetches raster-dem from a worker, so it is a connect-src. Scoped
+    # to the bucket path: a bare s3.amazonaws.com would admit every bucket
+    "https://s3.amazonaws.com/elevation-tiles-prod/",
 ]
 
 
@@ -174,16 +178,47 @@ def inline_script_hashes(web_dist: str | None) -> list[str]:
     return out
 
 
+def offline() -> bool:
+    return os.environ.get("NCR_OFFLINE", "").strip() == "1"
+
+
+# routes that cannot work without a network: refused at once in offline mode
+# instead of hanging on upstream timeouts
+_NEEDS_NETWORK = (("POST", "/ops/assess"), ("POST", "/ops/events"), ("GET", "/ops/coverage"),
+                  ("GET", "/ops/areas/*/fema-assistance"), ("POST", "/ops/areas/*/reassess"),
+                  ("POST", "/ops/areas/*/response"), ("GET", "/feed/"))
+
+
+def needs_network(method: str, path: str) -> bool:
+    """True when the server is offline and this route would need the network."""
+    if not offline():
+        return False
+    for m, pat in _NEEDS_NETWORK:
+        if method != m:
+            continue
+        if pat.endswith("/") and path.startswith(pat):
+            return True
+        if "*" in pat:
+            head, tail = pat.split("*", 1)
+            if path.startswith(head) and path.endswith(tail) and "/" not in path[len(head):-len(tail) or None]:
+                return True
+        elif path == pat or path.startswith(pat + "/"):
+            return True
+    return False
+
+
 def csp(web_dist: str | None) -> str:
     extra = os.environ.get("NCR_CSP_CONNECT", "").split()
-    connect = " ".join(_CONNECT + extra)
+    # offline: the page may reach this server and nothing else, so a missed
+    # external URL fails loudly instead of leaking a request or hanging
+    connect = "'self' blob: data:" if offline() else " ".join(_CONNECT + extra)
     script = " ".join(["'self'"] + inline_script_hashes(web_dist))
     return "; ".join([
         "default-src 'self'",
         f"script-src {script}",
         "style-src 'self' 'unsafe-inline'",
         "font-src 'self' data:",
-        "img-src 'self' data: blob: https:",
+        "img-src 'self' data: blob:" + ("" if offline() else " https:"),
         f"connect-src {connect}",
         "worker-src 'self' blob:",
         "child-src blob:",

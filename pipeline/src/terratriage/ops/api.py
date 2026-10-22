@@ -44,13 +44,12 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field, field_validator
 
-from . import DATA_DIR, DISCLAIMER, PIPELINE_ROOT, audit
+from . import DATA_DIR, DISCLAIMER, OPS_OUT, PIPELINE_ROOT, RAW_DIR, audit
 from .guard import csv_cell
 from .analyze.classes import FEMA, FEMA_LABEL
 
-OPS_OUT = os.path.join(DATA_DIR, "output", "ops")
 LABELS = os.environ.get("NCR_LABELS_DIR") or os.path.join(DATA_DIR, "labels")
-RAW = os.path.join(DATA_DIR, "raw")
+RAW = RAW_DIR
 REPORT = os.path.join(os.environ.get("NCR_REPORTS_DIR") or os.path.join(PIPELINE_ROOT, "..", "reports"),
                       "ACCURACY_REPORT.json")
 _AREA = re.compile(r"[a-z0-9_]{1,40}")

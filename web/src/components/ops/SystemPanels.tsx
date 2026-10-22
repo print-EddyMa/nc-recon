@@ -17,6 +17,7 @@ import {
   type HealthRow,
 } from "../../lib/ops";
 import { Button, Dot, Icon, Popover, type Status } from "../ui/kit";
+import { useOffline } from "../../lib/offline";
 
 const ROW_STATUS: Record<HealthRow["status"], Status> = {
   ok: "ok",
@@ -65,10 +66,15 @@ export function SourcesButton() {
   const rows = h?.sources.filter((s) => !HIDDEN.has(s.source)) ?? [];
   const down = rows.filter((s) => s.status === "down").length;
   const stale = rows.filter((s) => s.status === "stale").length;
-  const overall: Status = !API_URL || err ? "unknown" : down ? "bad" : stale ? "warn" : h ? "ok" : "unknown";
+  // offline the feeds cannot be checked: unknown, never a green "OK"
+  const offline = !!useOffline()?.offline;
+  const overall: Status =
+    !API_URL || err || offline ? "unknown" : down ? "bad" : stale ? "warn" : h ? "ok" : "unknown";
   const word = !API_URL
     ? "No service"
-    : err
+    : offline
+      ? "Sources not checked"
+      : err
       ? "Status unavailable"
       : down
         ? `${down} source${down > 1 ? "s" : ""} down`
@@ -238,5 +244,47 @@ export function AccuracyNote() {
         </div>
       ))}
     </div>
+  );
+}
+
+/** Shown only when the server runs from an offline pack: what still works,
+ * what does not, and where labels made here end up. */
+export function OfflineButton() {
+  const off = useOffline();
+  if (!off?.offline) return null;
+  return (
+    <Popover
+      label="Offline"
+      trigger={({ open, toggle, id }) => (
+        <button
+          onClick={toggle}
+          aria-expanded={open}
+          aria-controls={id}
+          className="pressable inline-flex h-8 items-center gap-1.5 rounded border border-st-warn/50 bg-st-warn/10 px-2 text-[13px] font-medium text-ink sm:px-2.5"
+        >
+          <Dot status="warn" />
+          Offline
+        </button>
+      )}
+    >
+      <div className="text-sm font-semibold text-ink">Working offline</div>
+      <p className="mt-1 text-xs leading-relaxed text-ink-dim">
+        Packed areas open with their own imagery and results.{" "}
+        {off.basemap.available ? "The base map is the packed USGS topo." : "No base map was packed, so only the area imagery shows."}
+      </p>
+      <div className="mt-3 text-xs font-semibold text-ink">Not available</div>
+      <ul className="mt-1 list-disc space-y-1 pl-4 text-xs leading-relaxed text-ink-dim">
+        {off.unavailable_offline.map((x) => (
+          <li key={x}>{x}</li>
+        ))}
+      </ul>
+      {off.labels && <p className="mt-3 border-t border-line pt-2 text-xs leading-relaxed text-ink-dim">{off.labels}</p>}
+      {off.packs.length > 0 && (
+        <div className="mt-3 border-t border-line pt-2 text-xs text-ink-faint">
+          {off.packs.length} pack{off.packs.length > 1 ? "s" : ""}:{" "}
+          {off.packs.map((p) => `${p.area}${p.pack_created_utc ? ` (${p.pack_created_utc.slice(0, 10)})` : ""}`).join(", ")}
+        </div>
+      )}
+    </Popover>
   );
 }

@@ -141,6 +141,7 @@ def ops_area(tmp_path, monkeypatch):
 
     monkeypatch.setenv("NCR_OPS_REGISTRY", str(tmp_path / "reg.yaml"))
     monkeypatch.setattr(jobs, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(jobs, "RAW_DIR", str(tmp_path / "raw"))
     ev.add_ops_area("town_ab12", "helene-2024-nc", "Town centre", -82.2, 35.6)
     (tmp_path / "raw" / "town_ab12").mkdir(parents=True)
     monkeypatch.setattr(jobs, "_worker", object())      # nothing actually starts

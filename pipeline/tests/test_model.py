@@ -59,3 +59,60 @@ def test_siamese_forward_shape():
     with torch.no_grad():
         out = m(torch.rand(2, 3, 96, 96), torch.rand(2, 3, 96, 96))
     assert tuple(out.shape) == (2, len(LEVELS))
+
+
+def test_m1_channel_interface(tmp_path, monkeypatch):
+    from pyproj import Transformer
+    from shapely.geometry import box
+
+    from terratriage.ops import model as mdl
+    from terratriage.ops.model import channel, linear
+
+    a = np.full((3, 400, 400), 120, "uint8")
+    _tif(tmp_path / "pre.tif", a)
+    _tif(tmp_path / "post.tif", a)
+    fake = ({"x": np.zeros(1)}, {"chip": {"metres": 32.0, "pixels": 64}})
+    monkeypatch.setattr(channel, "_model", lambda tag="x": fake)
+    monkeypatch.setattr(linear, "predict", lambda params, pre, post: np.tile([0.1, 0.1, 0.1, 0.2, 0.5], (len(pre), 1)))
+    # in the raster's CRS: one footprint inside, one far outside
+    fps = [box(400090, 3779890, 400110, 3779910), box(390000, 3779890, 390020, 3779910)]
+    with pytest.raises(FileNotFoundError):
+        monkeypatch.setattr(mdl, "MODEL_DIR", str(tmp_path / "none"))
+        channel.load()
+    h = {"tag": "groma-dmg-v0", "params": fake[0], "card": fake[1]}
+    out = channel.predict(h, str(tmp_path / "pre.tif"), str(tmp_path / "post.tif"), fps)
+    assert out[1] is None
+    assert out[0]["probs"] == [0.1, 0.1, 0.1, 0.2, 0.5] and out[0]["detail"]["argmax"] == "destroyed"
+    to_ll = Transformer.from_crs(32611, 4326, always_xy=True).transform
+    ll = [box(*to_ll(400090, 3779890), *to_ll(400110, 3779910))]
+    p = channel.m1_probs(str(tmp_path / "pre.tif"), str(tmp_path / "post.tif"), ll)
+    ch = channel.m1_channel(p[0])
+    assert ch.id == "M1" and ch.available and ch.likelihood.argmax() == 4
+    assert not channel.m1_channel(np.full(5, np.nan)).available
+
+
+def test_encoder_is_local_only(tmp_path, monkeypatch):
+    from terratriage.ops.model import fetch_encoder as fe
+
+    monkeypatch.setenv("TORCH_HOME", str(tmp_path))
+    with pytest.raises(FileNotFoundError, match="not on this machine"):
+        fe.encoder_path()
+    d = tmp_path / "hub" / "checkpoints"
+    d.mkdir(parents=True)
+    (d / fe.FILE).write_bytes(b"not the weights")
+    with pytest.raises(FileNotFoundError, match="sha256"):
+        fe.encoder_path()
+
+
+def test_channel_load_refuses_without_encoder(tmp_path, monkeypatch):
+    from terratriage.ops import model as mdl
+    from terratriage.ops.model import channel
+
+    w = tmp_path / "weights"
+    w.mkdir()
+    (w / "groma-dmg-v0.npz").write_bytes(b"x")
+    (w / "groma-dmg-v0.json").write_text("{}")
+    monkeypatch.setattr(mdl, "MODEL_DIR", str(tmp_path))
+    monkeypatch.setenv("TORCH_HOME", str(tmp_path / "torch"))
+    with pytest.raises(FileNotFoundError, match="encoder"):
+        channel.load()

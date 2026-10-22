@@ -25,7 +25,7 @@ import zipfile
 from collections import Counter, defaultdict
 from typing import Any
 
-from . import DATA_DIR, DISCLAIMER
+from . import DATA_DIR, DISCLAIMER, OPS_OUT
 from .analyze.classes import FEMA, FEMA_LABEL
 from .guard import csv_cell
 
@@ -51,7 +51,7 @@ def labels_dir() -> str:
 
 
 def ops_out() -> str:
-    return os.path.join(DATA_DIR, "output", "ops")
+    return OPS_OUT
 
 
 def _judgments_path() -> str:

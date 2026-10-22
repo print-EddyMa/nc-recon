@@ -178,12 +178,23 @@ function authHeaders(): HeadersInit {
   return t ? { Authorization: `Bearer ${t}` } : {};
 }
 
+/** An offline server refuses network routes with 503 and a sentence saying why. */
+async function refusal(r: Response, fallback: string): Promise<string> {
+  if (r.status !== 503) return fallback;
+  try {
+    const j = (await r.json()) as { detail?: unknown };
+    return typeof j.detail === "string" ? j.detail : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 async function getJSON<T>(path: string, auth = false): Promise<T> {
   const r = await fetch(`${API_URL}${path}`, {
     signal: AbortSignal.timeout(60_000),
     headers: auth ? authHeaders() : undefined,
   });
-  if (!r.ok) throw new Error(`${path}: ${r.status}`);
+  if (!r.ok) throw new Error(await refusal(r, `${path}: ${r.status}`));
   return (await r.json()) as T;
 }
 
@@ -905,7 +916,7 @@ export async function buildResponse(area: string): Promise<{ area: string; statu
     headers: authHeaders(),
     signal: AbortSignal.timeout(30_000),
   });
-  if (!r.ok) throw new Error(`build response: ${r.status}`);
+  if (!r.ok) throw new Error(await refusal(r, `build response: ${r.status}`));
   return r.json();
 }
 /** KML download URL (opens in Google Earth, ATAK/WinTAK, ArcGIS); needs the responder token header, so fetch it as a blob. */

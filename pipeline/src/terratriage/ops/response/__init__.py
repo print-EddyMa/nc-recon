@@ -19,9 +19,8 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
-from .. import DATA_DIR
+from .. import OPS_OUT
 
-OPS_OUT = os.path.join(DATA_DIR, "output", "ops")
 
 
 @dataclass
