@@ -19,6 +19,9 @@ import {
   ncStormTracks,
   ncCameras,
   ncClosures,
+  ncFiman,
+  ncPower,
+  ncShelters,
   ncStreamflow,
   ncFires,
   ncFemaHistory,
@@ -40,12 +43,15 @@ interface Props {
 type LayerId =
   | "climate"
   | "gauge"
+  | "fiman"
   | "flow"
   | "alert"
   | "storm"
   | "fire"
   | "camera"
-  | "closure";
+  | "closure"
+  | "power"
+  | "shelter";
 
 const LAYER_META: Record<LayerId, { label: string; note: string }> = {
   climate: { label: "Current conditions", note: "ECONet + RAWS (CLOUDS API)" },
@@ -53,17 +59,26 @@ const LAYER_META: Record<LayerId, { label: string; note: string }> = {
     label: "River flood forecast",
     note: "NOAA NWPS / National Water Model",
   },
+  fiman: {
+    label: "NC flood gauges",
+    note: "NC Emergency Management FIMAN",
+  },
   flow: { label: "Streamflow", note: "USGS NWIS instantaneous values" },
   alert: { label: "Official alerts", note: "NWS watches & warnings" },
   storm: { label: "Active storm", note: "NHC cone & track" },
   fire: { label: "Active fire", note: "NASA FIRMS VIIRS" },
   camera: { label: "DOT cameras", note: "NCDOT DriveNC" },
   closure: { label: "Road closures", note: "NCDOT DriveNC" },
+  power: { label: "Power outages", note: "Duke Energy, by county" },
+  shelter: { label: "Open shelters", note: "FEMA ESF6 / American Red Cross" },
 };
 const LAYER_ORDER: LayerId[] = [
   "gauge",
+  "fiman",
   "flow",
   "alert",
+  "power",
+  "shelter",
   "climate",
   "fire",
   "storm",
@@ -74,6 +89,9 @@ const LAYER_ORDER: LayerId[] = [
 const DEFAULT_ON: Record<LayerId, boolean> = {
   climate: true,
   gauge: true,
+  fiman: true,
+  power: true,
+  shelter: true,
   flow: false,
   alert: true,
   storm: true,
@@ -88,6 +106,7 @@ const DEFAULT_ON: Record<LayerId, boolean> = {
 // legend names them individually
 const CAMERA_RGB: [number, number, number] = [139, 148, 163];
 const CLOSURE_RGB: [number, number, number] = [232, 137, 74];
+const SHELTER_RGB: [number, number, number] = [62, 168, 140];
 
 const sevRGB = (s: number): [number, number, number] =>
   NC_SEV_COLOR[Math.max(-1, Math.min(3, s))];
@@ -111,6 +130,9 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
   const [camera, setCamera] = useState<NCResult<NCPointFC> | null>(null);
   const [closure, setClosure] = useState<NCResult<NCPointFC> | null>(null);
   const [flow, setFlow] = useState<NCResult<NCPointFC> | null>(null);
+  const [fiman, setFiman] = useState<NCResult<NCPointFC> | null>(null);
+  const [power, setPower] = useState<NCResult<NCGeomFC> | null>(null);
+  const [shelter, setShelter] = useState<NCResult<NCPointFC> | null>(null);
   const [fire, setFire] = useState<NCResult<NCPointFC> | null>(null);
   const [history, setHistory] = useState<NCHistory | null>(null);
   const [selected, setSelected] = useState<{
@@ -291,6 +313,9 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
       ncFloodForecasts().then(setGauge);
       ncAlerts().then(setAlert);
       ncStreamflow().then(setFlow);
+      ncFiman().then(setFiman);
+      ncPower().then(setPower);
+      ncShelters().then(setShelter);
     };
     pull();
     const t = window.setInterval(pull, 5 * 60_000);
@@ -313,7 +338,10 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
   const results: Record<LayerId, NCResult<NCPointFC | NCGeomFC> | null> = {
     climate,
     gauge,
+    fiman,
     flow,
+    power,
+    shelter,
     alert,
     storm,
     fire,
@@ -335,10 +363,11 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
     type PF = NCPointFC["features"][number];
 
     // polygon-ish layers first (alerts, storm cone) so points sit on top
-    for (const id of ["alert", "storm"] as const) {
+    for (const id of ["power", "alert", "storm"] as const) {
       const res = results[id];
       if (!on[id] || !res || res.disabled) continue;
       const isStorm = id === "storm";
+      const isPower = id === "power";
       out.push(
         new GeoJsonLayer({
           id: `nc-${id}`,
@@ -348,7 +377,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
           filled: true,
           getFillColor: (f) => {
             const [r, g, b] = sevRGB((f as GF).properties.severity);
-            return [r, g, b, isStorm ? 55 : 34];
+            return [r, g, b, isStorm ? 55 : isPower ? 80 : 34];
           },
           getLineColor: (f) => {
             const [r, g, b] = sevRGB((f as GF).properties.severity);
@@ -379,9 +408,11 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
     const FLOW_RGB: [number, number, number] = [90, 150, 200];
     for (const id of [
       "gauge",
+      "fiman",
       "flow",
       "climate",
       "fire",
+      "shelter",
       "closure",
       "camera",
     ] as const) {
@@ -390,6 +421,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
       const isCam = id === "camera";
       const isClosure = id === "closure";
       const isFlow = id === "flow";
+      const isShelter = id === "shelter";
       out.push(
         new ScatterplotLayer({
           id: `nc-${id}`,
@@ -404,6 +436,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
             if (isCam) return 2.5;
             if (isClosure) return 3.5;
             if (isFlow) return 2.8;
+            if (isShelter) return 5;
             const s = (f as PF).properties.severity;
             return s <= 0 ? 2.6 : 4 + s * 3;
           },
@@ -411,6 +444,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
             if (isCam) return [...CAMERA_RGB, 0];
             if (isClosure) return [...CLOSURE_RGB, 150];
             if (isFlow) return [...FLOW_RGB, 70];
+            if (isShelter) return [...SHELTER_RGB, 190];
             const s = (f as PF).properties.severity;
             const [r, g, b] = sevRGB(s);
             return [r, g, b, s <= 0 ? 45 : 70 + s * 55];
@@ -419,6 +453,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
             if (isCam) return [...CAMERA_RGB, 210];
             if (isClosure) return [...CLOSURE_RGB, 230];
             if (isFlow) return [...FLOW_RGB, 190];
+            if (isShelter) return [255, 255, 255, 230];
             const s = (f as PF).properties.severity;
             const [r, g, b] = sevRGB(s);
             return [r, g, b, s <= 0 ? 120 : 230];
@@ -429,7 +464,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
             const f = info.object as PF | undefined;
             if (!f) return;
             const c = f.geometry.coordinates as [number, number];
-            flyTo(c, id === "camera" || id === "closure" ? 11 : 10);
+            flyTo(c, id === "camera" || id === "closure" || id === "shelter" ? 11 : 10);
             setSelected({
               title: f.properties.title,
               detail:
@@ -449,7 +484,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [climate, gauge, flow, alert, storm, fire, camera, closure, on]);
+  }, [climate, gauge, fiman, flow, alert, storm, fire, camera, closure, power, shelter, on]);
 
   useEffect(() => {
     if (!ready || !mapRef.current) return;
@@ -576,7 +611,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
 
   // cameras / closures / storm are snapshot-by-design; only a live-capable feed
   // falling back to a snapshot means we're actually offline
-  const anyStale = (["gauge", "flow", "alert", "climate"] as const).some(
+  const anyStale = (["gauge", "fiman", "flow", "alert", "climate"] as const).some(
     (id) => {
       const r = results[id];
       return r && !r.disabled && r.stale;
@@ -594,7 +629,10 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
       // `res.source` names the feed and sometimes tacks on its own count
       // ("USGS NWIS · 291 gages"); drop both the source-name prefix and a
       // leading count so the row doesn't read "291 · 291 gages"
-      if (!res.disabled)
+      if (!res.disabled && count === 0 && id === "power") metaLine = "none out · live";
+      else if (!res.disabled && count === 0 && id === "shelter")
+        metaLine = "none open · live";
+      else if (!res.disabled)
         metaLine = `${count.toLocaleString()} · ${res.source.replace(/^[^·]+·\s*/, "").replace(/^[\d,]+\s+/, "")}`;
       else if (id === "climate" || id === "fire")
         metaLine = "optional, add a free key";
@@ -919,6 +957,13 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
                   }}
                 />
                 camera
+              </span>
+              <span className="flex items-center gap-1.5 text-2xs text-ink-faint">
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ background: `rgb(${SHELTER_RGB.join(",")})` }}
+                />
+                open shelter
               </span>
             </div>
 

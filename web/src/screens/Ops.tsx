@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapboxOverlay } from "@deck.gl/mapbox";
-import { GeoJsonLayer, ScatterplotLayer } from "@deck.gl/layers";
+import { GeoJsonLayer, PolygonLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { PickingInfo } from "@deck.gl/core";
+import { Marker } from "maplibre-gl";
 import { toast } from "sonner";
 import { useMapLibre, type IControl } from "../lib/useMapLibre";
 import {
@@ -11,17 +12,26 @@ import {
   NOT_ASSESSED_HEX,
   POST_SOURCE_LABEL,
   ago,
+  cancelJob,
   checkCoverage,
   createEvent,
   deleteArea,
   downloadExport,
   fmtAge,
-  jobStatus,
+  fmtDuration,
+  imageryDate,
+  imageryTileUrl,
+  isOpsUrl,
+  jobActive,
   labelerName,
   loadChip,
   loadEvents,
+  loadFemaReference,
+  loadFieldReference,
+  type FieldReference,
   loadHealth,
   loadImpact,
+  loadJobs,
   loadLabels,
   loadOpsArea,
   loadOpsAreas,
@@ -29,8 +39,10 @@ import {
   loadResponder,
   occupantsOf,
   openBrief,
+  opsRequestHeaders,
   postLabel,
   pSevere,
+  reassessArea,
   publicUrl,
   responderToken,
   reviewPriority,
@@ -38,7 +50,10 @@ import {
   setResponderToken,
   submitAssessment,
   type FemaClass,
+  type FemaReference,
+  type HealthBoard,
   type HealthRow,
+  type ImageryRecord,
   type Impact,
   type Job,
   type OpsAreaSummary,
@@ -66,7 +81,29 @@ const h2 = "text-sm font-semibold uppercase tracking-wide text-ink-dim";
 const field =
   "mt-1 w-full rounded-md border border-line-strong bg-canvas px-2.5 py-1.5 text-sm text-ink";
 
-const areaTitle = (id: string) =>
+/** Which of the assessment's own images sits under the structures. */
+type ImageryMode = "post" | "pre" | "off";
+
+/** The square a new assessment would cover: centre + half-width in metres. */
+interface Preview {
+  lon: number;
+  lat: number;
+  half_m: number;
+}
+const previewRing = ({ lon, lat, half_m }: Preview): [number, number][] => {
+  const dLat = half_m / 111_320;
+  const dLon = half_m / (111_320 * Math.cos((lat * Math.PI) / 180));
+  return [
+    [lon - dLon, lat - dLat],
+    [lon + dLon, lat - dLat],
+    [lon + dLon, lat + dLat],
+    [lon - dLon, lat + dLat],
+  ];
+};
+
+/** The name an analyst gave the area; older assessments only have their id. */
+const areaTitle = (id: string, name?: string) =>
+  name ||
   id
     .replace(/_[0-9a-f]{4}$/, "")
     .replace(/_/g, " ")
@@ -93,6 +130,15 @@ export default function Ops({
   const [newOpen, setNewOpen] = useState(false);
   const [pick, setPick] = useState<[number, number] | null>(null);
   const [picking, setPicking] = useState(false);
+  const [preview, setPreview] = useState<Preview | null>(null);
+  const [imagery, setImagery] = useState<ImageryMode>("post");
+  const [reload, setReload] = useState(0);
+  // optional note saved with the next label; cleared when the structure changes
+  const [note, setNote] = useState("");
+  const select = useCallback((id: string | null) => {
+    setSelected(id);
+    setNote("");
+  }, []);
 
   const refreshAreas = useCallback(() => {
     if (!API_URL) return;
@@ -105,7 +151,52 @@ export default function Ops({
   }, []);
   useEffect(refreshAreas, [refreshAreas]);
 
-  // the screen is remounted per area (key={areaId} in App), so state starts clean
+  // Assessment jobs live on the server (and survive its restarts), so the list
+  // is polled rather than held here: 4 s while one is going, 30 s otherwise so
+  // a job a colleague started still shows up.
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const lastStatus = useRef(new Map<string, Job["status"]>());
+  const watching = useRef<string | null>(null); // the job submitted from this form
+  const refreshJobs = useCallback(async () => {
+    if (!API_URL) return;
+    let list: Job[];
+    try {
+      list = await loadJobs();
+    } catch {
+      return; // no responder token yet, or the service is away: keep what we have
+    }
+    for (const j of list) {
+      const was = lastStatus.current.get(j.id);
+      lastStatus.current.set(j.id, j.status);
+      if (!was || was === j.status || (was !== "queued" && was !== "running")) continue;
+      if (j.status === "done") {
+        toast.success(
+          j.warnings?.length
+            ? `${j.name}: assessment complete, with warnings`
+            : `${j.name}: assessment complete`,
+        );
+        refreshAreas();
+        if (j.area === areaId) setReload((n) => n + 1); // this area, assessed again
+        else if (watching.current === j.id) onPickArea(j.area);
+        if (watching.current === j.id) watching.current = null;
+      } else if (j.status === "failed") toast.error(`${j.name}: ${j.error ?? "assessment failed"}`);
+      else if (j.status === "lost") toast.error(`${j.name}: ${j.error ?? "assessment lost"}`);
+    }
+    setJobs(list);
+  }, [refreshAreas, onPickArea, areaId]);
+  const anyActive = jobs.some(jobActive);
+  useEffect(() => {
+    const tick = () => void refreshJobs();
+    const first = window.setTimeout(tick, 0);
+    const t = window.setInterval(tick, anyActive ? 4000 : 30000);
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(t);
+    };
+  }, [refreshJobs, anyActive]);
+
+  // the screen is remounted per area (key={areaId} in App), so state starts
+  // clean; `reload` bumps when this area has been assessed again
   useEffect(() => {
     if (!areaId) return;
     let live = true;
@@ -131,7 +222,7 @@ export default function Ops({
     return () => {
       live = false;
     };
-  }, [areaId]);
+  }, [areaId, reload]);
 
   const byId = useMemo(() => {
     const m = new Map<string, OpsFeature>();
@@ -160,16 +251,23 @@ export default function Ops({
         setLabelerName(who);
       }
       try {
-        const r = await postLabel({ area: areaId, ncr_id: p.ncr_id, label: lab, labeler: who });
+        const r = await postLabel({
+          area: areaId,
+          ncr_id: p.ncr_id,
+          label: lab,
+          labeler: who,
+          notes: note.trim() || undefined,
+        });
         setLabels((m) => ({ ...m, [p.ncr_id]: lab }));
         toast.success(`Recorded "${lab.replace("_", " ")}" (${r.aoi_role} area)`);
         const next = queue.find((q) => q.ncr_id !== p.ncr_id);
-        if (next) setSelected(next.ncr_id);
+        if (next) select(next.ncr_id);
+        else setNote("");
       } catch (e) {
         toast.error((e as Error).message);
       }
     },
-    [areaId, queue],
+    [areaId, queue, note, select],
   );
 
   // keyboard labeling: 0-4 = class, x = cannot tell, j/k = next/prev, Esc = close
@@ -188,23 +286,39 @@ export default function Ops({
       } else if (e.key === "j" || e.key === "k") {
         const idx = queue.findIndex((q) => q.ncr_id === sel.properties.ncr_id);
         const n = queue[e.key === "j" ? idx + 1 : Math.max(0, idx - 1)];
-        if (n) setSelected(n.ncr_id);
+        if (n) select(n.ncr_id);
       } else if (e.key === "Escape") {
-        setSelected(null);
+        select(null);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [sel, queue, label]);
+  }, [sel, queue, label, select]);
 
-  const onDone = useCallback(
-    (area: string) => {
-      refreshAreas();
+  const onSubmitted = useCallback(
+    (j: Job) => {
+      watching.current = j.id;
+      lastStatus.current.set(j.id, j.status);
+      setJobs((cur) => [j, ...cur.filter((x) => x.id !== j.id)]);
       setNewOpen(false);
       setPick(null);
-      onPickArea(area);
+      setPicking(false);
+      void refreshJobs();
     },
-    [refreshAreas, onPickArea],
+    [refreshJobs],
+  );
+  const onCancelJob = useCallback(
+    async (j: Job) => {
+      try {
+        await cancelJob(j.id);
+        if (watching.current === j.id) watching.current = null;
+        toast(`${j.name}: assessment cancelled`);
+      } catch (e) {
+        toast.error((e as Error).message);
+      }
+      void refreshJobs();
+    },
+    [refreshJobs],
   );
   const onPick = useCallback((ll: [number, number] | null) => {
     setPicking(false);
@@ -215,9 +329,16 @@ export default function Ops({
   }, []);
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-1 overflow-y-auto md:grid-cols-[300px_1fr] md:overflow-hidden xl:grid-cols-[320px_1fr_400px]">
+    // phone: one scrolling column. md: list on the left, map over details on
+    // the right, each pane scrolling by itself. xl: three columns.
+    <div className="grid h-full min-h-0 grid-cols-1 overflow-y-auto md:grid-cols-[300px_1fr] md:grid-rows-[minmax(0,3fr)_minmax(0,2fr)] md:overflow-hidden xl:grid-cols-[320px_1fr_400px] xl:grid-rows-1">
       {/* ---------------------------- left ---------------------------- */}
-      <aside className="min-h-0 border-b border-line bg-surface p-4 md:overflow-y-auto md:border-b-0 md:border-r">
+      {/* on a phone an open area leads with its map; the list moves below */}
+      <aside
+        className={`border-line bg-surface p-4 md:order-none md:row-span-2 md:min-h-0 md:overflow-y-auto md:border-r xl:row-span-1 ${
+          areaId ? "order-last border-t md:border-t-0" : "border-b md:border-b-0"
+        }`}
+      >
         <div className="flex items-center justify-between">
           <h2 className={h2}>Assessments</h2>
           <button
@@ -234,10 +355,11 @@ export default function Ops({
             pick={pick}
             picking={picking}
             onPickToggle={() => setPicking((v) => !v)}
-            onDone={onDone}
-            onQueued={refreshAreas}
+            onPreview={setPreview}
+            onSubmitted={onSubmitted}
           />
         )}
+        <JobsPanel jobs={jobs} onOpen={onPickArea} onCancel={onCancelJob} />
         <AreaList areas={areas} err={areasErr} areaId={areaId} onPick={onPickArea} />
         <AccuracyPanel />
         <CollectionBoard />
@@ -248,12 +370,16 @@ export default function Ops({
       <section className="relative min-h-[55vh] md:min-h-0" aria-label="Map">
         <OpsMap
           fc={fc}
+          areaId={areaId}
+          imagery={imagery}
+          areas={areaId ? null : areas}
+          onOpenArea={onPickArea}
           selected={selected}
           reviewOnly={reviewOnly}
           labels={labels}
-          onSelect={setSelected}
+          onSelect={select}
           picking={picking}
-          pick={pick}
+          preview={newOpen ? preview : null}
           onPick={onPick}
         />
         {picking && (
@@ -262,8 +388,13 @@ export default function Ops({
           </div>
         )}
         {fc && (
-          <div className="absolute left-3 top-3 flex flex-col gap-2">
+          <div className="absolute left-3 top-3 z-10 flex w-60 flex-col gap-2">
             <Legend />
+            <ImagerySwitch
+              mode={imagery}
+              onMode={setImagery}
+              records={(fc.properties.provenance?.imagery ?? []) as ImageryRecord[]}
+            />
             <label className="flex items-center gap-2 rounded-md border border-line bg-surface px-3 py-2 text-sm">
               <input
                 type="checkbox"
@@ -274,8 +405,16 @@ export default function Ops({
             </label>
           </div>
         )}
+        {fc && fc.features.length === 0 && (
+          <div className="absolute inset-x-0 top-16 z-10 mx-auto w-fit max-w-md rounded-md border border-line bg-surface px-4 py-3 text-sm">
+            <b>No structures found here.</b> FEMA USA Structures, OpenStreetMap
+            and the USACE inventory list no buildings in this area, so nothing
+            was assessed. If buildings are known to be here, verify on the
+            ground.
+          </div>
+        )}
         {!fc && areaId && (
-          <div className="absolute inset-x-0 top-16 mx-auto w-fit max-w-md rounded-md border border-line bg-surface px-4 py-3 text-sm">
+          <div className="absolute inset-x-0 top-16 z-10 mx-auto w-fit max-w-md rounded-md border border-line bg-surface px-4 py-3 text-sm">
             {areaErr
               ? /40[13]/.test(areaErr)
                 ? "Structure-level results need the responder token (left panel, Responder access). The public summary needs none."
@@ -286,19 +425,30 @@ export default function Ops({
       </section>
 
       {/* ---------------------------- right --------------------------- */}
-      <aside className="min-h-0 border-t border-line bg-surface p-4 md:col-span-2 xl:col-span-1 xl:overflow-y-auto xl:border-l xl:border-t-0">
+      <aside className="border-t border-line bg-surface p-4 md:min-h-0 md:overflow-y-auto xl:border-l xl:border-t-0">
         {!areaId && <Welcome />}
+        {!areaId && areas && areas.length > 0 && <RollUp areas={areas} onOpen={onPickArea} />}
         {fc && areaId && (
           <RunSummary
             fc={fc}
             areaId={areaId}
+            rerunning={jobs.some((j) => j.area === areaId && jobActive(j))}
+            onRerun={async () => {
+              try {
+                onSubmitted(await reassessArea(areaId));
+              } catch (e) {
+                toast.error((e as Error).message);
+              }
+            }}
             onDeleted={() => {
               refreshAreas();
               onPickArea(null);
             }}
           />
         )}
-        {fc && areaId && <ImpactPanel areaId={areaId} />}
+        {fc && areaId && <ImpactPanel key={`people-${reload}`} areaId={areaId} />}
+        {fc && areaId && <FemaPanel key={`fema-${reload}`} areaId={areaId} />}
+        {fc && areaId && <FieldReferencePanel key={`field-${reload}`} areaId={areaId} />}
         {fc &&
           areaId &&
           (sel ? (
@@ -307,14 +457,16 @@ export default function Ops({
               f={sel}
               address={addresses[sel.properties.ncr_id]}
               labeled={labels[sel.properties.ncr_id]}
+              note={note}
+              onNote={setNote}
               onLabel={(lab) => void label(sel.properties, lab)}
-              onClose={() => setSelected(null)}
+              onClose={() => select(null)}
             />
           ) : (
             <ReviewList
               queue={queue}
               labeledCount={Object.keys(labels).length}
-              onPick={setSelected}
+              onPick={select}
             />
           ))}
       </aside>
@@ -335,6 +487,81 @@ function Welcome() {
   );
 }
 
+const sevOf = (a: OpsAreaSummary) =>
+  (a.expected_counts.major ?? 0) + (a.expected_counts.destroyed ?? 0);
+
+/** Every assessed area side by side, worst first: the table a briefing asks
+ * for ("where is it worst, and how much is still unchecked"). */
+function RollUp({ areas, onOpen }: { areas: OpsAreaSummary[]; onOpen: (id: string) => void }) {
+  const rows = useMemo(() => [...areas].sort((a, b) => sevOf(b) - sevOf(a)), [areas]);
+  const total = rows.reduce(
+    (t, a) => ({
+      structures: t.structures + a.n_structures,
+      sev: t.sev + sevOf(a),
+      review: t.review + a.n_needs_review,
+    }),
+    { structures: 0, sev: 0, review: 0 },
+  );
+  return (
+    <section className="mt-5 border-t border-line pt-4">
+      <h2 className={h2}>Assessed areas, worst first</h2>
+      <table className="tnum mt-2 w-full text-sm">
+        <caption className="sr-only">
+          Structures, expected Major or Destroyed, and calls awaiting review, by assessed area
+        </caption>
+        <thead>
+          <tr className="text-xs text-ink-dim">
+            <th className="text-left font-medium">Area</th>
+            <th className="text-right font-medium">Structures</th>
+            <th className="text-right font-medium" title="Expected structures at Major or Destroyed, with the 80% range">
+              ≥ Major
+            </th>
+            <th className="text-right font-medium">To review</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((a) => {
+            const r = a.expected_counts_80pct ?? {};
+            const lo = (r.major?.[0] ?? 0) + (r.destroyed?.[0] ?? 0);
+            const hi = (r.major?.[1] ?? 0) + (r.destroyed?.[1] ?? 0);
+            return (
+              <tr key={a.id} className="border-t border-line align-top">
+                <td className="py-1">
+                  <button className="text-left text-accent underline" onClick={() => onOpen(a.id)}>
+                    {areaTitle(a.id, a.aoi.name)}
+                  </button>
+                  {a.aoi.county && <div className="text-xs text-ink-dim">{a.aoi.county} Co.</div>}
+                </td>
+                <td className="py-1 text-right text-ink">{a.n_structures.toLocaleString()}</td>
+                <td className="py-1 text-right font-semibold text-ink">
+                  ~{Math.round(sevOf(a))}
+                  <div className="text-xs font-normal text-ink-dim">
+                    {lo}–{hi}
+                  </div>
+                </td>
+                <td className="py-1 text-right text-ink">{a.n_needs_review.toLocaleString()}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+        <tfoot>
+          <tr className="border-t-2 border-line-strong font-semibold text-ink">
+            <td className="py-1">All {rows.length} areas</td>
+            <td className="py-1 text-right">{total.structures.toLocaleString()}</td>
+            <td className="py-1 text-right">~{Math.round(total.sev).toLocaleString()}</td>
+            <td className="py-1 text-right">{total.review.toLocaleString()}</td>
+          </tr>
+        </tfoot>
+      </table>
+      <p className="mt-2 text-xs leading-relaxed text-ink-dim">
+        Expected counts from uncalibrated probabilities, and only for the ground
+        that was assessed: not a county or event total. Ranges are per area and
+        do not add.
+      </p>
+    </section>
+  );
+}
+
 // --------------------------------------------------------------------------- //
 // new assessment
 // --------------------------------------------------------------------------- //
@@ -348,14 +575,14 @@ function NewAssessment({
   pick,
   picking,
   onPickToggle,
-  onDone,
-  onQueued,
+  onPreview,
+  onSubmitted,
 }: {
   pick: [number, number] | null;
   picking: boolean;
   onPickToggle: () => void;
-  onDone: (area: string) => void;
-  onQueued: () => void;
+  onPreview: (p: Preview | null) => void;
+  onSubmitted: (job: Job) => void;
 }) {
   const [events, setEvents] = useState<OpsEvent[] | null>(null);
   const [event, setEvent] = useState("");
@@ -365,7 +592,6 @@ function NewAssessment({
   const [half, setHalf] = useState(400);
   const [cov, setCov] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [job, setJob] = useState<Job | null>(null);
   const [newEvent, setNewEvent] = useState(false);
   const [lastPick, setLastPick] = useState<[number, number] | null>(null);
 
@@ -388,39 +614,16 @@ function NewAssessment({
     setCov(null);
   }
 
-  useEffect(() => {
-    if (!job || job.status === "done" || job.status === "failed" || job.status === "lost") return;
-    const t = window.setInterval(() => {
-      jobStatus(job.id)
-        .then((j) => {
-          setJob(j);
-          if (j.status === "done") {
-            toast.success(
-              j.warnings?.length
-                ? `${j.name}: assessment complete, with warnings`
-                : `${j.name}: assessment complete`,
-            );
-            onDone(j.area);
-          } else if (j.status === "failed") toast.error(`${j.name}: ${j.error}`);
-        })
-        .catch((e: Error) => {
-          // job state lives in the server process: a restart loses it
-          if (/: 404$/.test(e.message)) {
-            setJob((cur) =>
-              cur
-                ? { ...cur, status: "lost", error: "The server restarted while this assessment was running. Run it again." }
-                : cur,
-            );
-          }
-        });
-    }, 4000);
-    return () => window.clearInterval(t);
-  }, [job, onDone]);
-
   const la = Number(lat);
   const lo = Number(lon);
   const coordsOk =
     lat !== "" && lon !== "" && la > 33.5 && la < 37 && lo > -85 && lo < -75;
+
+  // show the square this assessment would cover, typed or picked
+  useEffect(() => {
+    onPreview(coordsOk ? { lon: lo, lat: la, half_m: half } : null);
+  }, [coordsOk, lo, la, half, onPreview]);
+  useEffect(() => () => onPreview(null), [onPreview]);
 
   const check = async () => {
     setCov("Checking…");
@@ -439,9 +642,9 @@ function NewAssessment({
   const submit = async () => {
     setBusy(true);
     try {
-      const j = await submitAssessment({ event, name: name.trim(), lon: lo, lat: la, half_m: half });
-      setJob(j);
-      onQueued();
+      onSubmitted(
+        await submitAssessment({ event, name: name.trim(), lon: lo, lat: la, half_m: half }),
+      );
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -451,11 +654,7 @@ function NewAssessment({
 
   return (
     <div className="mt-3 rounded-md border border-line p-3 text-sm">
-      {job ? (
-        <JobCard job={job} onNew={() => setJob(null)} />
-      ) : (
-        <>
-          <label className="block">
+      <label className="block">
             <span className="text-ink-dim">Event</span>
             <select className={field} value={event} onChange={(e) => setEvent(e.target.value)}>
               {(events ?? []).map((e) => (
@@ -547,8 +746,6 @@ function NewAssessment({
             <p className="mt-2 text-sm text-dmg3">Coordinates must be in North Carolina.</p>
           )}
           {cov && <p className="mt-2 text-sm text-ink">{cov}</p>}
-        </>
-      )}
     </div>
   );
 }
@@ -561,36 +758,154 @@ const STEPS = [
   "writing brief",
 ];
 
-function JobCard({ job, onNew }: { job: Job; onNew: () => void }) {
-  const cur = STEPS.indexOf(job.step);
+const JOB_STATUS: Record<Job["status"], string> = {
+  queued: "Waiting for the previous assessment to finish",
+  running: "Running",
+  done: "Complete",
+  failed: "Failed",
+  cancelled: "Cancelled",
+  lost: "Interrupted",
+};
+const JOB_SHOWN_FOR_S = 24 * 3600;
+const CANCELLED_SHOWN_FOR_S = 10 * 60;
+const DISMISSED_KEY = "terratriage:dismissedJobs";
+
+/** Assessments in progress, and what happened to the recent ones. The list is
+ * the server's, so it is the same for every analyst and after a restart. */
+function JobsPanel({
+  jobs,
+  onOpen,
+  onCancel,
+}: {
+  jobs: Job[];
+  onOpen: (area: string) => void;
+  onCancel: (job: Job) => void;
+}) {
+  // re-render once a second while something runs, for the elapsed time
+  const [now, setNow] = useState(() => Date.now() / 1000);
+  const anyActive = jobs.some(jobActive);
+  useEffect(() => {
+    if (!anyActive) return;
+    const t = window.setInterval(() => setNow(Date.now() / 1000), 1000);
+    return () => window.clearInterval(t);
+  }, [anyActive]);
+  // dismissed cards stay dismissed in this browser (the screen remounts per area)
+  const [dismissed, setDismissed] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(DISMISSED_KEY) ?? "[]") as string[]);
+    } catch {
+      return new Set();
+    }
+  });
+  const dismiss = (id: string) =>
+    setDismissed((d) => {
+      const next = new Set(d).add(id);
+      try {
+        localStorage.setItem(DISMISSED_KEY, JSON.stringify([...next].slice(-100)));
+      } catch {
+        /* private window: dismissed until the next reload */
+      }
+      return next;
+    });
+  // what is running first, then the queue in the order it will run, then
+  // what stopped, most recent first
+  const rank = (j: Job) => (j.status === "running" ? 0 : j.status === "queued" ? 1 : 2);
+  const shown = jobs
+    .filter(
+      (j) =>
+        jobActive(j) ||
+        (!dismissed.has(j.id) &&
+          j.status !== "done" &&
+          // a failure stays until dismissed (for a day); a cancellation was
+          // someone's own choice and only needs to be seen briefly
+          now - (j.finished ?? j.created) <
+            (j.status === "cancelled" ? CANCELLED_SHOWN_FOR_S : JOB_SHOWN_FOR_S)),
+    )
+    .sort(
+      (a, b) =>
+        rank(a) - rank(b) ||
+        (jobActive(a) ? a.created - b.created : (b.finished ?? 0) - (a.finished ?? 0)),
+    );
+  if (shown.length === 0) return null;
+  return (
+    <section className="mt-4" aria-label="Assessment jobs">
+      <h2 className={h2}>In progress</h2>
+      <ul className="mt-2 space-y-2">
+        {shown.map((j) => (
+          <li key={j.id} className="rounded-md border border-line p-3 text-sm">
+            <JobCard
+              job={j}
+              now={now}
+              onOpen={onOpen}
+              onCancel={onCancel}
+              onDismiss={() => dismiss(j.id)}
+            />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function JobCard({
+  job,
+  now,
+  onOpen,
+  onCancel,
+  onDismiss,
+}: {
+  job: Job;
+  now: number;
+  onOpen: (area: string) => void;
+  onCancel: (job: Job) => void;
+  onDismiss: () => void;
+}) {
+  // a re-run reuses the imagery already on disk
+  const steps = job.kind === "reassess" ? STEPS.slice(2) : STEPS;
+  const cur = steps.indexOf(job.step);
   const done = job.status === "done";
+  const active = jobActive(job);
+  const stopped = !active && !done;
   return (
     <div>
-      <div className="font-semibold text-ink">{job.name}</div>
-      <div className="text-sm text-ink-dim">
-        {job.status === "queued"
-          ? "Waiting for the previous assessment to finish"
-          : job.status === "running"
-            ? "Running"
-            : job.status === "done"
-              ? "Complete"
-              : job.status === "lost"
-                ? "Lost"
-                : "Failed"}
-        {job.post_source && ` · ${POST_SOURCE_LABEL[job.post_source] ?? job.post_source}`}
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="font-semibold text-ink">{job.name}</span>
+        {job.status === "running" && job.started != null && (
+          <span className="tnum text-xs text-ink-dim">{fmtDuration(now - job.started)}</span>
+        )}
       </div>
-      <ol className="mt-2 space-y-0.5 text-sm">
-        {STEPS.map((s, i) => {
-          const past = done || i < cur;
-          const now = i === cur && job.status === "running";
-          return (
-            <li key={s} className={past ? "text-ink" : now ? "font-semibold text-accent" : "text-ink-faint"}>
-              {past ? "✓" : now ? "▸" : "·"} {s}
-            </li>
-          );
-        })}
-      </ol>
-      {(job.status === "failed" || job.status === "lost") && (
+      <div className="text-sm text-ink-dim" role="status">
+        {job.kind === "reassess" && "Run again · "}
+        {JOB_STATUS[job.status]}
+        {job.post_source && ` · ${POST_SOURCE_LABEL[job.post_source] ?? job.post_source}`}
+        {stopped && job.finished != null && ` · ${ago(job.finished)}`}
+      </div>
+      {job.step !== "" && (
+        <ol className="mt-2 space-y-0.5 text-sm">
+          {steps.map((s, i) => {
+            const past = done || i < cur;
+            const now_ = i === cur && job.status === "running";
+            const here = i === cur && stopped;
+            return (
+              <li
+                key={s}
+                className={
+                  past
+                    ? "text-ink"
+                    : now_
+                      ? "font-semibold text-accent"
+                      : here
+                        ? "font-semibold text-dmg3"
+                        : "text-ink-faint"
+                }
+              >
+                {past ? "✓" : now_ ? "▸" : here ? "×" : "·"} {s}
+              </li>
+            );
+          })}
+        </ol>
+      )}
+      {(job.status === "failed" || job.status === "lost") && job.error && (
         <p className="mt-2 text-sm text-dmg3">{job.error}</p>
       )}
       {job.warnings && job.warnings.length > 0 && (
@@ -600,11 +915,32 @@ function JobCard({ job, onNew }: { job: Job; onNew: () => void }) {
           ))}
         </ul>
       )}
-      {(done || job.status === "failed" || job.status === "lost") && (
-        <button className={`${btn} mt-2`} onClick={onNew}>
-          New assessment
-        </button>
-      )}
+      <div className="mt-2 flex gap-2">
+        {active && (
+          <button
+            className={btn}
+            onClick={() => {
+              if (
+                job.status === "queued" ||
+                window.confirm(`Stop the assessment "${job.name}"? What it has fetched so far is discarded.`)
+              )
+                onCancel(job);
+            }}
+          >
+            Cancel
+          </button>
+        )}
+        {done && (
+          <button className={btn} onClick={() => onOpen(job.area)}>
+            Open
+          </button>
+        )}
+        {stopped && (
+          <button className={btn} onClick={onDismiss}>
+            Dismiss
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -709,7 +1045,7 @@ function AreaList({
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold text-ink">{areaTitle(a.id)}</span>
+                  <span className="font-semibold text-ink">{areaTitle(a.id, a.aoi.name)}</span>
                   <span className="rounded-sm border border-line px-1.5 text-xs text-ink-dim" title={ROLE_TITLE[a.aoi.role] ?? ""}>
                     {a.aoi.role}
                   </span>
@@ -795,21 +1131,43 @@ const STATUS_WORD: Record<HealthRow["status"], string> = {
 };
 
 function CollectionBoard() {
-  const [h, setH] = useState<{ checked_utc: string; sources: HealthRow[] } | null>(null);
+  const [h, setH] = useState<HealthBoard | null>(null);
   const [err, setErr] = useState(false);
-  useEffect(() => {
+  const load = useCallback((recheck = false) => {
     if (!API_URL) return;
-    loadHealth()
-      .then(setH)
+    loadHealth(recheck)
+      .then((d) => {
+        setH(d);
+        setErr(false);
+      })
       .catch(() => setErr(true));
   }, []);
+  useEffect(() => load(), [load]);
+  // a re-check runs in the background on the server: look again until it lands
+  const refreshing = h?.refreshing ?? false;
+  useEffect(() => {
+    if (!refreshing) return;
+    const t = window.setInterval(() => load(), 3000);
+    return () => window.clearInterval(t);
+  }, [refreshing, load]);
+  const down = h?.sources.filter((s) => s.status === "down" && s.source !== "usgs_waterservices_legacy") ?? [];
   return (
     <section className="mt-5 border-t border-line pt-4">
-      <div className="flex items-baseline justify-between">
+      <div className="flex items-baseline justify-between gap-2">
         <h2 className={h2}>Data sources</h2>
-        {h && <span className="text-xs text-ink-faint">checked {ago(h.checked_utc)}</span>}
+        {h && (
+          <span className="text-xs text-ink-faint">
+            {refreshing ? "checking…" : `checked ${ago(h.checked_utc)}`}
+          </span>
+        )}
       </div>
-      {err && <p className="mt-1 text-sm text-ink-dim">Status unavailable.</p>}
+      {err && !h && <p className="mt-1 text-sm text-ink-dim">Status unavailable.</p>}
+      {down.length > 0 && (
+        <p className="mt-1 text-sm text-dmg3" role="status">
+          {down.length === 1 ? "1 source is down." : `${down.length} sources are down.`} New
+          assessments may fail or lose detail.
+        </p>
+      )}
       <ul className="mt-2 space-y-1">
         {h?.sources
           .filter((s) => s.source !== "usgs_waterservices_legacy")
@@ -824,6 +1182,11 @@ function CollectionBoard() {
             </li>
           ))}
       </ul>
+      {h && (
+        <button className={`${btn} mt-2`} disabled={refreshing} onClick={() => load(true)}>
+          {refreshing ? "Checking…" : "Check again"}
+        </button>
+      )}
     </section>
   );
 }
@@ -865,9 +1228,14 @@ function ResponderAccess() {
 }
 
 function Legend() {
+  // starts folded on a phone, where it would cover most of the map
+  const [wide] = useState(() => window.matchMedia?.("(min-width: 768px)").matches ?? true);
   return (
-    <div className="rounded-md border border-line bg-surface px-3 py-2 text-sm">
-      <div className="mb-1 text-xs font-semibold text-ink-dim">Most likely FEMA damage level</div>
+    <details open={wide} className="rounded-md border border-line bg-surface px-3 py-2 text-sm">
+      <summary className="cursor-pointer text-xs font-semibold text-ink-dim">
+        Most likely FEMA damage level
+      </summary>
+      <div className="mt-1" />
       {FEMA.map((c) => (
         <div key={c} className="flex items-center gap-2">
           <span className="h-3 w-3 rounded-sm border border-line" style={{ background: FEMA_HEX[c] }} />
@@ -883,6 +1251,55 @@ function Legend() {
         <span className="text-ink">Needs review</span>
       </div>
       <div className="mt-1 text-xs text-ink-dim">Faint fill = low confidence</div>
+    </details>
+  );
+}
+
+const IMAGERY_MODES: [ImageryMode, string][] = [
+  ["post", "After"],
+  ["pre", "Before"],
+  ["off", "Off"],
+];
+
+/** Puts the assessment's own before / after image under the structures, with
+ * the capture date, so a call is checked against the evidence it was made on. */
+function ImagerySwitch({
+  mode,
+  onMode,
+  records,
+}: {
+  mode: ImageryMode;
+  onMode: (m: ImageryMode) => void;
+  records: ImageryRecord[];
+}) {
+  const rec = records.find((r) => r.role === mode);
+  return (
+    <div className="rounded-md border border-line bg-surface px-3 py-2 text-sm">
+      <div className="mb-1 text-xs font-semibold text-ink-dim" id="ops-imagery-label">
+        Imagery under the structures
+      </div>
+      <div role="group" aria-labelledby="ops-imagery-label" className="flex gap-1">
+        {IMAGERY_MODES.map(([m, label]) => (
+          <button
+            key={m}
+            onClick={() => onMode(m)}
+            aria-pressed={mode === m}
+            className={`flex-1 rounded-md border px-2 py-1 text-sm ${
+              mode === m
+                ? "border-ink bg-ink font-semibold text-canvas"
+                : "border-line-strong text-ink hover:bg-surface-2"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {mode !== "off" && (
+        <div className="mt-1 text-xs leading-snug text-ink-dim">
+          <span className="tnum text-ink">{imageryDate(rec)}</span>
+          {rec?.source ? ` · ${rec.source.replace(/_/g, " ")}` : ""}
+        </div>
+      )}
     </div>
   );
 }
@@ -892,30 +1309,49 @@ function Legend() {
 // --------------------------------------------------------------------------- //
 function OpsMap({
   fc,
+  areaId,
+  imagery,
+  areas,
+  onOpenArea,
   selected,
   reviewOnly,
   labels,
   onSelect,
   picking,
-  pick,
+  preview,
   onPick,
 }: {
   fc: OpsCollection | null;
+  areaId: string | null;
+  imagery: ImageryMode;
+  /** assessed areas to mark on the statewide overview (null inside an area) */
+  areas: OpsAreaSummary[] | null;
+  onOpenArea: (id: string) => void;
   selected: string | null;
   reviewOnly: boolean;
   labels: Record<string, string>;
   onSelect: (id: string | null) => void;
   picking: boolean;
-  pick: [number, number] | null;
+  /** the square a new assessment would cover, while the form is open */
+  preview: Preview | null;
   onPick: (ll: [number, number] | null) => void;
 }) {
-  const { containerRef, mapRef, ready } = useMapLibre({ center: NC_CENTER, zoom: 6.6, pitch: 0 });
+  const { containerRef, mapRef, ready, styleEpoch } = useMapLibre({
+    center: NC_CENTER,
+    zoom: 6.6,
+    pitch: 0,
+  });
   const overlayRef = useRef<MapboxOverlay | null>(null);
   const [hover, setHover] = useState<{ x: number; y: number; p: OpsProps } | null>(null);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!ready || !map || !fc?.features.length) return;
+    if (!ready || !map || !fc) return;
+    if (!fc.features.length) {
+      const c = fc.properties.aoi.center;
+      if (c) map.jumpTo({ center: c, zoom: 15 });
+      return;
+    }
     let w = Infinity,
       s = Infinity,
       e = -Infinity,
@@ -947,6 +1383,122 @@ function OpsMap({
       });
   }, [selected, ready, fc, mapRef]);
 
+  // The assessment's own before / after image as a raster layer under the
+  // structures (deck.gl draws above the map) and under the basemap's top labels.
+  const shown = fc && areaId && imagery !== "off" ? imagery : null;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map || !areaId || !shown) return;
+    // the tiles are responder-only: send the token as a header, never in the URL
+    map.setTransformRequest((url) =>
+      isOpsUrl(url) ? { url, headers: opsRequestHeaders() } : { url },
+    );
+    const id = "ops-imagery";
+    try {
+      map.addSource(id, {
+        type: "raster",
+        tiles: [imageryTileUrl(areaId, shown)],
+        tileSize: 256,
+        minzoom: 12,
+        maxzoom: 19, // the stored 0.3 m grid; the map upsamples beyond it
+      });
+      // above every drawn basemap layer (roads and building blocks would
+      // otherwise cover the photo), below the labels that close the style
+      const layers = map.getStyle().layers;
+      let lastDrawn = -1;
+      layers.forEach((l, i) => {
+        if (l.type !== "symbol") lastDrawn = i;
+      });
+      map.addLayer(
+        { id, type: "raster", source: id, paint: { "raster-fade-duration": 0 } },
+        layers[lastDrawn + 1]?.id,
+      );
+    } catch {
+      /* style mid-swap: the styleEpoch bump re-runs this */
+    }
+    return () => {
+      try {
+        if (map.getLayer(id)) map.removeLayer(id);
+        if (map.getSource(id)) map.removeSource(id);
+      } catch {
+        /* map torn down */
+      }
+    };
+  }, [ready, mapRef, styleEpoch, areaId, shown]);
+
+  // Overview: one marker per assessed area. They are real buttons (keyboard
+  // and screen-reader reachable), sized-in-place HTML rather than canvas marks.
+  const located = useMemo(
+    () =>
+      (areas ?? []).flatMap((a) => {
+        const c =
+          a.aoi.center ??
+          (a.bbox ? ([(a.bbox[0] + a.bbox[2]) / 2, (a.bbox[1] + a.bbox[3]) / 2] as [number, number]) : null);
+        return c ? [{ a, c }] : [];
+      }),
+    [areas],
+  );
+  const fitted = useRef(false);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map || located.length === 0) return;
+    const markers = located.map(({ a, c }) => {
+      const sev = Math.round((a.expected_counts.major ?? 0) + (a.expected_counts.destroyed ?? 0));
+      const el = document.createElement("button");
+      el.type = "button";
+      el.className =
+        "flex items-center gap-1.5 rounded-md border border-line-strong bg-surface px-2 py-1 text-sm font-medium text-ink shadow-sm hover:border-accent focus-visible:border-accent";
+      el.setAttribute(
+        "aria-label",
+        `Open ${areaTitle(a.id, a.aoi.name)}: about ${sev} structures at Major or Destroyed, ${a.n_needs_review} to review`,
+      );
+      const dot = document.createElement("span");
+      dot.className = "h-2.5 w-2.5 shrink-0 rounded-full";
+      dot.style.background = FEMA_HEX.major;
+      const name = document.createElement("span");
+      name.textContent = areaTitle(a.id, a.aoi.name);
+      const n = document.createElement("span");
+      n.className = "tnum text-xs text-ink-dim";
+      n.textContent = `~${sev}`;
+      n.title = "Expected structures at Major or Destroyed";
+      el.append(dot, name, n);
+      // while a centre is being picked, a click on a marker must reach the map
+      if (picking) el.style.pointerEvents = "none";
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        onOpenArea(a.id);
+      });
+      return new Marker({ element: el, anchor: "left", offset: [-9, 0] }).setLngLat(c).addTo(map);
+    });
+    if (!fitted.current) {
+      fitted.current = true;
+      const lons = located.map((x) => x.c[0]);
+      const lats = located.map((x) => x.c[1]);
+      map.fitBounds(
+        [
+          [Math.min(...lons), Math.min(...lats)],
+          [Math.max(...lons), Math.max(...lats)],
+        ],
+        { padding: { top: 70, bottom: 70, left: 70, right: 150 }, duration: 0, maxZoom: 11 },
+      );
+    }
+    return () => markers.forEach((m) => m.remove());
+  }, [ready, mapRef, located, onOpenArea, picking]);
+
+  // a typed or picked centre that is off screen (or a dot at state zoom) is
+  // brought into view, once per location
+  const previewKey = preview ? `${preview.lon},${preview.lat}` : "";
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map || !preview) return;
+    const ring = previewRing(preview);
+    const b = map.getBounds();
+    const inside = ring.every(([x, y]) => b.contains([x, y]));
+    if (!inside || map.getZoom() < 11)
+      map.fitBounds([ring[0], ring[2]], { padding: 120, duration: 0, maxZoom: 15 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewKey, ready, mapRef]);
+
   // map-click picking for a new assessment
   useEffect(() => {
     const map = mapRef.current;
@@ -975,7 +1527,33 @@ function OpsMap({
   );
 
   const layers = useMemo(() => {
-    const out: (GeoJsonLayer<OpsProps> | ScatterplotLayer<[number, number]>)[] = [
+    const out: (
+      | GeoJsonLayer<OpsProps>
+      | ScatterplotLayer<Preview>
+      | PolygonLayer<OpsAreaSummary>
+      | PolygonLayer<Preview>
+    )[] = [
+      // overview: the extent each assessment covered, so a new one is not
+      // placed on top of ground that has already been assessed
+      new PolygonLayer<OpsAreaSummary>({
+        id: "ops-area-extents",
+        data: (areas ?? []).filter((a) => a.bbox),
+        getPolygon: (a) => {
+          const [w, s, e, n] = a.bbox!;
+          return [
+            [w, s],
+            [e, s],
+            [e, n],
+            [w, n],
+          ];
+        },
+        stroked: true,
+        filled: true,
+        getFillColor: [...hexRgb(FEMA_HEX.major), 28],
+        getLineColor: [...hexRgb(FEMA_HEX.major), 200],
+        lineWidthUnits: "pixels",
+        getLineWidth: 1.5,
+      }),
       new GeoJsonLayer<OpsProps>({
         id: "ops-structures",
         data: data as OpsFeature[],
@@ -989,18 +1567,25 @@ function OpsMap({
         getFillColor: (f): RGBA => {
           const p = f.properties;
           if (!p.damage_level) return [...hexRgb(NOT_ASSESSED_HEX), 220];
-          return [...hexRgb(FEMA_HEX[p.damage_level]), Math.round(80 + 170 * (p.confidence ?? 0))];
+          // over imagery the fill is a tint, so the roof stays readable
+          const c = p.confidence ?? 0;
+          return [...hexRgb(FEMA_HEX[p.damage_level]), Math.round(shown ? 45 + 60 * c : 80 + 170 * c)];
         },
         getLineColor: (f): RGBA => {
           const p = f.properties;
           if (p.ncr_id === selected) return [0, 0, 0, 255];
           if (labels[p.ncr_id]) return [40, 40, 40, 255];
           if (p.needs_review) return [...ACCENT, 255];
+          if (shown && p.damage_level) return [...hexRgb(FEMA_HEX[p.damage_level]), 255];
           return [90, 90, 90, 170];
         },
         getLineWidth: (f) =>
-          f.properties.ncr_id === selected ? 4 : f.properties.needs_review ? 2 : 0.8,
-        updateTriggers: { getLineColor: [selected, labels], getLineWidth: [selected] },
+          f.properties.ncr_id === selected ? 4 : f.properties.needs_review ? 2 : shown ? 1.5 : 0.8,
+        updateTriggers: {
+          getFillColor: [shown],
+          getLineColor: [selected, labels, shown],
+          getLineWidth: [selected, shown],
+        },
         onClick: (info: PickingInfo) => {
           const f = info.object as OpsFeature | undefined;
           onSelect(f ? f.properties.ncr_id : null);
@@ -1011,24 +1596,35 @@ function OpsMap({
         },
       }),
     ];
-    if (pick) {
+    if (preview) {
       out.push(
-        new ScatterplotLayer<[number, number]>({
-          id: "ops-pick",
-          data: [pick],
-          getPosition: (d) => d,
-          getRadius: 9,
+        new PolygonLayer<Preview>({
+          id: "ops-preview-extent",
+          data: [preview],
+          getPolygon: previewRing,
+          stroked: true,
+          filled: true,
+          getFillColor: [...ACCENT, 24],
+          getLineColor: [...ACCENT, 255],
+          lineWidthUnits: "pixels",
+          getLineWidth: 2,
+        }),
+        new ScatterplotLayer<Preview>({
+          id: "ops-preview-centre",
+          data: [preview],
+          getPosition: (d) => [d.lon, d.lat],
+          getRadius: 5,
           radiusUnits: "pixels",
           stroked: true,
           filled: false,
           getLineColor: [...ACCENT, 255],
           lineWidthUnits: "pixels",
-          getLineWidth: 3,
+          getLineWidth: 2,
         }),
       );
     }
     return out;
-  }, [data, selected, labels, onSelect, picking, pick]);
+  }, [data, areas, selected, labels, onSelect, picking, preview, shown]);
 
   useEffect(() => {
     if (!ready || !mapRef.current) return;
@@ -1080,10 +1676,15 @@ function OpsMap({
 function RunSummary({
   fc,
   areaId,
+  rerunning,
+  onRerun,
   onDeleted,
 }: {
   fc: OpsCollection;
   areaId: string;
+  /** an assessment of this area is queued or running */
+  rerunning: boolean;
+  onRerun: () => void;
   onDeleted: () => void;
 }) {
   const p = fc.properties;
@@ -1091,7 +1692,7 @@ function RunSummary({
   const reasons = p.pair_context.reasons ?? [];
   return (
     <section className="border-b border-line pb-4">
-      <h2 className="text-base font-semibold text-ink">{areaTitle(areaId)}</h2>
+      <h2 className="text-base font-semibold text-ink">{areaTitle(areaId, p.aoi.name)}</h2>
       <div className="text-sm text-ink-dim">
         {p.event.name} · {p.event.declarations.join(", ") || "provisional event"}
         {p.aoi.county ? ` · ${p.aoi.county} Co.` : ""} · {p.aoi.role} area
@@ -1125,9 +1726,20 @@ function RunSummary({
         </a>
         {p.aoi.role === "OPS" && (
           <button
+            className={btn}
+            disabled={rerunning}
+            title="Assess this area again from the imagery it already has: after a calibration or a software update. Labels are kept."
+            onClick={onRerun}
+          >
+            {rerunning ? "Running again…" : "Run again"}
+          </button>
+        )}
+        {p.aoi.role === "OPS" && (
+          <button
             className={`${btn} text-dmg3`}
+            disabled={rerunning}
             onClick={async () => {
-              if (!window.confirm(`Delete the assessment "${areaTitle(areaId)}"? Labels are kept.`)) return;
+              if (!window.confirm(`Delete the assessment "${areaTitle(areaId, p.aoi.name)}"? Labels are kept.`)) return;
               try {
                 await deleteArea(areaId);
                 toast.success("Assessment deleted");
@@ -1249,6 +1861,204 @@ function ImpactPanel({ areaId }: { areaId: string }) {
   );
 }
 
+const REVIEW_PAGE = 150;
+
+const n0 = (v: number | undefined) => Math.round(v ?? 0).toLocaleString();
+
+/** What FEMA has approved in the ZIP codes this area touches, beside what the
+ * assessment expects there. Folded by default: it is context for a later
+ * stage of an event, and it is easy to over-read. */
+function FemaPanel({ areaId }: { areaId: string }) {
+  const [ref, setRef] = useState<FemaReference | null | "none">(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open || ref !== null) return;
+    let live = true;
+    loadFemaReference(areaId)
+      .then((d) => live && setRef(d))
+      .catch(() => live && setRef("none"));
+    return () => {
+      live = false;
+    };
+  }, [open, ref, areaId]);
+  return (
+    <details
+      className="border-b border-line py-3 text-sm"
+      onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}
+    >
+      <summary className={`${h2} cursor-pointer`}>FEMA assistance by ZIP code</summary>
+      {ref === null && <p className="mt-2 text-ink-dim">Loading…</p>}
+      {ref === "none" && (
+        <p className="mt-2 text-ink-dim">
+          Not available (needs the responder token, or OpenFEMA is unreachable).
+        </p>
+      )}
+      {ref && ref !== "none" && (
+        <>
+          {ref.status === "NO_DECLARATION" ? (
+            <p className="mt-2 text-ink-dim">
+              No federal declaration for this event yet, so FEMA has published
+              no assistance data.
+            </p>
+          ) : ref.zips.length === 0 ? (
+            <p className="mt-2 text-ink-dim">
+              No structure in this area has an address, so none could be placed
+              in a ZIP code.
+            </p>
+          ) : (
+            <table className="tnum mt-2 w-full text-sm">
+              <caption className="sr-only">
+                Homes this assessment expects at Major or Destroyed, and FEMA owner approvals, by ZIP code
+              </caption>
+              <thead>
+                <tr className="text-xs text-ink-dim">
+                  <th className="text-left font-medium">ZIP</th>
+                  <th className="text-right font-medium" title="Homes assessed in this area with that ZIP, and how many are expected at Major or Destroyed">
+                    This area
+                  </th>
+                  <th className="text-right font-medium" title="Owner households FEMA approved in the whole ZIP code">
+                    FEMA approved
+                  </th>
+                  <th className="text-right font-medium" title="Owner approvals over $25,000, and maximum grants">
+                    Over $25k
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {ref.zips.map((z) => (
+                  <tr key={z.zip} className="border-t border-line align-top">
+                    <td className="py-1 text-ink">{z.zip}</td>
+                    <td className="py-1 text-right text-ink">
+                      ~{n0(z.expected_major_plus)} ≥ Major
+                      <div className="text-xs text-ink-dim">of {n0(z.homes_assessed)} homes</div>
+                    </td>
+                    <td className="py-1 text-right text-ink">
+                      {z.fema?.owners ? n0(z.fema.owners.approved) : "n/a"}
+                      {z.fema?.owners && (
+                        <div className="text-xs text-ink-dim">
+                          of {n0(z.fema.owners.registrations)} owners
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-1 text-right text-ink">
+                      {z.fema?.owners ? n0(z.fema.owners.approved_over_25k) : "n/a"}
+                      {z.fema?.owners && (
+                        <div className="text-xs text-ink-dim">
+                          {n0(z.fema.owners.max_grants)} max grants
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <p className="mt-2 text-xs leading-relaxed text-ink-dim">
+            {ref.caveat}
+            {ref.unplaced_structures > 0 &&
+              ` ${ref.unplaced_structures.toLocaleString()} structures here have no address and are not in the ZIP rows.`}{" "}
+            Source: {ref.source.name}.
+          </p>
+          {ref.warnings.map((w) => (
+            <p key={w} className="mt-1 text-xs text-dmg3">
+              {w}
+            </p>
+          ))}
+        </>
+      )}
+    </details>
+  );
+}
+
+const pct = (v: number | null | undefined) => (v == null ? "n/a" : `${Math.round(v * 100)}%`);
+
+/** NC Recon's calls beside the search-and-rescue teams' categories for the
+ * same structures. Shown only where a comparison exists (Buncombe areas). */
+function FieldReferencePanel({ areaId }: { areaId: string }) {
+  const [ref, setRef] = useState<FieldReference | null | "none">(null);
+  useEffect(() => {
+    let live = true;
+    loadFieldReference(areaId)
+      .then((d) => live && setRef(d))
+      .catch(() => live && setRef("none"));
+    return () => {
+      live = false;
+    };
+  }, [areaId]);
+  if (ref === null || ref === "none") return null;
+  const s = ref.summary;
+  const m = s.major_or_destroyed;
+  const hits = m.both_count;
+  const share = (a: number, b: number) => (b ? `${Math.round((100 * a) / b)}%` : "n/a");
+  return (
+    <details className="border-b border-line py-3 text-sm">
+      <summary className={`${h2} cursor-pointer`}>Compared with search teams' field calls</summary>
+      <p className="mt-2 text-ink">
+        {n0(ref.counts.matched)} buildings here were also categorized by Helene search-and-rescue teams.
+      </p>
+      <ul className="mt-2 space-y-1 text-ink">
+        <li>
+          When NC Recon called Major or Destroyed, the teams agreed {n0(hits)} of{" "}
+          {n0(m.ncr_most_likely_count)} times ({share(hits, m.ncr_most_likely_count)}).
+        </li>
+        <li>
+          It caught {n0(hits)} of the {n0(m.sar_count)} buildings the teams called Major or Destroyed (
+          {share(hits, m.sar_count)}). Interior flood damage does not show on a roof; those need the flood-depth
+          evidence or a field visit.
+        </li>
+        {ref.summary_homes && ref.summary_homes.n > 0 && (
+          <li>
+            Homes only ({n0(ref.summary_homes.n)}): agreed {n0(ref.summary_homes.major_or_destroyed.both_count)} of{" "}
+            {n0(ref.summary_homes.major_or_destroyed.ncr_most_likely_count)}; caught{" "}
+            {n0(ref.summary_homes.major_or_destroyed.both_count)} of{" "}
+            {n0(ref.summary_homes.major_or_destroyed.sar_count)}.
+          </li>
+        )}
+        <li className="text-ink-dim">
+          Same level {pct(s.same_level)}, within one level {pct(s.within_one_level)}; the teams&apos; level was
+          inside NC Recon&apos;s 80% set {pct(s.sar_level_in_80pct_set)} of the time.
+        </li>
+      </ul>
+      <table className="tnum mt-3 w-full text-xs">
+        <caption className="sr-only">Structures by search-team level (rows) and NC Recon most likely level (columns)</caption>
+        <thead>
+          <tr className="text-ink-dim">
+            <th className="text-left font-medium">Teams ↓ · NC Recon →</th>
+            {s.levels.map((l) => (
+              <th key={l} className="text-right font-medium">
+                {l}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {s.confusion_rows_sar_cols_ncr.map((row, i) => (
+            <tr key={s.levels[i]} className="border-t border-line">
+              <th scope="row" className="py-0.5 text-left font-normal text-ink-dim">
+                {s.levels[i]}
+              </th>
+              {row.map((v, j) => (
+                <td key={j} className={`py-0.5 text-right ${i === j ? "font-semibold text-ink" : "text-ink-dim"}`}>
+                  {v}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <ul className="mt-2 list-disc pl-4 text-xs leading-relaxed text-ink-dim">
+        {ref.caveats.map((c) => (
+          <li key={c}>{c}</li>
+        ))}
+      </ul>
+      <p className="mt-1 text-xs text-ink-dim">
+        {ref.match_rule}. {n0(ref.counts.unmatched)} team waypoints matched no assessed structure. Source:{" "}
+        {ref.reference.name}.
+      </p>
+    </details>
+  );
+}
+
 function ReviewList({
   queue,
   labeledCount,
@@ -1258,6 +2068,7 @@ function ReviewList({
   labeledCount: number;
   onPick: (id: string) => void;
 }) {
+  const [limit, setLimit] = useState(REVIEW_PAGE);
   return (
     <section className="pt-4">
       <h2 className={h2}>Review queue</h2>
@@ -1267,8 +2078,10 @@ function ReviewList({
         next/previous, Esc close.
       </p>
       <ul className="mt-2 divide-y divide-line">
-        {queue.slice(0, 150).map((p) => (
-          <li key={p.ncr_id}>
+        {queue.slice(0, limit).map((p, i) => (
+          // index in the key: assessments made before multi-part buildings got
+          // their own ids can hold the same ncr_id twice
+          <li key={`${p.ncr_id}-${i}`}>
             <button
               onClick={() => onPick(p.ncr_id)}
               className="flex w-full items-center gap-2 py-1.5 text-left text-sm hover:bg-surface-2"
@@ -1285,6 +2098,12 @@ function ReviewList({
           </li>
         ))}
       </ul>
+      {queue.length > limit && (
+        <button className={`${btn} mt-2`} onClick={() => setLimit((n) => n + REVIEW_PAGE)}>
+          Show {Math.min(REVIEW_PAGE, queue.length - limit)} more ({limit} of{" "}
+          {queue.length.toLocaleString()} shown)
+        </button>
+      )}
     </section>
   );
 }
@@ -1357,6 +2176,8 @@ function StructureCard({
   f,
   address,
   labeled,
+  note,
+  onNote,
   onLabel,
   onClose,
 }: {
@@ -1364,6 +2185,8 @@ function StructureCard({
   f: OpsFeature;
   address?: string;
   labeled?: string;
+  note: string;
+  onNote: (v: string) => void;
   onLabel: (lab: string) => void;
   onClose: () => void;
 }) {
@@ -1439,6 +2262,16 @@ function StructureCard({
             <span className="text-ink-dim">x</span> Can't tell
           </button>
         </div>
+        <label className="mt-2 block text-sm">
+          <span className="text-ink-dim">Note saved with the label (optional)</span>
+          <input
+            className={field}
+            value={note}
+            maxLength={300}
+            placeholder="e.g. roof under trees, tarp on north side"
+            onChange={(e) => onNote(e.target.value)}
+          />
+        </label>
       </div>
 
       <details className="mt-3 text-sm">

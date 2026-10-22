@@ -66,3 +66,11 @@ docs/CAC_VIDEO_SCRIPT.md
 pipeline/runs/
 reports/*.json
 web/dist-demo/
+
+# runtime state of a local server: responder audit trail, operational
+# registry, job list, analyst labels, calibration fits
+pipeline/data/audit.log
+pipeline/data/ops_registry.yaml*
+pipeline/data/jobs.json*
+pipeline/data/labels/
+pipeline/data/calibration/

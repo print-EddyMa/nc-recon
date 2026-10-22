@@ -116,3 +116,43 @@ def test_public_impact_is_suppressed(monkeypatch):
         assert t.get("suppressed") or (t["structures"] or 0) >= 5
     full = c.get("/ops/areas/marshall/impact", headers={"Authorization": "Bearer s3cret"}).json()
     assert not any(t.get("suppressed") for t in full["tracts"])
+
+
+def test_importing_the_server_touches_no_live_state(monkeypatch):
+    """Recovery (mark lost jobs, prune half-registered areas) belongs to server
+    start-up. Importing the module, as every test and script does, must not run
+    it: it once deleted the imagery of an assessment another process was running."""
+    import importlib
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+    called = []
+    monkeypatch.setattr(jobs, "prune_orphans", lambda: called.append("prune") or [])
+    monkeypatch.setattr(jobs, "restore", lambda: called.append("restore") or [])
+    import server
+    importlib.reload(server)
+    assert called == []
+    from fastapi.testclient import TestClient
+    with TestClient(server.app):            # start-up runs the recovery, once
+        assert called == ["restore", "prune"]
+
+
+def test_test_run_does_not_use_the_live_registry():
+    from terratriage.ops import DATA_DIR, audit
+    from terratriage.ops.plan.events import registry_path
+    assert not registry_path().startswith(DATA_DIR)
+    assert not jobs.store_path().startswith(DATA_DIR)
+    assert not audit.PATH.startswith(DATA_DIR)
+
+
+def test_job_errors_carry_no_terminal_escape_codes(monkeypatch, tmp_path):
+    import subprocess
+    import sys
+    monkeypatch.setenv("NCR_JOBS_FILE", str(tmp_path / "jobs.json"))
+    real = subprocess.Popen
+    code = "import sys; sys.stderr.write('\\x1b[1;35mRasterioIOError\\x1b[0m: \\x1b[35mRead failed\\x1b[0m\\n'); sys.exit(1)"
+    monkeypatch.setattr(jobs.subprocess, "Popen", lambda cmd, **kw: real([sys.executable, "-c", code], **kw))
+    j = _job()
+    with pytest.raises(RuntimeError) as ex:
+        jobs._run(j, "assessing structures", ["ops-assess"])
+    assert str(ex.value) == "assessing structures failed: RasterioIOError: Read failed"
+    assert not any("\x1b" in line for line in j.log)

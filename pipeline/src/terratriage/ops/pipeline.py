@@ -26,8 +26,9 @@ from .analyze.evidence import aoi_radiometry, measure
 from .analyze.fusion import decide, rules
 from .cachekey import code_version
 from .collect.nsi import NSI
+from .counties import county_of
 from .geodesy import transformer, usng
-from .plan.events import check_image_pair, event_for_area
+from .plan.events import area_name, check_image_pair, event_for_area
 from .process import coreg, imagery
 from .process.structures import RESIDENTIAL, conflate, unmatched_nsi
 from .process.structures import ncr_id as ncr_id_fn
@@ -69,6 +70,35 @@ def _cnn_logits(pre_path: str, post_path: str, polys, crs) -> tuple[np.ndarray |
     return None, "MODEL_MISSING"
 
 
+def part_ids(source_id: str, geom) -> list[tuple[str, Any]]:
+    """(id, polygon) for each part of a footprint. A multi-part building (a
+    house and its detached wing under one source id) is assessed part by part,
+    so every part needs its own id: the largest keeps the source id, the rest
+    get "<id>/1", "<id>/2" by decreasing area. Single-part ids are unchanged."""
+    if geom.geom_type != "MultiPolygon":
+        return [(source_id, geom)]
+    parts = sorted(geom.geoms, key=lambda p: (-p.area, p.centroid.x, p.centroid.y))
+    return [(source_id if k == 0 else f"{source_id}/{k}", p) for k, p in enumerate(parts)]
+
+
+def unique_id(source_id: str, geom, taken: dict[str, Any]) -> str | None:
+    """Keep ids unique within a source. A feature the service returned twice
+    (same id, same shape: paging overlap) is dropped (None). A different
+    building under an id already used keeps its place with "<id>~2", "~3"..."""
+    prev = taken.get(source_id)
+    if prev is None:
+        taken[source_id] = geom
+        return source_id
+    k, sid = 1, source_id
+    while sid in taken:
+        if taken[sid].equals(geom):
+            return None
+        k += 1
+        sid = f"{source_id}~{k}"
+    taken[sid] = geom
+    return sid
+
+
 def footprints(raster_path: str, area: str, warnings: list[str]) -> dict[str, Any]:
     """USA Structures as the primary footprint set, OSM filling gaps.
 
@@ -98,14 +128,19 @@ def footprints(raster_path: str, area: str, warnings: list[str]) -> dict[str, An
     polys, srcs, ids, attrs = [], [], [], []
     try:
         usa = USAStructures().fetch(bbox)
+        taken: dict[str, Any] = {}
         for f in usa.data["features"]:
             g = shape(f["geometry"])
-            for part in (g.geoms if g.geom_type == "MultiPolygon" else [g]):
-                if part.is_valid and _ok(part):
-                    polys.append(part)
-                    srcs.append("usa_structures")
-                    ids.append(str(f["properties"]["BUILD_ID"]))
-                    attrs.append(f["properties"])
+            for sid, part in part_ids(str(f["properties"]["BUILD_ID"]), g):
+                if not (part.is_valid and _ok(part)):
+                    continue
+                sid = unique_id(sid, part, taken)
+                if sid is None:
+                    continue
+                polys.append(part)
+                srcs.append("usa_structures")
+                ids.append(sid)
+                attrs.append(f["properties"])
         vintage = usa.provenance.dataset_version
     except Exception as ex:  # noqa: BLE001
         warnings.append(f"USA Structures unavailable ({ex}); OSM only")
@@ -203,8 +238,27 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
     except Exception as ex:  # noqa: BLE001 - occupancy is context, not the damage call
         warnings.append(f"USACE NSI unavailable ({str(ex)[:120]}): no occupancy/foundation data; "
                         "occupants from USA Structures only; flood depth (E5) unavailable")
+    # water-surface elevations for E5: the event's published crests on the
+    # town's reaches (a secondary source: never allowed to cost the assessment)
+    wse_prov: list[dict] = []
+    if wse_sources is None:
+        from .collect import ncem_peak_stage
+
+        wse_sources, wse_warn, wse_prov = ncem_peak_stage.wse_sources(
+            ev.id, bbox, str(ev.incident_begin), str(ev.post.end))
+        warnings.extend(wse_warn)
+        if wse_sources:
+            warnings.append(f"flood depth (E5) from {len(wse_sources)} published crest(s): "
+                            + "; ".join(s.ref for s in wse_sources))
         nsi_feats, nsi_prov = [], {"source": "USACE National Structure Inventory", "status": "unavailable"}
     structs = conflate(polys_ll, srcs, ids, nsi_feats, attrs)
+    seen_ids: set[str] = set()
+    for st in structs:
+        # labels, chips and exports are all keyed by ncr_id: two structures
+        # sharing one would silently share a label
+        if st.ncr_id in seen_ids:
+            raise RuntimeError(f"duplicate structure id {st.ncr_id} ({st.source_ids})")
+        seen_ids.add(st.ncr_id)
     missing = unmatched_nsi(structs, nsi_feats)
     if missing:
         warnings.append(f"{len(missing)} NSI structure points have no footprint in any source "
@@ -366,6 +420,9 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
                           "cbfips_2010": np_.get("cbfips"),
                       }})
 
+    if not feats:
+        warnings.append("No structures found in this area in FEMA USA Structures, OpenStreetMap or "
+                        "the USACE National Structure Inventory: nothing was assessed")
     counts = {c: 0 for c in FEMA}
     expected = np.zeros(len(FEMA))
     n_review = 0
@@ -384,9 +441,14 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
         n_review += int(p["needs_review"])
     interval = count_interval(np.array(assessed_probs)) if assessed_probs else {}
 
+    side = imagery.sidecar(RAW, area)
     provenance = {
-        "imagery": [imagery.sidecar(RAW, area)[r]["provenance"] | {"role": r, "date_label": imagery.sidecar(RAW, area)[r]["date_label"]}
-                    for r in ("pre", "post")] if imagery.sidecar(RAW, area) else [
+        "imagery": [side[r]["provenance"] | {
+            "role": r, "date_label": side[r]["date_label"],
+            # the acquisition date as far as it is known: one day, or a range
+            "date_min": side[r].get("date_min") or side[r].get("date"),
+            "date_max": side[r].get("date_max") or side[r].get("date")}
+                    for r in ("pre", "post")] if side else [
             Provenance(
                 source=f"Maxar Open Data ({i.platform})", source_url=i.url or "",
                 license="CC BY-NC 4.0", acquired_utc=i.acquired_utc,
@@ -424,7 +486,10 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
             "event": {"id": ev.id, "name": ev.name,
                       "declarations": [d.fema_id for d in ev.declarations],
                       "incident_begin": ev.incident_begin.isoformat()},
-            "aoi": {"id": area, "role": aoi.role, "county": aoi.county, "center": list(aoi.center)},
+            "aoi": {"id": area, "name": area_name(area), "role": aoi.role, "center": list(aoi.center),
+                    # an operational area is made from a point: name its county
+                    # from the census blocks of its own structures
+                    "county": aoi.county or county_of(f["properties"].get("cbfips_2010") for f in feats)},
             "pair_context": pair, "coregistration": cr, "footprint_alignment": align_info,
             "e2_baseline": None if e2_base is None else {"median": round(e2_base[0], 3),
                                                          "scaled_mad": round(e2_base[1], 3)},
@@ -443,6 +508,7 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
             "config_status": {"context_rules": ctx_rules.get("status"),
                               "crosswalk_xbd_to_fema": crosswalks()["xbd_to_fema"]["status"]},
             "warnings": warnings,
+            "flood_depth_sources": wse_prov,
             "provenance": provenance,
             "runtime_sec": round(time.time() - t0, 1),
         },
@@ -506,6 +572,7 @@ def _manifest(run_id, area, out_path, pre, post, timings, warnings, missing, ctx
                    "context_rules_status": ctx_rules.get("status")},
         "timings_sec": {k: round(v, 2) for k, v in timings.items()},
         "warnings": warnings,
+        "flood_depth_sources": wse_prov,
         "nsi_structures_without_footprint": [
             {"fd_id": f["properties"].get("fd_id"), "occtype": f["properties"].get("occtype"),
              "lonlat": f["geometry"]["coordinates"]} for f in missing],

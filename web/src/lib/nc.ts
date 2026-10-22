@@ -445,6 +445,77 @@ async function _ncClosures(): Promise<NCResult<NCPointFC>> {
 export const ncClosures = () => memoFeed("closures", _ncClosures);
 
 // --------------------------------------------------------------------------- //
+// Composed by the pipeline server from public ArcGIS services (no browser
+// access to NCEM's host; the others are shaped and cached there): NC FIMAN
+// gauges, Duke Energy outages by county, FEMA open shelters. No committed
+// snapshots: without the server the layer is off and says why.
+// --------------------------------------------------------------------------- //
+async function _ncFiman(): Promise<NCResult<NCPointFC>> {
+  const now = Date.now();
+  const { data, live, asOf } = await liveOrSnapshot("fiman", "fiman_snapshot.geojson", emptyPts);
+  const n = data.features.length;
+  const flooding = data.features.filter((f) => f.properties.severity >= 2).length;
+  const near = data.features.filter((f) => f.properties.severity === 1).length;
+  return {
+    data,
+    stale: !live,
+    disabled: n === 0,
+    reason: n === 0 ? "Needs the NC Recon server: NCEM's FIMAN service has no browser access." : undefined,
+    source: `NCEM FIMAN · ${live ? "live" : snapLabel(asOf)}`,
+    fetchedAt: now,
+    headline: !n
+      ? undefined
+      : flooding
+        ? `${flooding} flooding · ${near} near`
+        : near
+          ? `${near} near flooding`
+          : `${n} gauges, all normal`,
+  };
+}
+export const ncFiman = () => memoFeed("fiman", _ncFiman);
+
+type PowerFC = NCGeomFC & { totals?: { customers_out: number; customers_served: number; counties_out: number } };
+async function _ncPower(): Promise<NCResult<NCGeomFC>> {
+  const now = Date.now();
+  const { data, live, asOf } = await liveOrSnapshot<PowerFC>("power", "power_snapshot.geojson", emptyGeom);
+  const out = data.totals?.customers_out ?? 0;
+  return {
+    data,
+    stale: !live,
+    disabled: !live && data.features.length === 0,
+    reason: !live ? "Needs the NC Recon server for Duke Energy's outage service." : undefined,
+    source: `Duke Energy outage map · ${live ? "live" : snapLabel(asOf)}`,
+    fetchedAt: now,
+    headline: live
+      ? out
+        ? `${out.toLocaleString()} customers out in ${data.totals?.counties_out ?? 0} counties`
+        : "no Duke Energy outages"
+      : undefined,
+  };
+}
+export const ncPower = () => memoFeed("power", _ncPower);
+
+async function _ncShelters(): Promise<NCResult<NCPointFC>> {
+  const now = Date.now();
+  const { data, live, asOf } = await liveOrSnapshot("shelters", "shelters_snapshot.geojson", emptyPts);
+  const n = data.features.length;
+  const pop = data.features.reduce(
+    (s, f) => s + (Number((f.properties as { population?: number | null }).population) || 0),
+    0,
+  );
+  return {
+    data,
+    stale: !live,
+    disabled: !live && n === 0,
+    reason: !live ? "Needs the NC Recon server for FEMA's shelter list." : undefined,
+    source: `FEMA ESF6 shelters · ${live ? "live" : snapLabel(asOf)}`,
+    fetchedAt: now,
+    headline: live ? (n ? `${n} open · ${pop.toLocaleString()} sheltered` : "no open shelters") : undefined,
+  };
+}
+export const ncShelters = () => memoFeed("shelters", _ncShelters);
+
+// --------------------------------------------------------------------------- //
 // E1. NC State Climate Office CLOUDS API: ECONet + RAWS current conditions.
 // Needs a free user hash; without one the layer is disabled with a prompt.
 // --------------------------------------------------------------------------- //

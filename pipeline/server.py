@@ -43,6 +43,7 @@ import time
 import urllib.request
 import uuid
 from collections import deque
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -93,7 +94,13 @@ _AREA_RE = re.compile(r"[a-z0-9_]{1,40}")
 _EVENT_RE = re.compile(r"[A-Za-z0-9._-]{1,80}")
 _NAME_STRIP_RE = re.compile(r"[^\w \-.,]", re.UNICODE)
 
-app = FastAPI(title="NC Recon", version="1.2")
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    _recover_after_restart()
+    yield
+
+
+app = FastAPI(title="NC Recon", version="1.2", lifespan=_lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS or ["http://localhost:5173"],
@@ -101,18 +108,57 @@ app.add_middleware(
     allow_headers=["authorization", "content-type"],
 )
 
+from terratriage.ops import guard  # noqa: E402
 from terratriage.ops.api import router as ops_router  # noqa: E402
 
 app.include_router(ops_router)
 
-try:  # half-registered areas from a restart mid-job
-    from terratriage.ops.jobs import prune_orphans  # noqa: E402
 
-    _pruned = prune_orphans()
-    if _pruned:
-        print(f"[server] pruned unfinished operational areas: {_pruned}")
-except Exception as _ex:  # noqa: BLE001
-    print(f"[server] orphan prune skipped: {_ex}")
+@app.middleware("http")
+async def _guard(request: Request, call_next):
+    """Per-client rate limits and browser security headers on every response
+    (API and web app alike). See terratriage.ops.guard."""
+    wait = guard.check(request)
+    if wait:
+        return JSONResponse(
+            {"detail": "too many requests; slow down"},
+            status_code=429,
+            headers={"Retry-After": str(int(wait) + 1)},
+        )
+    resp = await call_next(request)
+    for k, v in _SECURITY_HEADERS.items():
+        resp.headers.setdefault(k, v)
+    # API answers are never cached by a browser or a shared proxy; the built
+    # web assets keep the validators StaticFiles already sets
+    if request.url.path.startswith(_API_PREFIXES):
+        resp.headers.setdefault("Cache-Control", "no-store")
+    return resp
+
+
+_API_PREFIXES = ("/ops", "/feed", "/events", "/catalog", "/health")
+
+
+_SECURITY_HEADERS = guard.security_headers(os.environ.get("NCR_WEB_DIST", "").strip() or None)
+
+
+
+def _recover_after_restart() -> None:
+    """Runs once when the server starts serving (not on import: a test run or a
+    script that merely imports this module must never touch a live data
+    directory). Marks interrupted jobs lost and drops the areas they left
+    half-registered."""
+    try:
+        from terratriage.ops.jobs import prune_orphans, restore
+
+        lost = restore()
+        if lost:
+            print(f"[server] {len(lost)} assessment job(s) were interrupted by the restart: marked lost")
+        pruned = prune_orphans()
+        if pruned:
+            print(f"[server] pruned unfinished operational areas: {pruned}")
+    except Exception as ex:  # noqa: BLE001
+        print(f"[server] restart recovery skipped: {ex}")
+
 
 USGS_URL = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson"
 GDACS_URL = "https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH"
@@ -196,14 +242,15 @@ _FEEDS: dict[str, tuple[str, int]] = {
     "nws": ("https://api.weather.gov/alerts/active?area=NC", 180),
 }
 _FEED_CACHE: dict[str, tuple[float, bytes, str]] = {}
-_FEED_UA = "NCRecon/1.0 (Congressional App Challenge; +https://github.com/)"
+from terratriage.ops.collect.base import USER_AGENT as _FEED_UA  # noqa: E402  (names a contact)
 
 
 # Feeds the server composes itself (several upstream calls -> one normalized
 # GeoJSON), rather than passing one URL through. USGS streamflow moved off the
 # legacy NWIS WaterServices (503 since Aug 2026, decommission Q1 2027) onto the
 # api.waterdata.usgs.gov OGC API, whose NC query needs a site-list join.
-_COMPOSED_TTL = {"usgs_water": 300, "drivenc_closures": 300, "drivenc_cameras": 3600, "nhc": 600}
+_COMPOSED_TTL = {"usgs_water": 300, "drivenc_closures": 300, "drivenc_cameras": 3600, "nhc": 600,
+                 "fiman": 300, "power": 600, "shelters": 900}
 
 
 def _composed(name: str) -> bytes:
@@ -215,11 +262,12 @@ def _composed(name: str) -> bytes:
         fc["provenance"] = layer.provenance.to_dict()
         fc["warnings"] = layer.warnings
         return json.dumps(fc).encode()
-    if name in ("drivenc_closures", "drivenc_cameras", "nhc"):
+    if name in ("drivenc_closures", "drivenc_cameras", "nhc", "fiman", "power", "shelters"):
         from terratriage.ops.collect import nc_feeds
 
         fn = {"drivenc_closures": nc_feeds.drivenc_closures, "drivenc_cameras": nc_feeds.drivenc_cameras,
-              "nhc": nc_feeds.nhc_storms}[name]
+              "nhc": nc_feeds.nhc_storms, "fiman": nc_feeds.fiman_gauges, "power": nc_feeds.duke_outages,
+              "shelters": nc_feeds.fema_shelters}[name]
         return json.dumps(fn()).encode()
     raise KeyError(name)
 
@@ -670,14 +718,6 @@ def tile(area: str, kind: str, z: int, x: int, y: int, empty: int = 0):
 _WEB_DIST = os.environ.get("NCR_WEB_DIST", "").strip()
 if _WEB_DIST and os.path.isdir(_WEB_DIST):
     from fastapi.staticfiles import StaticFiles
-
-    @app.middleware("http")
-    async def _security_headers(request: Request, call_next):
-        resp = await call_next(request)
-        resp.headers.setdefault("X-Content-Type-Options", "nosniff")
-        resp.headers.setdefault("Referrer-Policy", "no-referrer")
-        resp.headers.setdefault("X-Frame-Options", "DENY")
-        return resp
 
     app.mount("/", StaticFiles(directory=_WEB_DIST, html=True), name="web")
 

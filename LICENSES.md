@@ -3,8 +3,8 @@
 | Component | License | Obligation for NC Recon outputs |
 |---|---|---|
 | NC Recon code | (project) | — |
-| OpenStreetMap footprints (gap-fill) | ODbL 1.0 | Attribution "© OpenStreetMap contributors"; a derived *database* including them must be ODbL. Exports mark `footprint_source = osm`. |
-| FEMA USA Structures | US Government work | Credit FEMA / ORNL. Addresses are PII-adjacent: responder mode only. |
+| OpenStreetMap footprints (gap-fill) | ODbL 1.0 | Attribution "© OpenStreetMap contributors"; a derived *database* including them must be ODbL. Exports mark `footprint_source = osm`. Open question (OSMF Horizontal Layers guideline): merging OSM and USA Structures outlines in one building layer makes that layer a derivative database; the damage attributes are kept in NC Recon's own table keyed by footprint id so the county's assessment data is not pulled under ODbL. |
+| FEMA USA Structures | CC BY 4.0 (per the Esri item's licence statement, checked 2026-10-07) | Credit FEMA / ORNL with the CC BY notice. Addresses are PII-adjacent: responder mode only. |
 | USACE NSI 2022 | US Government work | Credit USACE. |
 | Maxar Open Data (Helene) | CC BY-NC 4.0 | Non-commercial use only, with attribution. Products derived from Maxar imagery inherit NC. |
 | NC OneMap orthoimagery (2020–2023 program; Helene 2025) | Public (NC OneMap / CGIA / NC 911 Board; NC Collaboratory) | Credit the providers. |
@@ -12,6 +12,7 @@
 | USGS Water Data, STN, 3DEP | US Government work | Credit USGS. |
 | NOAA NWPS / NWS / NHC | US Government work | Credit NOAA. |
 | OpenFEMA | US Government work, OpenFEMA terms | No FEMA endorsement implied. |
+| Buncombe County SARCOP extract (comparison only) | unstated (county ArcGIS Online item) | Not redistributed; only aggregates and NC Recon structure ids are stored. Personal fields on the layer are never fetched. |
 | CDC/ATSDR SVI 2022 | US Government work | Credit CDC/ATSDR; cache a versioned snapshot. |
 | xView2 baseline weights / xBD | xView2 challenge terms (non-commercial) | Note in model outputs. |
 | CARTO basemaps (web) | CARTO attribution terms | Attribution shown on map. |

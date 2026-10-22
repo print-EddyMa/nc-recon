@@ -1,0 +1,330 @@
+<title>Groma Disaster Assessment</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Groma tells emergency managers, insurers and the National Guard what happened to every building after a disaster, how we know, and how sure we are.">
+<link rel="icon" href="data:image/svg+xml,__FAVICON__">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Hallmark · macrostructure: Split Studio · tone: austere, surveyed · anchor hue: verdigris
+ * nav: N9 edge-aligned with a two-line lockup · footer: Ft4 dense colophon · enrichment: real imagery plate + rendered instrument
+ * pre-emit critique: P4 H4 E4 S5 R5 V4
+ * A surveyor's sheet: a collar of coordinates, one plate of real imagery, a faint
+ * centuriation grid behind it, and three buyer paths set like entries in a register. */
+:root {
+  --bg: #111517; --surface: #171C1E; --surface-2: #1E2427; --line: #2A3235; --line-strong: #3B4549;
+  --grid: rgba(233, 231, 224, 0.045);
+  --ink: #E9E7E0; --ink-dim: #A4A9A3; --ink-faint: #7C837F;
+  --verdigris: #63B59C; --verdigris-ink: #0D1A16;
+  --bronze: #C9954B;
+  --ring: #6FD3FF; --cap-ink: #F2F1EC; --cap-bg: rgba(10, 14, 15, 0.74);
+  --d0: #9E9E9E; --d1: #FECC5C; --d2: #FD8D3C; --d3: #F03B20; --d4: #BD0026;
+  --display: "Marcellus", "Trajan Pro", "Optima", Georgia, serif;
+  --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --measure: 74rem;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #ECEEEA; --surface: #F6F7F4; --surface-2: #E2E5E0; --line: #D0D5CF; --line-strong: #AEB6B0;
+    --grid: rgba(22, 27, 29, 0.05);
+    --ink: #161B1D; --ink-dim: #4C5552; --ink-faint: #69716D;
+    --verdigris: #2C7A66; --verdigris-ink: #FFFFFF;
+    --bronze: #8E5F27;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #ECEEEA; --surface: #F6F7F4; --surface-2: #E2E5E0; --line: #D0D5CF; --line-strong: #AEB6B0;
+  --grid: rgba(22, 27, 29, 0.05);
+  --ink: #161B1D; --ink-dim: #4C5552; --ink-faint: #69716D;
+  --verdigris: #2C7A66; --verdigris-ink: #FFFFFF;
+  --bronze: #8E5F27;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 1.0625rem/1.6 var(--body); -webkit-font-smoothing: antialiased; }
+a { color: var(--verdigris); text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--verdigris); outline-offset: 3px; border-radius: 3px; }
+.wrap { max-width: var(--measure); margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--display); font-weight: 400; font-style: normal; text-wrap: balance; margin: 0; overflow-wrap: anywhere; min-width: 0; }
+p { margin: 0; max-width: 62ch; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* bar */
+.bar .wrap { display: flex; align-items: center; gap: 2rem; padding-block: 1.1rem; }
+.brand { display: flex; align-items: center; gap: 0.65rem; color: var(--ink); text-decoration: none; }
+.brand svg { width: 30px; height: 30px; flex: none; }
+.brand b { font: 400 1.35rem/1 var(--display); letter-spacing: 0.24em; }
+.lockup { display: grid; gap: 0.35rem; }
+.lockup small { font: 500 0.64rem/1 var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-faint); white-space: nowrap; }
+.bar nav { display: flex; gap: 1.6rem; margin-left: auto; }
+.bar nav a { color: var(--ink-dim); text-decoration: none; font-size: 0.92rem; white-space: nowrap; padding-block: 0.3rem; border-bottom: 1px solid transparent; transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out); }
+.bar nav a:hover { color: var(--ink); border-bottom-color: var(--line-strong); }
+@media (max-width: 860px) { .bar nav { display: none; } .bar .btn { margin-left: auto; } }
+@media (max-width: 480px) { .bar .btn { display: none; } }
+
+.btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.7rem 1.1rem; border-radius: 4px; font: 600 0.95rem/1 var(--body); text-decoration: none; white-space: nowrap; border: 1px solid var(--line-strong); color: var(--ink); background: transparent; cursor: pointer; transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out); }
+.btn:hover { border-color: var(--ink-faint); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--verdigris); color: var(--verdigris-ink); border-color: var(--verdigris); }
+.btn.primary:hover { background: color-mix(in srgb, var(--verdigris) 88%, var(--ink)); }
+
+/* the mark: plumb lines settle once */
+.plumb { transform-box: view-box; transform-origin: var(--px) 15px; animation: settle 2.6s cubic-bezier(.3,.6,.2,1) both; }
+@keyframes settle { 0% { transform: rotate(9deg); } 30% { transform: rotate(-5deg); } 55% { transform: rotate(2.5deg); } 78% { transform: rotate(-1deg); } 100% { transform: rotate(0); } }
+@media (prefers-reduced-motion: reduce) { .plumb { animation: none; } html { scroll-behavior: auto; } * { transition-duration: 0s !important; } }
+
+/* hero: statement left, plate right, centuriation grid behind */
+.hero { position: relative; border-top: 1px solid var(--line); }
+.hero::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 72px 72px; background-position: -1px -1px;
+  -webkit-mask-image: linear-gradient(180deg, #000 30%, transparent 100%); mask-image: linear-gradient(180deg, #000 30%, transparent 100%); }
+.hero .wrap { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: clamp(2rem, 5vw, 5rem); align-items: start; padding-block: clamp(3rem, 7vw, 6rem) clamp(3.5rem, 7vw, 6rem); }
+@media (max-width: 920px) { .hero .wrap { grid-template-columns: minmax(0, 1fr); } }
+h1 { font-size: clamp(2.4rem, 4.8vw, 4rem); line-height: 1.04; letter-spacing: 0.005em; }
+.lede { font-size: 1.2rem; color: var(--ink-dim); margin-top: 1.6rem; max-width: 31rem; }
+.ctas { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 2.2rem; }
+.doors { margin: 3rem 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line); max-width: 31rem; }
+.doors a { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding: 0.85rem 0; border-bottom: 1px solid var(--line); color: var(--ink); text-decoration: none; }
+.doors a span:first-child { font: 400 1.12rem/1.3 var(--display); }
+.doors a span:last-child { font: 400 0.78rem/1 var(--mono); color: var(--ink-faint); white-space: nowrap; transition: color 160ms var(--ease-out), transform 160ms var(--ease-out); }
+.doors a:hover span:last-child { color: var(--verdigris); transform: translateX(3px); }
+.doors a span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+@media (max-width: 520px) { .doors a span:last-child { display: none; } }
+
+/* the plate */
+.plate { margin: 0; min-width: 0; }
+.frame { position: relative; border: 1px solid var(--line-strong); padding: 10px; background: var(--surface); }
+.frame::before, .frame::after { content: ""; position: absolute; width: 14px; height: 14px; border-color: var(--bronze); border-style: solid; }
+.frame::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+.frame::after { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+.compare { position: relative; aspect-ratio: 1; overflow: hidden; background: var(--surface-2); --pos: 50%; touch-action: pan-y; }
+.compare img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.compare svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.compare .after { position: absolute; inset: 0; clip-path: inset(0 0 0 var(--pos)); }
+.compare .seam { position: absolute; top: 0; bottom: 0; left: var(--pos); width: 2px; margin-left: -1px; background: var(--cap-ink); pointer-events: none; }
+.compare .seam::after { content: ""; position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; border: 2px solid var(--cap-ink); background: var(--cap-bg); }
+.compare input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; }
+.compare input:focus-visible + .seam::after { outline: 2px solid var(--verdigris); outline-offset: 2px; }
+.cap { position: absolute; top: 0.6rem; font: 500 0.68rem/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--cap-ink); background: var(--cap-bg); padding: 0.35rem 0.5rem; border-radius: 2px; pointer-events: none; }
+.cap.l { left: 0.6rem; } .cap.r { right: 0.6rem; }
+.ticks { display: flex; justify-content: space-between; gap: 1rem; margin-top: 0.55rem; font: 400 0.7rem/1.3 var(--mono); color: var(--ink-faint); }
+.reading { list-style: none; margin: 1.1rem 0 0; padding: 0; }
+.reading li { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr) auto; gap: 0.8rem; align-items: baseline; padding: 0.7rem 0; border-top: 1px solid var(--line); }
+.reading .n { font: 400 1.05rem/1 var(--display); color: var(--bronze); }
+.reading .w { font-size: 0.93rem; }
+.reading .w small { display: block; font-size: 0.82rem; color: var(--ink-faint); margin-top: 0.15rem; }
+.reading .v { font: 500 0.82rem/1.2 var(--mono); text-align: right; white-space: nowrap; }
+.reading .v.wait { color: var(--ink-faint); }
+.reading .v.ok { color: var(--verdigris); }
+.probs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; align-items: end; height: 34px; margin-top: 0.5rem; max-width: 15rem; }
+.probs i { display: block; min-height: 2px; }
+
+/* the register: one entry per buyer */
+.register { border-top: 1px solid var(--line); }
+.entry { border-bottom: 1px solid var(--line); scroll-margin-top: 1rem; }
+.entry .wrap { padding-block: clamp(3rem, 6vw, 4.75rem); display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1.5rem clamp(2rem, 5vw, 5rem); }
+@media (max-width: 860px) { .entry .wrap { grid-template-columns: minmax(0, 1fr); } }
+.entry header { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem 1.4rem; }
+.entry h2 { font-size: clamp(1.15rem, 1.6vw, 1.3rem); letter-spacing: 0.16em; text-transform: uppercase; color: var(--bronze); }
+.entry header span { font: 400 0.78rem/1.4 var(--mono); color: var(--ink-faint); }
+.entry .promise { font: 400 clamp(1.9rem, 3.6vw, 2.9rem)/1.1 var(--display); text-wrap: balance; overflow-wrap: anywhere; }
+.entry .why { color: var(--ink-dim); margin-top: 1.1rem; }
+.entry .go { margin-top: 1.8rem; }
+.spec { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; }
+.spec div { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 1rem; padding: 0.8rem 0; border-top: 1px solid var(--line); }
+.spec div:last-child { border-bottom: 1px solid var(--line); }
+.spec dt { font: 400 0.76rem/1.6 var(--mono); color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+.spec dd { margin: 0; font-size: 0.97rem; }
+@media (max-width: 420px) { .spec div { grid-template-columns: minmax(0, 1fr); gap: 0.2rem; } }
+
+/* proof */
+.proof .wrap { padding-block: clamp(3.5rem, 8vw, 6.5rem); display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1rem clamp(2rem, 5vw, 4.5rem); align-items: center; }
+@media (max-width: 760px) { .proof .wrap { grid-template-columns: minmax(0, 1fr); } }
+.big { font: 400 clamp(4.2rem, 11vw, 8.5rem)/0.9 var(--display); letter-spacing: -0.01em; white-space: nowrap; }
+.big small { font-size: 0.4em; color: var(--ink-faint); margin: 0 0.12em; }
+.proof p { color: var(--ink-dim); }
+.proof p + p { margin-top: 0.9rem; }
+.proof p strong { color: var(--ink); font-weight: 600; }
+.proof .fine { font-size: 0.85rem; color: var(--ink-faint); }
+
+/* program + start */
+.start { border-top: 1px solid var(--line); background: var(--surface); }
+.start .wrap { padding-block: clamp(3.5rem, 7vw, 5.5rem); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 15rem); gap: 2rem clamp(2rem, 5vw, 5rem); align-items: center; }
+@media (max-width: 760px) { .start .wrap { grid-template-columns: minmax(0, 1fr); } .start .instrument { order: -1; max-width: 9rem; } }
+.start h2 { font-size: clamp(2rem, 4vw, 3rem); line-height: 1.08; }
+.start p { color: var(--ink-dim); margin-top: 1rem; }
+.facts { display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; margin-top: 1.8rem; padding-top: 1.2rem; border-top: 1px solid var(--line); font: 400 0.85rem/1.4 var(--mono); color: var(--ink-dim); }
+.facts b { font-weight: 500; color: var(--ink); }
+.start .ctas { margin-top: 2rem; }
+.instrument { margin: 0 auto; position: relative; width: 100%; max-width: 13rem; }
+.instrument i { position: absolute; inset: 0; -webkit-mask: var(--m) center / contain no-repeat; mask: var(--m) center / contain no-repeat; }
+.instrument .ln { background: var(--ink); }
+.instrument .br { background: var(--bronze); }
+.instrument::after { content: ""; position: absolute; left: -12%; right: -12%; bottom: 1.2%; border-bottom: 1px solid var(--line-strong); }
+.contact { font: 400 0.85rem/1.4 var(--mono); color: var(--ink-faint); margin-top: 1rem; }
+
+footer .wrap { padding-block: 2.2rem 2.8rem; display: grid; gap: 0.9rem; font-size: 0.84rem; color: var(--ink-faint); }
+footer .row { display: flex; flex-wrap: wrap; gap: 0.5rem 1.4rem; align-items: center; }
+footer .brand b { font-size: 1.05rem; }
+footer .brand svg { width: 24px; height: 24px; }
+footer p { max-width: 80ch; }
+</style>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Groma Disaster Assessment, home">__MARK__<span class="lockup"><b>GROMA</b><small>Disaster Assessment</small></span></a>
+    <nav aria-label="Who it is for">
+      <a href="#emergency">Emergency management</a>
+      <a href="#insurance">Insurance and lending</a>
+      <a href="#guard">National Guard</a>
+    </nav>
+    <a class="btn primary" href="__REPO__" target="_blank" rel="noopener">Get the software</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <h1>Disaster damage assessment, building by building.</h1>
+        <p class="lede">Groma compares before and after imagery of every structure, sends the hard calls to people, and tells you how sure it is. Delivered in the formats your teams already use.</p>
+        <div class="ctas">
+          <a class="btn primary" href="__REPO__" target="_blank" rel="noopener">Get the software, free</a>
+          <a class="btn" href="#proof">See the field check</a>
+        </div>
+        <ul class="doors" aria-label="Choose your path">
+          <li><a href="#emergency"><span>For counties and the state</span><span>Damage counts</span></a></li>
+          <li><a href="#insurance"><span>For insurers and lenders</span><span>Condition checks</span></a></li>
+          <li><a href="#guard"><span>For the National Guard</span><span>Common picture</span></a></li>
+        </ul>
+      </div>
+
+      <figure class="plate" aria-label="A real record: one home in Swannanoa before and after Hurricane Helene">
+        <div class="frame">
+          <div class="compare" id="compare">
+            <img src="__PRE__" alt="Before: a manufactured home in Swannanoa, NC OneMap orthoimagery, February 2023" fetchpriority="high">
+            <svg viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"><polygon points="__RING_PRE__" fill="none" stroke="var(--ring)" stroke-width="0.006"/></svg>
+            <div class="after">
+              <img src="__POST__" alt="After: bare ground where the home stood, NC OneMap post-Helene orthoimagery, spring 2025">
+              <svg viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"><polygon points="__RING_POST__" fill="none" stroke="var(--ring)" stroke-width="0.006"/></svg>
+            </div>
+            <span class="cap l">Before · Feb 2023</span><span class="cap r">After · 2025</span>
+            <input type="range" min="0" max="100" value="50" aria-label="Slide to compare before and after">
+            <span class="seam" aria-hidden="true"></span>
+          </div>
+        </div>
+        <div class="ticks"><span>Record __NCR_SHORT__</span><span>NC OneMap imagery</span></div>
+        <ol class="reading" aria-label="How Groma knows">
+          <li><span class="n">I</span><span class="w">Observed by the model<small>Imagery, footprint aligned to the roof</small><span class="probs" aria-hidden="true">__PROB_BARS__</span></span><span class="v">Destroyed __P_DESTROYED__%</span></li>
+          <li><span class="n">II</span><span class="w">Checked by people<small>Severe calls go to blind review first</small></span><span class="v wait">Queued</span></li>
+          <li><span class="n">III</span><span class="w">On the ground<small>County search team at the site</small></span><span class="v ok">Destroyed</span></li>
+        </ol>
+      </figure>
+    </div>
+  </section>
+
+  <div class="register">
+    <section class="entry" id="emergency" aria-labelledby="h-em">
+      <div class="wrap">
+        <header><h2 id="h-em">Emergency management</h2><span>Counties · the state · FEMA partners</span></header>
+        <div>
+          <p class="promise">A building-by-building damage count the day imagery arrives.</p>
+          <p class="why">Ranked for your field teams, flagged where the model is unsure, and filled into the FEMA damage survey’s own fields. Your teams confirm; they don’t start from a blank map.</p>
+          <a class="btn primary go" href="__REPO__" target="_blank" rel="noopener">Get the software</a>
+        </div>
+        <dl class="spec">
+          <div><dt>Delivers</dt><dd>FEMA damage survey layout, GeoPackage, File Geodatabase, KML, CSV</dd></div>
+          <div><dt>Runs on</dt><dd>One laptop or a county server</dd></div>
+          <div><dt>Speed</dt><dd>About 90 seconds a town</dd></div>
+          <div><dt>Cost</dt><dd>Free and open source</dd></div>
+          <div><dt>Privacy</dt><dd>Addresses stay behind a responder login</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="entry" id="insurance" aria-labelledby="h-in">
+      <div class="wrap">
+        <header><h2 id="h-in">Insurance and lending</h2><span>Claims · underwriting · mortgage servicing</span></header>
+        <div>
+          <p class="promise">Check a building’s condition before you pay on it.</p>
+          <p class="why">Every answer comes with its imagery and its confidence. Clear cases move fast. Doubtful ones go to people before they count.</p>
+          <a class="btn primary go" href="#proof">See the field check</a>
+        </div>
+        <dl class="spec">
+          <div><dt>Answer</dt><dd>The five FEMA damage levels, each with a probability</dd></div>
+          <div><dt>Checked</dt><dd>Blind review by three people, weighted by their record</dd></div>
+          <div><dt>Evidence</dt><dd>Before and after imagery for every building</dd></div>
+          <div><dt>Delivers</dt><dd>CSV and GeoPackage, one row per building</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="entry" id="guard" aria-labelledby="h-ng">
+      <div class="wrap">
+        <header><h2 id="h-ng">National Guard and civil support</h2><span>Defense support of civil authorities · disaster response</span></header>
+        <div>
+          <p class="promise">One damage picture, on one laptop, in US National Grid.</p>
+          <p class="why">Runs on a single laptop with no cloud account. Every building carries a US National Grid reference, so the map, the radio call and the search team’s list all name the same place.</p>
+          <a class="btn primary go" href="__REPO__" target="_blank" rel="noopener">Get the software</a>
+        </div>
+        <dl class="spec">
+          <div><dt>Grid</dt><dd>US National Grid on every building</dd></div>
+          <div><dt>Runs on</dt><dd>One laptop, no cloud account</dd></div>
+          <div><dt>Formats</dt><dd>KML, GeoPackage, CSV</dd></div>
+          <div><dt>Data</dt><dd>Public imagery and structure inventories</dd></div>
+        </dl>
+      </div>
+    </section>
+  </div>
+
+  <section class="proof" id="proof" aria-labelledby="h-proof">
+    <div class="wrap">
+      <p class="big" aria-hidden="true">15<small>of</small>19</p>
+      <div>
+        <h2 id="h-proof" style="font-size:clamp(1.6rem,3vw,2.2rem);line-height:1.15">Checked against the search teams.</h2>
+        <p style="margin-top:1rem">When the model called a Swannanoa home <strong>Major or Destroyed</strong>, Buncombe County’s Helene search teams agreed <strong>15 times out of 19</strong>.</p>
+        <p>It also misses a lot: it found <strong>15 of the 64</strong> homes the teams called Major or Destroyed. Flood damage inside a house does not show from above. That is why people check.</p>
+        <p class="fine">178 homes seen by both. Not an accuracy figure: an area used for tuning, not a held-out test. The teams logged mostly visibly damaged homes in the first weeks after landfall; the imagery is from months later.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="start" id="start" aria-labelledby="h-start">
+    <div class="wrap">
+      <div>
+        <h2 id="h-start">Free for counties, the state and responders.</h2>
+        <p>NC Recon, Groma’s first program, has assessed Hurricane Helene damage in eight western North Carolina towns. Download it, run it on a laptop, and point it at your own area.</p>
+        <div class="facts"><span><b>7,649</b> structures</span><span><b>8</b> towns</span><span><b>Free</b> public data</span><span><b>Open</b> source</span></div>
+        <div class="ctas"><a class="btn primary" href="__REPO__" target="_blank" rel="noopener">Get the software</a>__BRIEF__</div>
+      </div>
+      __INSTRUMENT__
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="row"><a class="brand" href="#top" aria-label="Groma home">__MARK__<b>GROMA</b></a><span>Named for the Roman surveyor’s instrument, which let gravity decide what was straight.</span></div>
+    <p>NC Recon is decision support. It is not an official FEMA or NC Emergency Management damage assessment, and its accuracy is not yet validated. Verify on the ground.</p>
+    <p>Imagery: NC OneMap statewide orthoimagery (NC CGIA, NC 911 Board) and post-Helene orthoimagery (NC Collaboratory, UNC Chapel Hill). Field record: Buncombe County public SARCOP extract.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var c = document.getElementById("compare");
+  if (!c) return;
+  var r = c.querySelector("input");
+  function set() { c.style.setProperty("--pos", r.value + "%"); }
+  r.addEventListener("input", set);
+  set();
+})();
+</script>

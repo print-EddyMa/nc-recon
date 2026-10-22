@@ -25,3 +25,5 @@ web/demo-deps
 web/dist-demo
 web/public/demo
 web/demo.html
+web/public/intro
+web/intro.html

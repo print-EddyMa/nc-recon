@@ -14,8 +14,9 @@ import { DISCLAIMER } from "./lib/ops";
 const Ops = lazy(() => import("./screens/Ops"));
 const NCDashboard = lazy(() => import("./screens/NCDashboard"));
 const Help = lazy(() => import("./screens/Help"));
+const Verify = lazy(() => import("./screens/Verify"));
 
-type Screen = "ops" | "conditions" | "help";
+type Screen = "ops" | "conditions" | "verify" | "help";
 
 function parseHash(): { screen: Screen; area: string | null } {
   const h = window.location.hash;
@@ -23,6 +24,7 @@ function parseHash(): { screen: Screen; area: string | null } {
   if (m) return { screen: "ops", area: m[1] };
   if (h.startsWith("#/conditions")) return { screen: "conditions", area: null };
   if (h.startsWith("#/help")) return { screen: "help", area: null };
+  if (h.startsWith("#/verify")) return { screen: "verify", area: null };
   return { screen: "ops", area: null };
 }
 
@@ -99,16 +101,17 @@ export default function App() {
         }}
       />
       <div className="flex h-full flex-col">
-        <header className="flex shrink-0 items-center gap-4 border-b border-line bg-surface px-4 py-2">
+        <header className="flex shrink-0 items-center gap-2 border-b border-line bg-surface px-3 py-2 sm:gap-4 sm:px-4">
           <a href="#/" className="flex items-center gap-2 text-ink" aria-label="NC Recon, operations">
             <Mark uid="hdr" className="h-5 w-[62px]" />
-            <span className="font-display text-base font-semibold">NC Recon</span>
+            <span className="hidden font-display text-base font-semibold sm:inline">NC Recon</span>
           </a>
           <nav aria-label="Main" className="flex items-center gap-1">
             {(
               [
                 ["ops", "Operations"],
                 ["conditions", "Conditions"],
+                ["verify", "Verify"],
                 ["help", "Help"],
               ] as const
             ).map(([id, label]) => (
@@ -155,6 +158,11 @@ export default function App() {
             {screen === "conditions" && (
               <ErrorBoundary label="The conditions map">
                 <NCDashboard onOpenAssess={() => go("ops")} onOpenAbout={() => go("help")} />
+              </ErrorBoundary>
+            )}
+            {screen === "verify" && (
+              <ErrorBoundary label="Verify">
+                <Verify />
               </ErrorBoundary>
             )}
             {screen === "help" && (

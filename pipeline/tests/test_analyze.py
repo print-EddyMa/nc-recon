@@ -206,3 +206,52 @@ def test_e2_z_baseline_does_not_force_damage_share():
     hit = BuildingEvidence(999)
     hit.m.update(ssim_fp=0.2, edge_loss=0.4, cva_fp=0.3, cva_ring=0.2)
     assert channels.e2(hit, 1.0, base).detail["z"] > 3.5
+
+
+def test_multipart_footprints_get_distinct_stable_ids():
+    """A MultiPolygon building is assessed part by part; each part needs its
+    own ncr_id (labels, chips and exports are keyed by it). The largest part
+    keeps the bare source id so single-part ids never change."""
+    from shapely.geometry import MultiPolygon, box
+
+    from terratriage.ops.pipeline import part_ids
+    from terratriage.ops.process.structures import ncr_id
+
+    small, big = box(0, 0, 1, 1), box(5, 5, 9, 9)
+    assert part_ids("51272758", big) == [("51272758", big)]
+    for order in ([small, big], [big, small]):
+        got = part_ids("51272758", MultiPolygon(order))
+        assert [(sid, p.area) for sid, p in got] == [("51272758", 16.0), ("51272758/1", 1.0)]
+    ids = [ncr_id("usa_structures", sid) for sid, _ in got]
+    assert len(set(ids)) == 2 and ids[0] == ncr_id("usa_structures", "51272758")
+
+
+def test_nc_county_table():
+    from terratriage.ops.counties import NC_COUNTIES, county_name, county_of
+
+    assert len(NC_COUNTIES) == 100
+    # spot checks against the Census Bureau's county FIPS codes
+    for fips, name in (("37001", "Alamance"), ("37021", "Buncombe"), ("37063", "Durham"),
+                       ("37087", "Haywood"), ("37111", "McDowell"), ("37113", "Macon"),
+                       ("37115", "Madison"), ("37119", "Mecklenburg"), ("37121", "Mitchell"),
+                       ("37129", "New Hanover"), ("37161", "Rutherford"), ("37183", "Wake"),
+                       ("37199", "Yancey")):
+        assert NC_COUNTIES[fips] == name
+    assert county_name("371119703001023") == "McDowell" and county_name("45045001") is None
+    assert county_of(["371119703001023", "371119703001024", "370219801001000", None]) == "McDowell"
+    assert county_of([]) == "" and county_of([None, "99"]) == ""
+
+
+def test_repeated_source_ids_stay_unique():
+    from shapely.geometry import box
+
+    from terratriage.ops.pipeline import unique_id
+
+    a, b, c = box(0, 0, 1, 1), box(5, 5, 6, 6), box(9, 9, 10, 10)
+    taken = {}
+    assert unique_id("77", a, taken) == "77"
+    assert unique_id("77", box(0, 0, 1, 1), taken) is None       # the same feature, paged twice
+    assert unique_id("77", b, taken) == "77~2"                   # a different building, same id
+    assert unique_id("77", b, taken) is None
+    assert unique_id("77", c, taken) == "77~3"
+    assert unique_id("78", a, taken) == "78"

@@ -25,9 +25,12 @@ xbd_to_fema:
 nc_field_to_fema:
   status: prior
   rationale: >
-    NC Survey123 / NCSAR field categories. "Moderate" is not a FEMA IA
-    category; it maps to Minor-or-Major. Reports carry both the lower and upper
-    bound mapping; this matrix is the midpoint.
+    Field categories read back from Survey123 / SARCOP layers. NCEM's IA
+    survey and the Helene SARCOP waypoints use FEMA's levels (unaffected,
+    affected, minor, major, destroyed); "Moderate" is accepted only for older
+    or out-of-state forms and maps to Minor-or-Major. Reports carry both the
+    lower and upper bound mapping; this matrix is the midpoint. NC Recon never
+    offers "Moderate" to a field team.
   source_labels: [unaffected, affected, minor, moderate, major, destroyed]
   matrix:
     - [1.00, 0.00, 0.00, 0.00, 0.00]

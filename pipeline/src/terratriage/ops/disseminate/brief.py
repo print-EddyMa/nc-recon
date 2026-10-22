@@ -11,6 +11,7 @@ from __future__ import annotations
 import html
 import json
 import os
+import re
 from datetime import datetime, timezone
 
 from .. import DATA_DIR, DISCLAIMER
@@ -22,6 +23,8 @@ OPS_OUT = os.path.join(DATA_DIR, "output", "ops")
 
 def _svg_map(fc: dict, w: int = 640, h: int = 420) -> str:
     pts = [f["properties"]["centroid"] for f in fc["features"]]
+    if not pts:
+        return '<p class="meta">No map: no structures were found in this area.</p>'
     xs, ys = [p[0] for p in pts], [p[1] for p in pts]
     x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
     import math
@@ -62,10 +65,20 @@ def brief(area: str) -> str:
     sev_hi = sum((rng.get(c) or [0, 0])[1] for c in ("major", "destroyed"))
     assessed = P["n_structures"] - P["not_assessed"]["total"]
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    name = area.replace("_", " ").title()
-    bluf = (f"{name} ({P['aoi']['county']} Co.): about <b>{round(sev)}</b> of {assessed:,} assessed "
+    # operational area ids end in a random 4-hex suffix ("marion_df23"): not part of the name
+    stem = re.sub(r"_[0-9a-f]{4}$", "", area) if P["aoi"].get("role") == "OPS" else area
+    name = P["aoi"].get("name") or stem.replace("_", " ").title()
+    from ..counties import county_of
+
+    county = P["aoi"].get("county") or county_of(f["properties"].get("cbfips_2010") for f in fc["features"])
+    where = f"{name} ({county} Co.)" if county else name
+    bluf = (f"{where}: about <b>{round(sev)}</b> of {assessed:,} assessed "
             f"structures are likely Major or Destroyed (80% range {sev_lo}-{sev_hi}). "
             f"{P['n_needs_review']:,} calls need human verification before use.")
+    if not fc["features"]:
+        bluf = (f"{where}: <b>no structures</b> were found in this area in FEMA USA Structures, "
+                "OpenStreetMap or the USACE National Structure Inventory, so there is nothing to assess. "
+                "If buildings are known to be here, the inventories are incomplete: verify on the ground.")
     if imp and imp.get("expected_displaced"):
         d = imp["expected_displaced"]
         ua = imp.get("unassessed_residential") or {}
@@ -114,8 +127,11 @@ h1{{font-size:20px;margin:0}} h2{{font-size:14px;margin:18px 0 6px;border-bottom
 table{{border-collapse:collapse;width:100%;font:12px system-ui,sans-serif}} td,th{{padding:3px 6px;border-bottom:1px solid #eee;text-align:left}}
 .n{{text-align:right;font-variant-numeric:tabular-nums}} .sw{{display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:middle}}
 .disc{{font:12px system-ui,sans-serif;border:1px solid #bd0026;padding:6px 8px;margin-top:14px}}
-ul{{font:12px system-ui,sans-serif;padding-left:18px}} @media print{{body{{margin:0}}}}
+ul{{font:12px system-ui,sans-serif;padding-left:18px}}
+.print{{float:right;font:13px system-ui,sans-serif;padding:5px 10px;border:1px solid #888;border-radius:6px;background:#fff;cursor:pointer}}
+@media print{{body{{margin:0}} .print{{display:none}}}}
 </style></head><body>
+<button class="print" type="button" onclick="window.print()">Print or save as PDF</button>
 <h1>Situation brief: {html.escape(name)}</h1>
 <div class="meta">{html.escape(P['event']['name'])} · {', '.join(P['event']['declarations'])} · AOI role {P['aoi']['role']} · {now}</div>
 <div class="disc">{html.escape(DISCLAIMER)}</div>

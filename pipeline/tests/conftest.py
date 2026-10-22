@@ -11,6 +11,23 @@ FIXTURES = os.path.join(HERE, "fixtures")
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "live: hits a real upstream service (run with -m live)")
+    # Runtime state goes to a throwaway directory for the whole session, set
+    # before anything imports the package. The suite reads the committed config
+    # and any local assessment outputs, but it must never write to (or prune)
+    # the live operational registry, the job list or the audit log: a test run
+    # beside a working server once deleted an assessment that was in progress.
+    import tempfile
+
+    state = tempfile.mkdtemp(prefix="ncr-test-state-")
+    os.environ["NCR_OPS_REGISTRY"] = os.path.join(state, "ops_registry.yaml")
+    os.environ["NCR_JOBS_FILE"] = os.path.join(state, "jobs.json")
+    os.environ["NCR_AUDIT_LOG"] = os.path.join(state, "audit.log")
+    os.environ["NCR_TRUTH_DIR"] = os.path.join(state, "truth")
+    os.environ["NCR_LABELS_DIR"] = os.path.join(state, "labels")
+    # one TestClient is every "client" at once; keep the per-client limiter out of the way
+    os.environ.setdefault("NCR_RATE_READ_PER_MIN", "100000")
+    os.environ.setdefault("NCR_RATE_WRITE_PER_MIN", "100000")
+    os.environ.setdefault("NCR_RATE_FEED_PER_MIN", "100000")
 
 
 def pytest_collection_modifyitems(config, items):

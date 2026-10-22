@@ -14,6 +14,11 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y libexpat1
       - run: pip install -r requirements-dev.txt
       - run: python -m pytest tests -q        # offline; `-m live` hits upstreams
+      - run: pip install pip-audit cyclonedx-bom
+      - run: pip-audit -r requirements.txt --strict   # runtime dependencies only
+      - run: cyclonedx-py requirements requirements.txt -o sbom-python.cdx.json
+      - uses: actions/upload-artifact@v4
+        with: { name: sbom-python, path: pipeline/sbom-python.cdx.json }
 
   web:
     runs-on: ubuntu-latest
@@ -26,7 +31,11 @@ jobs:
       - run: npx tsc -b
       - run: npm run lint
       - run: npx vite build
-      - run: npm audit --audit-level=high
+      - run: npm audit --omit=dev --audit-level=high   # what ships; dev toolchain advisories are reported, not blocking
+      - run: npm audit || true
+      - run: npm sbom --omit=dev --sbom-format cyclonedx > sbom-web.cdx.json
+      - uses: actions/upload-artifact@v4
+        with: { name: sbom-web, path: web/sbom-web.cdx.json }
 
   image:
     runs-on: ubuntu-latest

@@ -14,6 +14,8 @@ from concurrent.futures import ThreadPoolExecutor
 from .. import DATA_DIR
 from ..provenance import utc_now
 from .base import Connector, Health, SchemaError, http_json, parse_utc
+from . import nc_feeds
+from .ncem_peak_stage import NCEMPeakStage
 from .eri import ERI
 from .nc_orthos import NCOrthos
 from .nsi import NSI
@@ -47,6 +49,53 @@ class NWSAlerts(Connector):
             raise SchemaError("NWS alerts missing features")
         upd = parse_utc(d.get("updated"))
         return time.time() - upd.timestamp() if upd else None
+
+
+class FIMAN(Connector):
+    name = "fiman"
+    license = "NC Emergency Management (public ArcGIS service; terms unstated)"
+    homepage = "https://fiman.nc.gov/"
+    stale_after_s = 3 * 3600
+
+    def probe(self):
+        d = http_json(nc_feeds.FIMAN, params={"where": "IN_SERVICE=1", "outFields": "HYDRO_ALL_DATE",
+                                              "orderByFields": "HYDRO_ALL_DATE DESC", "resultRecordCount": 1,
+                                              "returnGeometry": "false", "f": "json"}, timeout=30)
+        feats = d.get("features") if isinstance(d, dict) else None
+        if not feats:
+            raise SchemaError("FIMAN gauge query returned no features")
+        ts = (feats[0].get("attributes") or {}).get("HYDRO_ALL_DATE")
+        return time.time() - ts / 1000 if isinstance(ts, (int, float)) else None
+
+
+class DukeOutages(Connector):
+    name = "duke_outages"
+    license = "Duke Energy (public ArcGIS service 'for public use'; no licence text)"
+    homepage = "https://outagemap.duke-energy.com/"
+    stale_after_s = 2 * 3600
+
+    def probe(self):
+        d = http_json(nc_feeds.DUKE, params={"where": "1=1", "outFields": "last_edited_date",
+                                             "orderByFields": "last_edited_date DESC", "resultRecordCount": 1,
+                                             "returnGeometry": "false", "f": "json"}, timeout=30)
+        feats = d.get("features") if isinstance(d, dict) else None
+        if not feats:
+            raise SchemaError("Duke outage query returned no features")
+        ts = (feats[0].get("attributes") or {}).get("last_edited_date")
+        return time.time() - ts / 1000 if isinstance(ts, (int, float)) else None
+
+
+class FEMAShelters(Connector):
+    name = "fema_shelters"
+    license = "US Government work (FEMA ESF6 / American Red Cross shelter list)"
+    homepage = "https://gis.fema.gov/arcgis/rest/services/NSS/OpenShelters/FeatureServer/0"
+    stale_after_s = 2 * 86400
+
+    def probe(self):
+        d = http_json(nc_feeds.SHELTERS, params={"where": "1=1", "returnCountOnly": "true", "f": "json"}, timeout=30)
+        if not isinstance(d, dict) or "count" not in d:
+            raise SchemaError("FEMA shelter count query malformed")
+        return None
 
 
 class OpenFEMA(Connector):
@@ -142,8 +191,8 @@ class DamageModel(Connector):
 
 
 def connectors() -> list[Connector]:
-    return [DamageModel(), USGSWater(), NWPS(), NWSAlerts(), OpenFEMA(), NSI(), USAStructures(), NCOrthos(),
-            ERI(), USGSLegacy(), GEE(), Earthdata()]
+    return [DamageModel(), USGSWater(), NWPS(), FIMAN(), NWSAlerts(), OpenFEMA(), NSI(), USAStructures(), NCOrthos(),
+            ERI(), NCEMPeakStage(), DukeOutages(), FEMAShelters(), USGSLegacy(), GEE(), Earthdata()]
 
 
 def run(write: bool = True) -> list[Health]:
@@ -155,8 +204,11 @@ def run(write: bool = True) -> list[Health]:
     if write:
         out = os.path.join(DATA_DIR, "output", "ops")
         os.makedirs(out, exist_ok=True)
-        with open(os.path.join(out, "health.json"), "w", encoding="utf-8") as fh:
+        # atomic: the API serves this file while a refresh is rewriting it
+        path = os.path.join(out, "health.json")
+        with open(f"{path}.tmp", "w", encoding="utf-8") as fh:
             json.dump({"checked_utc": utc_now(), "sources": [h.to_dict() for h in res]}, fh, indent=2)
+        os.replace(f"{path}.tmp", path)
     return res
 
 

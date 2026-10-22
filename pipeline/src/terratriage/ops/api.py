@@ -12,10 +12,21 @@ Responder (bearer token; refused when no token is configured, unless the
 operator runs with NCR_DEV_OPEN=1 for local development - see ops/auth.py):
   GET  /ops/areas/{area}                ops GeoJSON (building level; no addresses)
   GET  /ops/areas/{area}/chip/{ncr_id}/{pre|post}.png
+  GET  /ops/areas/{area}/tiles/{pre|post}/{z}/{x}/{y}   map tiles of the assessed imagery
   GET  /ops/areas/{area}/brief.html     situation brief (its map shows structures)
   GET  /ops/areas/{area}/responder      ncr_id -> address sidecar
+  GET  /ops/areas/{area}/fema-assistance  FEMA assistance by ZIP beside the assessment
+  GET  /ops/areas/{area}/field-reference  Helene SAR field categories beside the calls (Buncombe)
+  GET  /ops/truth/next?area=&worker=&role=   NC Recon Verify: next blind verification task
+  POST /ops/truth/judgments                  one blind judgment
+  GET  /ops/truth/areas/{area}               verification progress for an area
+  GET  /ops/truth/metrics                    verified structures, verifiers, reliability
+  GET  /ops/truth/export.zip                 versioned dataset of verified labels + datasheet
   POST /ops/labels                      append a truth label (TUNE/TEST aware)
   GET  /ops/areas/{area}/export.zip     GeoJSON/CSV/KML/GPKG/FileGDB/Survey123 bundle
+  POST /ops/assess                      queue an assessment; GET /ops/assess/{id}, GET /ops/jobs
+  DELETE /ops/assess/{id}               cancel a queued or running assessment
+  POST /ops/areas/{area}/reassess       run an operational area again on its stored imagery
 """
 from __future__ import annotations
 
@@ -37,7 +48,7 @@ from . import DATA_DIR, DISCLAIMER, PIPELINE_ROOT, audit
 from .analyze.classes import FEMA, FEMA_LABEL
 
 OPS_OUT = os.path.join(DATA_DIR, "output", "ops")
-LABELS = os.path.join(DATA_DIR, "labels")
+LABELS = os.environ.get("NCR_LABELS_DIR") or os.path.join(DATA_DIR, "labels")
 RAW = os.path.join(DATA_DIR, "raw")
 REPORT = os.path.join(os.environ.get("NCR_REPORTS_DIR") or os.path.join(PIPELINE_ROOT, "..", "reports"),
                       "ACCURACY_REPORT.json")
@@ -47,8 +58,13 @@ PROTOCOL = "ncr-label-v1"
 LABEL_CHOICES = (*FEMA, "cannot_tell")
 
 router = APIRouter(prefix="/ops")
-_lock = threading.Lock()
+_label_lock = threading.Lock()      # serialises appends to the label CSVs
+_health_lock = threading.Lock()     # one health refresh at a time
+_health_busy = threading.Event()
 _cache: dict[str, tuple[float, Any]] = {}
+_bbox_cache: dict[str, tuple[float, list[float] | None]] = {}
+HEALTH_TTL_S = 600
+HEALTH_MIN_RECHECK_S = 60
 
 
 def _area(area: str) -> str:
@@ -73,8 +89,45 @@ def _load(area: str) -> dict[str, Any]:
         return hit[1]
     with open(p, encoding="utf-8") as fh:
         fc = json.load(fh)
+    aoi = fc["properties"].setdefault("aoi", {})
+    if not aoi.get("name"):
+        from .plan.events import area_name
+
+        aoi["name"] = area_name(area)
+    if not aoi.get("county"):
+        # assessed before operational areas recorded their county: read it off
+        # the structures' census blocks
+        from .counties import county_of
+
+        aoi["county"] = county_of(f["properties"].get("cbfips_2010") for f in fc["features"])
     _cache[p] = (mt, fc)
     return fc
+
+
+def _bbox(area: str) -> list[float] | None:
+    """[west, south, east, north] of an area's structures, for the public
+    overview map. Coarse on purpose: snapped outward to 0.001 degree (about
+    100 m), and withheld when the area has fewer structures than the public
+    suppression threshold, so the box never pins down a home."""
+    import math
+
+    from .disseminate.aggregate import SUPPRESS
+
+    p = os.path.join(OPS_OUT, f"{area}.geojson")
+    fc = _load(area)
+    mt = _cache[p][0]
+    hit = _bbox_cache.get(p)
+    if hit and hit[0] == mt:
+        return hit[1]
+    pts = [f["properties"].get("centroid") for f in fc["features"]]
+    pts = [c for c in pts if c]
+    box = None
+    if len(pts) >= SUPPRESS:
+        xs, ys = [c[0] for c in pts], [c[1] for c in pts]
+        box = [math.floor(min(xs) * 1000) / 1000, math.floor(min(ys) * 1000) / 1000,
+               math.ceil(max(xs) * 1000) / 1000, math.ceil(max(ys) * 1000) / 1000]
+    _bbox_cache[p] = (mt, box)
+    return box
 
 
 @router.get("/meta")
@@ -98,7 +151,7 @@ def areas():
             out.append({k: p.get(k) for k in (
                 "run_id", "generated_utc", "event", "aoi", "counts", "expected_counts",
                 "expected_counts_80pct", "n_structures", "n_needs_review", "not_assessed",
-                "calibration", "warnings", "pair_context")} | {"id": f[:-8]})
+                "calibration", "warnings", "pair_context")} | {"id": f[:-8], "bbox": _bbox(f[:-8])})
     return out
 
 
@@ -168,6 +221,36 @@ def chip(area: str, ncr_id: str, kind: str, request: Request, size: int = 256, p
                              "Cross-Origin-Resource-Policy": "cross-origin"})
 
 
+# 1x1 transparent PNG: "no imagery here" without a console-spamming 404
+_BLANK_PNG = bytes.fromhex(
+    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4"
+    "890000000d49444154789c626001000000050001a5f645400000000049454e44ae426082")
+
+
+@router.get("/areas/{area}/tiles/{kind}/{z}/{x}/{y}")
+def image_tile(area: str, kind: str, z: int, x: int, y: int, request: Request,
+               authorization: str | None = Header(default=None)):
+    """Map tile of the before / after imagery this assessment read."""
+    from .disseminate import tiles
+    from .plan.events import event_for_area
+    from .process import imagery
+
+    _responder(request, authorization)
+    if kind not in ("pre", "post") or not tiles.MIN_ZOOM <= z <= tiles.MAX_ZOOM or not (
+            0 <= x < 2 ** z and 0 <= y < 2 ** z):
+        raise HTTPException(400, "bad tile request")
+    _load(area)
+    found = event_for_area(area)
+    try:
+        pre, post = imagery.pair_for_area(RAW, area, (found[0].maxar_event if found else None) or "")
+    except FileNotFoundError as ex:
+        raise HTTPException(404, "the imagery for this assessment is no longer stored") from ex
+    out = tiles.get(area, kind, pre.path if kind == "pre" else post.path, z, x, y)
+    body, media = out if out else (_BLANK_PNG, "image/png")
+    return Response(body, media_type=media, headers={"Cache-Control": "private, max-age=86400",
+                                                     "Cross-Origin-Resource-Policy": "cross-origin"})
+
+
 @router.get("/areas/{area}/impact")
 def impact(area: str, authorization: str | None = Header(default=None)):
     """People / need by tract. Responders get it whole; the public gets the same
@@ -198,9 +281,122 @@ def impact(area: str, authorization: str | None = Header(default=None)):
 def public_tracts(area: str):
     from .disseminate.aggregate import aggregate
 
+    from .collect.base import SourceUnavailable
+
     _load(area)
-    with open(aggregate(area), encoding="utf-8") as fh:
+    try:
+        path = aggregate(area)
+    except SourceUnavailable as ex:
+        # tract boundaries come from the CDC SVI service; nothing is cached yet
+        raise HTTPException(503, "census tract boundaries (CDC SVI) are unreachable; try again later") from ex
+    with open(path, encoding="utf-8") as fh:
         return JSONResponse(json.load(fh))
+
+
+@router.get("/areas/{area}/fema-assistance")
+def fema_assistance(area: str, request: Request, authorization: str | None = Header(default=None)):
+    """FEMA Individual Assistance by ZIP code, beside this assessment's own
+    numbers for the same ZIPs. Responder-only: the ZIPs come from addresses."""
+    from .analyze import fema_reference
+
+    _responder(request, authorization)
+    _load(area)
+    return fema_reference.run(area)
+
+
+@router.get("/areas/{area}/field-reference")
+def field_reference(area: str, request: Request, authorization: str | None = Header(default=None)):
+    """NC Recon's calls beside the Helene search-and-rescue field categories
+    for the same structures (Buncombe's public SARCOP extract). Responder-only:
+    the per-structure pairs locate damage calls. Read from the stored
+    comparison (`run.py ops-sarcop`); never computed on request, and never for
+    a TEST area."""
+    _responder(request, authorization)
+    _load(area)
+    p = os.path.join(OPS_OUT, f"{_area(area)}.sarcop_reference.json")
+    if not os.path.exists(p):
+        raise HTTPException(404, "no field comparison for this area (only Buncombe County areas have one)")
+    with open(p, encoding="utf-8") as fh:
+        d = json.load(fh)
+    d.pop("pairs", None)
+    return JSONResponse(d)
+
+
+class JudgmentReq(BaseModel):
+    area: str = Field(max_length=40)
+    ncr_id: str = Field(max_length=36)
+    label: str
+    worker: str = Field(min_length=1, max_length=40)
+    role: str = "verifier"
+    kind: str = "remote"
+    blind: bool = True
+    seconds: float | None = Field(default=None, ge=0, le=36000)
+
+
+@router.get("/truth/next")
+def truth_next(area: str, worker: str, request: Request, role: str = "verifier",
+               authorization: str | None = Header(default=None)):
+    """The next blind verification task: a building and its imagery dates,
+    never the model's call."""
+    from . import truth
+
+    _responder(request, authorization)
+    _load(area)
+    try:
+        t = truth.next_task(area, worker, role)
+    except ValueError as ex:
+        raise HTTPException(400, str(ex)) from ex
+    return t or {"area": area, "ncr_id": None, "done": True}
+
+
+@router.post("/truth/judgments")
+def truth_judge(req: JudgmentReq, request: Request, authorization: str | None = Header(default=None)):
+    from . import truth
+
+    _responder(request, authorization)
+    _area(req.area)
+    if not _UUID.fullmatch(req.ncr_id):
+        raise HTTPException(400, "bad ncr_id")
+    _load(req.area)
+    try:
+        j = truth.submit(req.area, req.ncr_id, req.label, req.worker, role=req.role, kind=req.kind,
+                         blind=req.blind, seconds=req.seconds)
+    except ValueError as ex:
+        raise HTTPException(400, str(ex)) from ex
+    except LookupError as ex:
+        raise HTTPException(404, str(ex)) from ex
+    except PermissionError as ex:
+        raise HTTPException(409, str(ex)) from ex
+    audit.record("verify", request, req.area, ncr_id=req.ncr_id, label=req.label, worker=j["worker"])
+    return {"ok": True, "status": truth.consensus(req.area).get(req.ncr_id)}
+
+
+@router.get("/truth/areas/{area}")
+def truth_area(area: str, request: Request, authorization: str | None = Header(default=None)):
+    from . import truth
+
+    _responder(request, authorization)
+    _load(area)
+    return truth.area_status(_area(area))
+
+
+@router.get("/truth/metrics")
+def truth_metrics(request: Request, authorization: str | None = Header(default=None)):
+    from . import truth
+
+    _responder(request, authorization)
+    return truth.metrics()
+
+
+@router.get("/truth/export.zip")
+def truth_export(request: Request, area: str | None = None, authorization: str | None = Header(default=None)):
+    from . import truth
+
+    _responder(request, authorization)
+    data, sheet = truth.export([_area(area)] if area else None)
+    audit.record("verify_export", request, area, records=sheet["records"])
+    return Response(data, media_type="application/zip",
+                    headers={"Content-Disposition": 'attachment; filename="ncrecon-verify-dataset.zip"'})
 
 
 @router.get("/areas/{area}/brief.html")
@@ -227,17 +423,43 @@ def responder(area: str, request: Request, authorization: str | None = Header(de
         return json.load(fh)
 
 
+def _refresh_health() -> None:
+    from .collect import health as h
+
+    try:
+        with _health_lock:
+            h.run(write=True)
+    except Exception as ex:  # noqa: BLE001 - a failed refresh keeps the last board
+        print(f"[ops] health refresh failed: {ex}")
+    finally:
+        _health_busy.clear()
+
+
 @router.get("/health")
-def health():
+def health(recheck: bool = False):
+    """The collection board. Serves the last written board straight away and
+    refreshes it in the background when it is older than 10 minutes, so a slow
+    upstream never holds up the page (or anything else). `recheck=1` asks for
+    a refresh now; honoured at most once a minute."""
     from .collect import health as h
 
     p = os.path.join(OPS_OUT, "health.json")
-    if not os.path.exists(p) or time.time() - os.path.getmtime(p) > 600:
-        with _lock:
-            if not os.path.exists(p) or time.time() - os.path.getmtime(p) > 600:
+    if not os.path.exists(p):
+        # first ever call: nothing to show yet, so this one waits
+        with _health_lock:
+            if not os.path.exists(p):
                 h.run(write=True)
+    else:
+        age = time.time() - os.path.getmtime(p)
+        if (age > HEALTH_TTL_S or (recheck and age > HEALTH_MIN_RECHECK_S)) and not _health_busy.is_set():
+            _health_busy.set()
+            threading.Thread(target=_refresh_health, daemon=True, name="ops-health").start()
+    if not os.path.exists(p):
+        raise HTTPException(503, "data-source status is not available yet")
     with open(p, encoding="utf-8") as fh:
-        return json.load(fh)
+        d = json.load(fh)
+    d["refreshing"] = _health_busy.is_set()
+    return d
 
 
 @router.get("/report")
@@ -288,7 +510,7 @@ def add_label(req: LabelReq, request: Request, authorization: str | None = Heade
     os.makedirs(LABELS, exist_ok=True)
     path = os.path.join(LABELS, f"{req.area}.csv")
     new = not os.path.exists(path)
-    with _lock, open(path, "a", newline="", encoding="utf-8") as fh:
+    with _label_lock, open(path, "a", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
         if new:
             w.writerow(["ncr_id", "label", "labeler", "protocol", "imagery_date", "aoi_role", "labeled_utc", "notes"])
@@ -317,7 +539,10 @@ def export_zip(area: str, request: Request, authorization: str | None = Header(d
     _load(area)
     audit.record("export", request, area)
     d = os.path.join(OPS_OUT, "exports", area)
-    export_area(area, mode="responder", out_dir=d)
+    try:
+        export_area(area, mode="responder", out_dir=d)
+    except ValueError as ex:
+        raise HTTPException(409, str(ex)) from ex
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for root, _dirs, files in os.walk(d):
@@ -410,6 +635,27 @@ def assess(req: AssessReq, request: Request, authorization: str | None = Header(
     return job.to_dict()
 
 
+@router.post("/areas/{area}/reassess")
+def reassess(area: str, request: Request, authorization: str | None = Header(default=None)):
+    """Assess an operational area again from the imagery it already has."""
+    from . import jobs
+
+    _responder(request, authorization)
+    _area(area)
+    try:
+        job = jobs.submit_reassess(area)
+    except LookupError as ex:
+        raise HTTPException(404, str(ex)) from ex
+    except PermissionError as ex:
+        raise HTTPException(403, str(ex)) from ex
+    except OverflowError as ex:
+        raise HTTPException(429, str(ex)) from ex
+    except ValueError as ex:
+        raise HTTPException(409, str(ex)) from ex
+    audit.record("reassess", request, area, job=job.id)
+    return job.to_dict()
+
+
 @router.get("/assess/{job_id}")
 def assess_status(job_id: str, request: Request, authorization: str | None = Header(default=None)):
     from . import jobs
@@ -418,6 +664,18 @@ def assess_status(job_id: str, request: Request, authorization: str | None = Hea
     job = jobs.get(job_id)
     if job is None:
         raise HTTPException(404, "no such job")
+    return job.to_dict()
+
+
+@router.delete("/assess/{job_id}")
+def assess_cancel(job_id: str, request: Request, authorization: str | None = Header(default=None)):
+    from . import jobs
+
+    _responder(request, authorization)
+    job = jobs.cancel(job_id)
+    if job is None:
+        raise HTTPException(404, "no such job")
+    audit.record("cancel_assess", request, job.area, job=job_id)
     return job.to_dict()
 
 

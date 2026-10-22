@@ -277,6 +277,51 @@ def cmd_ops_aggregate(a):
     print(aggregate(a.area))
 
 
+def cmd_ops_reference(a):
+    from terratriage.ops.analyze import fema_reference
+
+    out = fema_reference.run(a.area)
+    print(out["caveat"])
+    for w in out["warnings"]:
+        print(f"WARNING: {w}")
+    for r in out["zips"]:
+        f = (r["fema"] or {}).get("owners") or {}
+        print(f"ZIP {r['zip']}: {r['homes_assessed']} homes assessed here, "
+              f"~{r['expected_major_plus']} expected Major or Destroyed | FEMA owners: "
+              f"{int(f.get('approved', 0))} approved of {int(f.get('registrations', 0))} registered, "
+              f"{int(f.get('approved_over_25k', 0))} over $25,000, {int(f.get('max_grants', 0))} maximum grants")
+    print(f"{out['unplaced_structures']} structures have no address and could not be placed in a ZIP code")
+
+
+def cmd_ops_sarcop(a):
+    from terratriage.ops.analyze import sarcop_reference
+
+    r = sarcop_reference.compare_area(a.area, allow_test=a.allow_test)
+    print(sarcop_reference.format_summary(r))
+
+
+def cmd_truth_status(a):
+    from terratriage.ops import truth
+
+    print(json.dumps(truth.area_status(a.area) if a.area else truth.metrics(), indent=2))
+
+
+def cmd_truth_release(a):
+    from terratriage.ops import truth
+
+    print(json.dumps(truth.release(a.area), indent=2))
+
+
+def cmd_truth_export(a):
+    from terratriage.ops import truth
+
+    data, sheet = truth.export([a.area] if a.area else None, keep=True)
+    out = a.out or "ncrecon-verify-dataset.zip"
+    with open(out, "wb") as fh:
+        fh.write(data)
+    print(f"[truth] {sheet['records']} verified records -> {out}")
+
+
 def cmd_ops_brief(a):
     from terratriage.ops.disseminate.brief import brief
 
@@ -391,6 +436,23 @@ def main():
     ob = sub.add_parser("ops-brief", help="ops mode: one-page situation brief (HTML + text)")
     ob.add_argument("--area", required=True)
     ob.set_defaults(fn=cmd_ops_brief)
+    tv = sub.add_parser("truth-status", help="NC Recon Verify: verification progress (one area or all)")
+    tv.add_argument("--area")
+    tv.set_defaults(fn=cmd_truth_status)
+    tr = sub.add_parser("truth-release", help="NC Recon Verify: write verified consensus into the protocol label file")
+    tr.add_argument("--area", required=True)
+    tr.set_defaults(fn=cmd_truth_release)
+    te = sub.add_parser("truth-export", help="NC Recon Verify: dataset of verified labels + datasheet (zip)")
+    te.add_argument("--area")
+    te.add_argument("--out")
+    te.set_defaults(fn=cmd_truth_export)
+    sp_sar = sub.add_parser("ops-sarcop", help="ops mode: NC Recon calls beside Buncombe's Helene SAR field categories (comparison, not validation)")
+    sp_sar.add_argument("--area", required=True)
+    sp_sar.add_argument("--allow-test", action="store_true", help="permit a TEST (hold-out) area")
+    sp_sar.set_defaults(fn=cmd_ops_sarcop)
+    orf = sub.add_parser("ops-reference", help="ops mode: FEMA housing assistance by ZIP beside the assessment")
+    orf.add_argument("--area", required=True)
+    orf.set_defaults(fn=cmd_ops_reference)
     obk = sub.add_parser("ops-backup", help="ops mode: archive labels, registry, outputs")
     obk.add_argument("--out", default=None)
     obk.set_defaults(fn=cmd_ops_backup)

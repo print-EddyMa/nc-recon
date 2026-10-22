@@ -10,9 +10,12 @@ each structure's **FEMA damage level with a probability**. Uncertain and
 severe calls go to a **human review queue**, and every call carries its reasons
 and the evidence it could not check. It estimates **people likely displaced**
 and ranks census tracts by need. Outputs are GeoJSON, CSV with US National
-Grid, KML, GeoPackage, File Geodatabase, a Survey123 field sheet, and a
+Grid, KML, GeoPackage, File Geodatabase, a Survey123 field sheet, homes in the
+field layout of FEMA's IA damage survey, and a
 one-page situation brief. A **Conditions** map shows live river gauges and
-flood forecasts, NWS alerts, road closures, DOT cameras and active storms.
+flood forecasts (USGS, NOAA and NC Emergency Management's FIMAN network), NWS
+alerts, power outages by county, open shelters, road closures, DOT cameras and
+active storms.
 
 > Decision-support tool. Not an official FEMA or NC Emergency Management
 > damage assessment. Verify on the ground. **Accuracy is not yet validated**:
@@ -35,14 +38,21 @@ access. Full guide, security model, backups: [`docs/ops/DEPLOYMENT.md`](docs/ops
 
 ## Use
 
-* **Operations** (home): assessed areas, **New assessment** (pick a point,
-  check imagery, run), map, structure cards, review queue with keyboard
-  labeling, situation brief, GIS export, public tract summary, data-source
-  status, accuracy.
+* **Operations** (home): a map of every assessed area; **New assessment**
+  (pick a point, see the square it will cover, check imagery, run); jobs in
+  progress with their step, run time and a cancel button; inside an area, the
+  structures over the before / after imagery the assessment read, structure
+  cards, a review queue with keyboard labeling, the situation brief, GIS
+  export, public tract summary, FEMA assistance by ZIP code, **Run again**;
+  data-source status and accuracy.
 * **Conditions**: statewide live hazards.
 * **Help**: how to read every number, what the system cannot see.
 
 Event playbook: [`docs/ops/OPERATIONS.md`](docs/ops/OPERATIONS.md).
+Verified ground truth (blind multi-verifier labeling, consensus, dataset):
+[`docs/truth/README.md`](docs/truth/README.md).
+Working with NC emergency offices: [`docs/outreach/PLAN.md`](docs/outreach/PLAN.md)
+(plan, first email, printable one-pager).
 
 ## Develop locally
 
@@ -62,7 +72,8 @@ npm run dev                                         # :5173
 
 Pipeline CLI (`pipeline/scripts/run.py`): `ops-health`, `ops-fetch`,
 `ops-assess`, `ops-impact`, `ops-export`, `ops-brief`, `ops-aggregate`,
-`ops-eval`, `ops-calibrate`, `ops-backup`.
+`ops-reference`, `ops-eval`, `ops-calibrate`, `ops-backup`. More in
+[`pipeline/README.md`](pipeline/README.md).
 
 ## Layout
 
@@ -74,7 +85,7 @@ pipeline/
     collect/                connectors with health checks
     process/                geodesy-aware imagery, co-registration, alignment, structures
     analyze/                evidence channels, fusion, calibration, evaluation, impact
-    disseminate/            exports, brief, public aggregates
+    disseminate/            exports, brief, public aggregates, map tiles
     api.py jobs.py auth.py  HTTP API, assessment queue, access control
   config/                   events, context rules, crosswalks, FEMA damage matrix
   tests/                    pytest
@@ -91,6 +102,10 @@ The scripted demo from the Congressional App Challenge is kept as an offline
 recording tool with its own pinned map stack: `npm run demo:dev`,
 `npm run demo:build`, `npm run demo:validate`. It is not part of the deployed
 app. The pre-operational build is tagged `cac-v2-demo-stable`.
+
+Beside it, `web/intro.html` is a longer self-running intro in the product's
+own vocabulary (FEMA levels, the current Old Fort assessment, every assessed
+town): [`web/src/intro/README.md`](web/src/intro/README.md).
 
 ## Credits and licenses
 

@@ -88,6 +88,8 @@ def run(area: str, seed: int = 0, n_mc: int = 2000) -> dict[str, Any]:
     with open(os.path.join(OPS_OUT, f"{area}.geojson"), encoding="utf-8") as fh:
         fc = json.load(fh)
     feats = [f["properties"] for f in fc["features"]]
+    if not feats:
+        return {"area": area, "status": "NO_STRUCTURES"}
     lons = [p["centroid"][0] for p in feats]
     lats = [p["centroid"][1] for p in feats]
     bbox = (min(lons), min(lats), max(lons), max(lats))

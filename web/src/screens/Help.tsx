@@ -24,7 +24,11 @@ export default function Help() {
         <h2 className="mt-6 text-lg font-semibold">Run a new assessment</h2>
         <ol className="mt-1 list-decimal space-y-1 pl-5">
           <li>Operations → <b>New assessment</b>. Pick the event.</li>
-          <li>Enter a place name and coordinates, or click <b>Pick on map</b>.</li>
+          <li>
+            Enter a place name and coordinates, or click <b>Pick on map</b>. The
+            blue square on the map is the ground the assessment will cover; the
+            outlined boxes are areas already assessed.
+          </li>
           <li>
             Choose the area size. Small (0.8 km across) runs in about 2 minutes;
             large (2.4 km) can take 10 minutes or more.
@@ -35,10 +39,21 @@ export default function Help() {
             satellite). If none does, the tool cannot assess that spot yet.
           </li>
           <li>
-            Submit. One assessment runs at a time; others wait in line. The new
-            area appears in the list when finished.
+            Submit. One assessment runs at a time; others wait in line.{" "}
+            <b>In progress</b> shows each step and how long it has run, for
+            every analyst on this server, and <b>Cancel</b> stops one. The new
+            area opens when it finishes.
           </li>
         </ol>
+        <p className="mt-2">
+          If the server restarts while an assessment is running, it is listed as
+          Interrupted and nothing partial is kept: run it again.
+        </p>
+        <p className="mt-2">
+          <b>Run again</b> on an operational area assesses it again from the
+          imagery it already has, after a calibration or a software update.
+          Labels are kept.
+        </p>
         <p className="mt-2">
           Event not listed? Register a <b>provisional event</b> with its start
           date (and FEMA disaster number when declared). Before/after windows
@@ -69,6 +84,13 @@ export default function Help() {
           faint fills are uncertain. Use the probability bar on each structure
           card, not the colour alone.
         </p>
+        <p className="mt-2">
+          <b>Imagery under the structures</b> switches the map between the
+          After and Before images this assessment actually read, with their
+          capture dates. Over imagery the fills thin to a tint so the roof stays
+          visible. A date shown as a range means the source does not publish the
+          exact day.
+        </p>
 
         <h2 className="mt-6 text-lg font-semibold">Numbers you can report</h2>
         <ul className="mt-1 list-disc space-y-1 pl-5">
@@ -90,16 +112,35 @@ export default function Help() {
           </li>
         </ul>
 
+        <h2 className="mt-6 text-lg font-semibold">FEMA assistance by ZIP code</h2>
+        <p className="mt-1">
+          Once Individual Assistance is being paid, each area can show how many
+          owner households FEMA approved in the ZIP codes it touches, beside
+          the homes this assessment expects at Major or Destroyed there. FEMA's
+          figures cover the whole ZIP code and count households that
+          registered, so the two will not match. Look for gross disagreement:
+          heavy damage called where FEMA approved almost nobody, or the
+          reverse.
+        </p>
+
         <h2 className="mt-6 text-lg font-semibold">Review and ground truth</h2>
         <p className="mt-1">
           The review queue is ordered by chance of Major/Destroyed times
           expected occupants. Open a structure, compare Before and After, and
           record what the imagery shows (keys <b>0–4</b>, <b>x</b> = can't
-          tell, <b>j/k</b> = next/previous). Labels are the only way the
+          tell, <b>j/k</b> = next/previous). A short note can be saved with a
+          label. Labels are the only way the
           system's accuracy gets measured; until enough exist, the accuracy
           panel says "Not yet validated" and shows no numbers. Follow
           docs/ops/LABELING_PROTOCOL.md. Areas marked TEST are held out: never
           tune on them.
+        </p>
+        <p className="mt-2">
+          <b>Verify</b> is the blind version for teams: each building goes to
+          three people who see only the Before and After images, never the
+          model's call. Two agreeing answers settle it; disagreements go to an
+          analyst. Settled answers become labels only when someone releases
+          them (<code>run.py truth-release</code>). See docs/truth/README.md.
         </p>
 
         <h2 className="mt-6 text-lg font-semibold">What it cannot see</h2>
@@ -136,8 +177,9 @@ export default function Help() {
           USGS Water Data, NOAA NWPS/NWS/NHC, NCDOT DriveNC, OpenFEMA, FEMA USA
           Structures, USACE National Structure Inventory, OpenStreetMap (ODbL),
           NC OneMap orthoimagery, NOAA NGS Emergency Response Imagery, Maxar
-          Open Data (CC BY-NC 4.0), CDC/ATSDR SVI. The Collection status panel
-          shows each source's live state. Details: docs/ops/DATA_SOURCES.md.
+          Open Data (CC BY-NC 4.0), CDC/ATSDR SVI. The Data sources panel
+          shows each source's state and when it was last checked; <b>Check
+          again</b> re-tests them. Details: docs/ops/DATA_SOURCES.md.
         </p>
       </article>
     </div>

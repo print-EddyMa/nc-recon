@@ -6,6 +6,8 @@ services:
     image: ncrecon:latest
     restart: unless-stopped
     env_file: .env
+    environment:
+      NCR_TRUST_PROXY: "1"            # rate limits see the real client behind Caddy
     volumes:
       - ncrecon-data:/app/data          # assessments, labels, registry, caches
     expose:

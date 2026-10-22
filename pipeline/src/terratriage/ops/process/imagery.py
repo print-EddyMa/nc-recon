@@ -119,16 +119,23 @@ def image_info(path: str, role: str, event: str) -> ImageInfo:
     )
 
 
-def _from_sidecar(meta: dict, role: str) -> ImageInfo:
+def _from_sidecar(meta: dict, role: str, area_dir: str | None = None) -> ImageInfo:
     m = meta[role]
     prov = m.get("provenance") or {}
+    path = m["path"]
+    if not os.path.exists(path) and area_dir:
+        # the sidecar records an absolute path; after a backup restore or a
+        # move between a laptop and the container the file sits beside it
+        beside = os.path.join(area_dir, os.path.basename(path))
+        if os.path.exists(beside):
+            path = beside
     lo = m.get("date_min") or m.get("date")
     hi = m.get("date_max") or m.get("date")
     return ImageInfo(
         role=role, date=lo if lo == hi else f"{lo}..{hi}", acquired_utc=None,
         platform=f"aerial:{m['source']}", catalog_id=None, gsd_m=None,
         off_nadir_deg=None, sun_elevation_deg=None, sun_azimuth_deg=None,
-        view_azimuth_deg=None, clouds_pct=None, url=prov.get("source_url"), path=m["path"],
+        view_azimuth_deg=None, clouds_pct=None, url=prov.get("source_url"), path=path,
         date_min=lo, date_max=hi, date_source=m.get("date_source"),
     )
 
@@ -146,7 +153,8 @@ def sidecar(raw_dir: str, area: str) -> dict | None:
 def pair_for_area(raw_dir: str, area: str, event: str) -> tuple[ImageInfo, ImageInfo]:
     meta = sidecar(raw_dir, area)
     if meta:  # ops-fetch pair (NC orthos / ERI)
-        return _from_sidecar(meta, "pre"), _from_sidecar(meta, "post")
+        d = os.path.join(raw_dir, area)
+        return _from_sidecar(meta, "pre", d), _from_sidecar(meta, "post", d)
     pre = sorted(glob.glob(os.path.join(raw_dir, area, "pre_*.tif")))
     post = sorted(glob.glob(os.path.join(raw_dir, area, "post_*.tif")))
     if not pre or not post:

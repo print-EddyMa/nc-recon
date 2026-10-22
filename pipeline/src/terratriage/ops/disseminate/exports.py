@@ -7,6 +7,9 @@ Formats (all in data/output/ops/exports/<area>/):
   <area>.gpkg         GeoPackage (QGIS / ArcGIS Pro)
   <area>.gdb          File Geodatabase (GDAL OpenFileGDB writer)
   <area>_survey123.csv  field-verification sheet + choices
+  <area>_fema_ia.csv / .geojson  residential structures in the field layout of
+                      FEMA's Individual Assistance damage assessment survey, so
+                      a county can append them to its Survey123 layer
   <area>.provenance.json, README.txt  (sources, licenses, disclaimer)
 
 Field names follow the FEMA damage-assessment database where one exists
@@ -49,6 +52,142 @@ License obligations for this export
 * Damage model: xView2 baseline classifier trained on xBD (xView2 challenge
   terms: non-commercial).
 """
+
+
+FEMA_IA_LEVELS = ("unaffected", "affected", "minor", "major", "destroyed", "inaccessible")
+# NC Recon level -> FEMA IA survey choice (code values as the survey stores them)
+IA_LEVEL = {"no_damage": "unaffected", "affected": "affected", "minor": "minor",
+            "major": "major", "destroyed": "destroyed"}
+# Field names exactly as a deployed FEMA "Damage Assessment form V2.7 for
+# Individual Assistance" Survey123 layer stores them (Survey123 truncates long
+# question names to 31 characters). Read from a public deployment on
+# 2026-10-09; FEMA's own v4.1.0 template page was not reachable, so confirm
+# against NCEM's authoritative IA survey before appending.
+FEMA_IA_FIELDS = (
+    "incident_id_number", "incident_begin_date", "collection_date", "event_name",
+    "street_address", "stateterritory", "county", "zipcode",
+    "what_event_type_caused_the_dama", "owner_or_renter", "is_there_insurance",
+    "level_of_damage_assessed", "choose_the_type_of_dwelling",
+    "is_this_home_occupied_at_least_", "are_the_utilities_functional",
+    "additional_narrative", "date_and_time_of_assessment",
+)
+FEMA_IA_NOTE = """FEMA IA layout (<area>_fema_ia.csv / .geojson)
+---------------------------------------------
+Residential structures only, one point each, with the question names of FEMA's
+Individual Assistance damage assessment survey as deployed in Survey123
+(form V2.7), plus NC Recon columns prefixed ncr_. Every row is a remote call:
+"level_of_damage_assessed" is the most likely level from imagery, never a
+field observation; owner/renter, insurance, occupancy and utilities are
+"unknown" because imagery cannot see them. Rows marked ncr_needs_review = yes
+are uncertain or severe and should be verified on the ground first.
+The field list was read from a public deployment of the FEMA form; confirm it
+against NCEM's authoritative IA survey before appending to a state layer.
+"""
+
+
+def _event_type(name: str) -> str:
+    n = (name or "").lower()
+    for key, label in (("hurricane", "Hurricane"), ("tropical storm", "Tropical Storm"), ("tornado", "Tornado"),
+                       ("flood", "Flood"), ("winter", "Winter Storm"), ("fire", "Fire"), ("storm", "Severe Storm")):
+        if key in n:
+            return label
+    return "Other"
+
+
+def _dwelling(p: dict[str, Any]) -> str | None:
+    """FEMA IA dwelling type; "" for a home of unknown type; None for a
+    structure that is not a home (left out of the IA layer)."""
+    flags = p.get("flags") or {}
+    occ = (p.get("occupancy") or "").upper()
+    prim = (p.get("primary_occupancy") or "").lower()
+    if flags.get("outbuilding"):
+        return None
+    if flags.get("manufactured_home") or occ.startswith("RES2") or "manufactured" in prim:
+        return "manufactured_home"
+    if occ.startswith(("RES3", "RES4", "RES5", "RES6")) or "multi" in prim:
+        return "multi_family"
+    if occ.startswith("RES1") or "single family" in prim:
+        return "single_family"
+    if flags.get("residential"):
+        return ""  # a home, but nothing says which kind: leave it for the field team
+    return None
+
+
+def _fema_ia(area: str, fc: dict[str, Any], rows: list[dict[str, Any]], d: str) -> tuple[str, str, int]:
+    from ..analyze.fema_reference import zip_of
+
+    run = fc["properties"]
+    ev = run.get("event") or {}
+    aoi = run.get("aoi") or {}
+    generated = run.get("generated_utc") or utc_now()
+    event_type = _event_type(ev.get("name") or "")
+    out_rows, feats, skipped = [], [], 0
+    for f, row in zip(fc["features"], rows):
+        p = f["properties"]
+        dwelling = _dwelling(p)
+        if dwelling is None:
+            skipped += 1
+            continue
+        lvl = p.get("damage_level")
+        fema = p.get("fema") or {}
+        probs = p.get("damage_probs") or {}
+        reasons = [r.replace("_", " ").lower() for r in (p.get("review_reasons") or [])]
+        if lvl:
+            narrative = (f"Remote assessment by NC Recon from imagery dated "
+                         f"{fema.get('IMG_DATE') or fema.get('IMG_DATE_RANGE') or 'unknown'}; "
+                         f"P({FEMA_LABEL.get(lvl, lvl)}) = {round(100 * (probs.get(lvl) or 0))}%"
+                         + (f"; verify first: {', '.join(reasons)}" if p.get("needs_review") else "")
+                         + ". Not field verified.")
+        else:
+            narrative = "In the structure inventory but not assessed (no footprint seen in the imagery). Not field verified."
+        addr = row.get("address") or ""
+        out = {
+            "incident_id_number": fema.get("DIS_NUMBER") or (ev.get("declarations") or [""])[0],
+            "incident_begin_date": ev.get("incident_begin") or fema.get("EVENT_DATE"),
+            "collection_date": fema.get("IMG_DATE") or "",
+            "event_name": ev.get("name") or fema.get("EVENT_NAME"),
+            "street_address": addr.split(",")[0].strip() if addr else "",
+            "stateterritory": "North Carolina",
+            "county": aoi.get("county") or "",
+            "zipcode": zip_of(addr) or "",
+            "what_event_type_caused_the_dama": event_type,
+            "owner_or_renter": "unknown",
+            "is_there_insurance": "unknown",
+            # an inventory point with no footprint in the imagery is not "inaccessible"
+            # in FEMA's sense (blocked access); leave it blank for the field team
+            "level_of_damage_assessed": IA_LEVEL.get(lvl, "") if lvl else "",
+            "choose_the_type_of_dwelling": dwelling,
+            "is_this_home_occupied_at_least_": "unknown",
+            "are_the_utilities_functional": "unknown",
+            "additional_narrative": narrative,
+            "date_and_time_of_assessment": generated,
+            "ncr_id": p["ncr_id"],
+            "ncr_assessment_type": fema.get("ASMT_TYPE") or ("Remote Sensing" if lvl else "Unknown"),
+            "ncr_probability": round(probs.get(lvl) or 0, 3) if lvl else None,
+            "ncr_needs_review": "yes" if p.get("needs_review") else "no",
+            "ncr_usng_10m": p.get("usng_10m"),
+            "ncr_lat": row["lat"], "ncr_lon": row["lon"],
+        }
+        out_rows.append(out)
+        feats.append({"type": "Feature", "geometry": {"type": "Point", "coordinates": [row["lon"], row["lat"]]},
+                      "properties": out})
+    # verify-first rows first, then most severe, so a field team can work down the list
+    order = {"destroyed": 0, "major": 1, "minor": 2, "affected": 3, "unaffected": 4, "": 5}
+    idx = sorted(range(len(out_rows)), key=lambda i: (out_rows[i]["ncr_needs_review"] != "yes",
+                                                      order.get(out_rows[i]["level_of_damage_assessed"], 5)))
+    out_rows = [out_rows[i] for i in idx]
+    feats = [feats[i] for i in idx]
+    cols = list(FEMA_IA_FIELDS) + ["ncr_id", "ncr_assessment_type", "ncr_probability", "ncr_needs_review",
+                                   "ncr_usng_10m", "ncr_lat", "ncr_lon"]
+    csv_path = os.path.join(d, f"{area}_fema_ia.csv")
+    with open(csv_path, "w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=cols)
+        w.writeheader()
+        w.writerows(out_rows)
+    gj_path = os.path.join(d, f"{area}_fema_ia.geojson")
+    with open(gj_path, "w", encoding="utf-8") as fh:
+        json.dump({"type": "FeatureCollection", "features": feats}, fh)
+    return csv_path, gj_path, skipped
 
 
 def _ring_ccw(ring: list[list[float]]) -> list[list[float]]:
@@ -119,6 +258,8 @@ def export_area(area: str, mode: str = "responder", out_dir: str | None = None) 
     if os.path.exists(rsp_path):
         with open(rsp_path, encoding="utf-8") as fh:
             responder = json.load(fh)["structures"]
+    if not fc["features"]:
+        raise ValueError("this assessment found no structures, so there is nothing to export")
     d = out_dir or os.path.join(OPS_OUT, "exports", area)
     os.makedirs(d, exist_ok=True)
     rows, geoms = [], []
@@ -174,6 +315,8 @@ def export_area(area: str, mode: str = "responder", out_dir: str | None = None) 
 
     paths["kml"] = _kml(area, rows, geoms, os.path.join(d, f"{area}.kml"))
     paths["survey123"] = _survey123(area, rows, d)
+    ia_csv, ia_geojson, ia_skipped = _fema_ia(area, fc, rows, d)
+    paths["fema_ia_csv"], paths["fema_ia_geojson"] = ia_csv, ia_geojson
 
     prov = {"generated_utc": utc_now(), "run_id": run_props.get("run_id"), "mode": mode,
             "disclaimer": DISCLAIMER, "event": run_props.get("event"), "aoi": run_props.get("aoi"),
@@ -182,6 +325,7 @@ def export_area(area: str, mode: str = "responder", out_dir: str | None = None) 
             "coordinate_reference": "EPSG:4326 (WGS 84) lon/lat; USNG strings computed from NAD83(2011)-"
                                     "equivalent lon/lat (the ~1 m realization gap is below 1 m USNG precision "
                                     "reliability)",
+            "fema_ia_excluded_non_residential": ia_skipped,
             "files": {k: os.path.basename(v) for k, v in paths.items()}}
     p = os.path.join(d, f"{area}.provenance.json")
     with open(p, "w", encoding="utf-8") as fh:
@@ -190,7 +334,7 @@ def export_area(area: str, mode: str = "responder", out_dir: str | None = None) 
     with open(os.path.join(d, "README.txt"), "w", encoding="utf-8") as fh:
         fh.write(f"NC Recon export: {area}\n\n{DISCLAIMER}\n\n"
                  "Contains street addresses (responder mode). Do not post publicly.\n\n"
-                 f"{LICENSE_TEXT}\nSee {area}.provenance.json for sources, dates and processing.\n")
+                 f"{LICENSE_TEXT}\n{FEMA_IA_NOTE}\nSee {area}.provenance.json for sources, dates and processing.\n")
     print(f"[export] {area}: {len(rows)} rows -> {d}")
     return paths
 
@@ -244,7 +388,9 @@ def _survey123(area, rows, d) -> str:
     with open(os.path.join(d, "survey123_choices.csv"), "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
         w.writerow(["list_name", "name", "label"])
-        for n in ("unaffected", "affected", "minor", "moderate", "major", "destroyed", "inaccessible"):
+        # FEMA's IA degrees of damage (2025 PDA Guide) plus the two states a
+        # field team needs: unaffected, and inaccessible (cannot be seen)
+        for n in FEMA_IA_LEVELS:
             w.writerow(["field_damage_category", n, n.title()])
         for n in ("autonomous", "sbas", "dgps", "rtk_float", "rtk_fixed", "ppk", "manual_pin"):
             w.writerow(["gnss_fix_type", n, n.replace("_", " ").upper()])

@@ -376,6 +376,18 @@ def add_provisional_event(event_id: str, name: str, incident_begin: str, *, stat
     return load_events()[event_id]
 
 
+def area_name(area_id: str) -> str:
+    """Display name of an area: the one an analyst typed for an operational
+    area (kept in the registry), else the id in title case."""
+    import re
+
+    name = ((_read_yaml(registry_path()).get("aois") or {}).get(area_id) or {}).get("name")
+    if name:
+        return str(name)
+    return re.sub(r"_[0-9a-f]{4}$", "", area_id).replace("_", " ").title() if area_id in (
+        _read_yaml(registry_path()).get("aois") or {}) else area_id.replace("_", " ").title()
+
+
 def event_for_area(area_id: str) -> tuple[Event, AOI] | None:
     for ev in load_events().values():
         if area_id in ev.aois:

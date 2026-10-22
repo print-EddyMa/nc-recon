@@ -33,7 +33,8 @@ def aggregate(area: str) -> str:
     feats = [f["properties"] for f in fc["features"]]
     lons = [p["centroid"][0] for p in feats]
     lats = [p["centroid"][1] for p in feats]
-    tracts = svi_tracts((min(lons), min(lats), max(lons), max(lats)))
+    # an area with no structures publishes an empty (but valid) product
+    tracts = svi_tracts((min(lons), min(lats), max(lons), max(lats))) if feats else []
     geoms = [shape(t["geometry"]) for t in tracts]
     tree = STRtree(geoms)
     acc: dict[str, dict] = {}
@@ -65,8 +66,17 @@ def aggregate(area: str) -> str:
             else:
                 props[k] = val
         imp = by_imp.get(fips, {})
-        props["expected_displaced"] = imp.get("expected_displaced")
-        props["need_index"] = imp.get("need_index")
+        # the people figures come from the same few homes: when the structure
+        # count is withheld (or the tract has under SUPPRESS assessed homes)
+        # they are withheld too, or a single household could be read off them
+        few = a["structures"] < SUPPRESS or (imp.get("structures") or 0) < SUPPRESS
+        for k in ("expected_displaced", "need_index"):
+            v = imp.get(k)
+            if few and v is not None:
+                props[k] = None
+                props["suppressed_fields"].append(k)
+            else:
+                props[k] = v
         props["svi_percentile"] = imp.get("svi_percentile")
         props["disclaimer"] = DISCLAIMER
         out.append({"type": "Feature", "geometry": t["geometry"], "properties": props})

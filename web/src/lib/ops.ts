@@ -96,7 +96,14 @@ export interface OpsRunProps {
   generated_utc: string;
   disclaimer: string;
   event: { id: string; name: string; declarations: string[]; incident_begin: string };
-  aoi: { id: string; role: "TUNE" | "TEST" | "OPS" | string; county: string; center?: [number, number] };
+  aoi: {
+    id: string;
+    /** the name an analyst gave the area, when one was recorded */
+    name?: string;
+    role: "TUNE" | "TEST" | "OPS" | string;
+    county: string;
+    center?: [number, number];
+  };
   pair_context: Record<string, unknown> & { reasons: string[] };
   counts: Record<FemaClass, number>;
   expected_counts: Record<FemaClass, number>;
@@ -128,7 +135,11 @@ export type OpsAreaSummary = Pick<
   | "not_assessed"
   | "calibration"
   | "warnings"
-> & { id: string };
+> & {
+  id: string;
+  /** [west, south, east, north] of the assessed structures */
+  bbox?: [number, number, number, number] | null;
+};
 
 export interface HealthRow {
   source: string;
@@ -179,8 +190,14 @@ async function getJSON<T>(path: string, auth = false): Promise<T> {
 export const loadOpsAreas = () => getJSON<OpsAreaSummary[]>("/ops/areas");
 export const loadOpsArea = (id: string) =>
   getJSON<OpsCollection>(`/ops/areas/${encodeURIComponent(id)}`, true);
-export const loadHealth = () =>
-  getJSON<{ checked_utc: string; sources: HealthRow[] }>("/ops/health");
+export interface HealthBoard {
+  checked_utc: string;
+  sources: HealthRow[];
+  /** a background re-check is running; `checked_utc` will move when it lands */
+  refreshing?: boolean;
+}
+export const loadHealth = (recheck = false) =>
+  getJSON<HealthBoard>(`/ops/health${recheck ? "?recheck=1" : ""}`);
 export const loadReport = () => getJSON<Record<string, unknown>>("/ops/report");
 export const loadLabels = (area: string) =>
   getJSON<{ ncr_id: string; label: string; labeler: string }[]>(
@@ -212,11 +229,109 @@ export interface Impact {
 }
 export const loadImpact = (area: string) =>
   getJSON<Impact>(`/ops/areas/${encodeURIComponent(area)}/impact`);
+/** FEMA Individual Assistance by ZIP code beside this assessment's own
+ * numbers for the same ZIPs. Context, not validation (see `caveat`). */
+export interface FemaReference {
+  status: "OK" | "NO_FEMA_DATA" | "NO_DECLARATION";
+  declarations: string[];
+  unplaced_structures: number;
+  caveat: string;
+  warnings: string[];
+  zips: {
+    zip: string;
+    structures: number;
+    homes_assessed: number;
+    expected_major_plus: number;
+    fema: {
+      owners: {
+        registrations: number;
+        approved: number;
+        approved_over_25k: number;
+        max_grants: number;
+      } | null;
+      renters: { registrations: number; approved: number } | null;
+    } | null;
+  }[];
+  source: { name: string; url: string };
+}
+export const loadFemaReference = (area: string) =>
+  getJSON<FemaReference>(`/ops/areas/${encodeURIComponent(area)}/fema-assistance`, true);
+
+/** NC Recon's calls beside the Helene search-and-rescue field categories for
+ * the same structures. A comparison, not validation (see `caveats`). */
+export interface FieldReference {
+  area: string;
+  role: string | null;
+  county: string | null;
+  reference: { name: string; url: string };
+  match_rule: string;
+  credible_set: string;
+  counts: { waypoints: number; matched: number; unmatched: number; not_structure: number; superseded_visits: number };
+  summary: {
+    n: number;
+    levels: string[];
+    confusion_rows_sar_cols_ncr: number[][];
+    same_level: number | null;
+    within_one_level: number | null;
+    kappa: number | null;
+    sar_level_in_80pct_set: number | null;
+    major_or_destroyed: {
+      both_count: number;
+      sar_count: number;
+      ncr_most_likely_count: number;
+      ncr_expected_count: number;
+      precision: number | null;
+      recall: number | null;
+    };
+  };
+  summary_homes?: {
+    n: number;
+    major_or_destroyed: { both_count: number; sar_count: number; ncr_most_likely_count: number };
+  };
+  caveats: string[];
+}
+export const loadFieldReference = (area: string) =>
+  getJSON<FieldReference>(`/ops/areas/${encodeURIComponent(area)}/field-reference`, true);
+
 export const publicUrl = (area: string) =>
   `${API_URL}/ops/areas/${encodeURIComponent(area)}/public.geojson`;
 
 const chipUrl = (area: string, ncrId: string, kind: "pre" | "post") =>
   `${API_URL}/ops/areas/${encodeURIComponent(area)}/chip/${ncrId}/${kind}.png`;
+
+/** XYZ tile template for the before / after imagery an assessment read.
+ * Responder-only: pair it with `opsRequestHeaders` in the map's
+ * `transformRequest`, since a tile request cannot otherwise carry the token. */
+export const imageryTileUrl = (area: string, kind: "pre" | "post") =>
+  `${API_URL}/ops/areas/${encodeURIComponent(area)}/tiles/${kind}/{z}/{x}/{y}`;
+export const isOpsUrl = (url: string) => url.startsWith(`${API_URL}/ops/`);
+export const opsRequestHeaders = (): Record<string, string> => {
+  const t = responderToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
+};
+
+/** One before / after image as recorded in the run's provenance. */
+export interface ImageryRecord {
+  role: "pre" | "post";
+  source?: string;
+  license?: string;
+  acquired_utc?: string | null;
+  date_label?: string;
+  date_min?: string | null;
+  date_max?: string | null;
+  geometry?: { date?: string | null };
+}
+
+/** The capture date as far as it is known: a day, a range, or the program
+ * label when the source publishes no date. Never an invented day. */
+export function imageryDate(r: ImageryRecord | undefined): string {
+  if (!r) return "date unknown";
+  if (r.acquired_utc) return r.acquired_utc.slice(0, 10);
+  if (r.geometry?.date) return r.geometry.date;
+  if (r.date_min && r.date_max)
+    return r.date_min === r.date_max ? r.date_min : `${r.date_min} to ${r.date_max}`;
+  return r.date_label?.split(/[;,(]/)[0].trim() || "date unknown";
+}
 
 /** Chips are responder-only, and an <img> cannot send the bearer header, so
  * fetch with the header and hand back an object URL (caller revokes it). */
@@ -251,6 +366,67 @@ export async function openBrief(area: string): Promise<void> {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
+// ---------------------------------------------------------------------------
+// NC Recon Verify (docs/truth/README.md): blind verification tasks.
+// A task carries no model output, by design.
+// ---------------------------------------------------------------------------
+export interface VerifyTask {
+  area: string;
+  ncr_id: string | null;
+  done?: boolean;
+  judgments_so_far?: number;
+  needed?: number;
+  remaining_in_area?: number;
+  imagery?: { pre?: string; post?: string };
+}
+export interface VerifyAreaStatus {
+  area: string;
+  aoi_role: string;
+  candidates: number;
+  judgments: number;
+  verifiers: number;
+  verified: number;
+  escalated: number;
+  unverifiable: number;
+  in_progress: number;
+  released: number;
+  median_seconds_per_judgment: number | null;
+}
+const VERIFIER_KEY = "terratriage:verifier";
+export const verifierName = () => ls(VERIFIER_KEY);
+export const setVerifierName = (v: string) => lsSet(VERIFIER_KEY, v.trim());
+export const nextVerifyTask = (area: string, worker: string, role: "verifier" | "analyst") =>
+  getJSON<VerifyTask>(
+    `/ops/truth/next?area=${encodeURIComponent(area)}&worker=${encodeURIComponent(worker)}&role=${role}`,
+    true,
+  );
+export const loadVerifyStatus = (area: string) =>
+  getJSON<VerifyAreaStatus>(`/ops/truth/areas/${encodeURIComponent(area)}`, true);
+export async function postJudgment(body: {
+  area: string;
+  ncr_id: string;
+  label: string;
+  worker: string;
+  role: "verifier" | "analyst";
+  seconds: number;
+}): Promise<{ ok: boolean; status: { status: string; label?: string | null } | null }> {
+  const r = await fetch(`${API_URL}/ops/truth/judgments`, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ ...body, kind: "remote", blind: true }),
+  });
+  if (!r.ok) {
+    throw new Error(
+      r.status === 401 || r.status === 403
+        ? "Responder token required (Operations > Responder access)"
+        : r.status === 409
+          ? "You already judged this building"
+          : `not saved (${r.status})`,
+    );
+  }
+  return r.json();
+}
+
 export async function postLabel(body: {
   area: string;
   ncr_id: string;
@@ -278,11 +454,14 @@ export async function downloadExport(area: string): Promise<void> {
     { headers: authHeaders() },
   );
   if (!r.ok) {
-    throw new Error(
-      r.status === 401 || r.status === 403
-        ? "Responder token required for building-level exports"
-        : `export failed (${r.status})`,
-    );
+    if (r.status === 401 || r.status === 403)
+      throw new Error("Responder token required for building-level exports");
+    // the server says why in plain words (e.g. an area with no structures)
+    const detail = await r
+      .json()
+      .then((j: { detail?: unknown }) => (typeof j.detail === "string" ? j.detail : null))
+      .catch(() => null);
+    throw new Error(detail ?? `export failed (${r.status})`);
   }
   const blob = await r.blob();
   const a = document.createElement("a");
@@ -339,15 +518,20 @@ export interface Job {
   area: string;
   event: string;
   name: string;
-  status: "queued" | "running" | "done" | "failed" | "lost";
+  /** a new area, or an existing one run again on its stored imagery */
+  kind?: "assess" | "reassess";
+  status: "queued" | "running" | "done" | "failed" | "cancelled" | "lost";
   step: string;
   post_source: string | null;
   error: string | null;
   warnings?: string[];
   log: string[];
   created: number;
+  started?: number | null;
   finished: number | null;
 }
+
+export const jobActive = (j: Job) => j.status === "queued" || j.status === "running";
 
 async function postJSON<T>(path: string, body: unknown): Promise<T> {
   const r = await fetch(`${API_URL}${path}`, {
@@ -379,6 +563,29 @@ export const submitAssessment = (body: {
 
 export const jobStatus = (id: string) => getJSON<Job>(`/ops/assess/${id}`, true);
 
+/** Recent assessment jobs, newest first (kept across server restarts). */
+export const loadJobs = () => getJSON<Job[]>("/ops/jobs", true);
+
+export async function cancelJob(id: string): Promise<Job> {
+  const r = await fetch(`${API_URL}/ops/assess/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!r.ok)
+    throw new Error(
+      r.status === 401 || r.status === 403 ? "Responder token required" : `cancel failed (${r.status})`,
+    );
+  return (await r.json()) as Job;
+}
+
+/** "45 s" / "3 min" / "1 h 05 min", for how long a job has been going. */
+export function fmtDuration(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds));
+  if (s < 60) return `${s} s`;
+  if (s < 3600) return `${Math.round(s / 60)} min`;
+  return `${Math.floor(s / 3600)} h ${String(Math.round((s % 3600) / 60)).padStart(2, "0")} min`;
+}
+
 export const createEvent = (body: {
   id: string;
   name: string;
@@ -404,6 +611,10 @@ export function ago(iso: string | number | null | undefined): string {
   if (s < 48 * 3600) return `${Math.round(s / 3600)} h ago`;
   return new Date(t).toLocaleDateString();
 }
+
+/** Assess an operational area again from the imagery it already has. */
+export const reassessArea = (area: string) =>
+  postJSON<Job>(`/ops/areas/${encodeURIComponent(area)}/reassess`, {});
 
 export async function deleteArea(area: string): Promise<void> {
   const r = await fetch(`${API_URL}/ops/areas/${encodeURIComponent(area)}`, {

@@ -1,4 +1,8 @@
-@import url("https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Geist:wght@400;450;500;600&family=Geist+Mono:wght@400;500&display=swap");
+/* self-hosted (bundled by Vite): the UI renders the same with no internet, which
+   an EOC on a satellite link or a field laptop cannot take for granted */
+@import "@fontsource-variable/source-serif-4/opsz.css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
 
 @tailwind base;
 @tailwind components;

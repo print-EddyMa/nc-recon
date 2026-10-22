@@ -1,0 +1,245 @@
+{
+ "areas": [
+  {
+   "id": "old_fort",
+   "name": "Old Fort",
+   "county": "McDowell",
+   "center": [
+    -82.17861,
+    35.6217
+   ],
+   "structures": 2206,
+   "assessed": 1693,
+   "severe": 244,
+   "severe_lo": 222,
+   "severe_hi": 266,
+   "review": 1160,
+   "displaced": 318,
+   "runtime_s": 84.0,
+   "expected": {
+    "no_damage": 522,
+    "affected": 515,
+    "minor": 411,
+    "major": 176,
+    "destroyed": 69
+   },
+   "pre_date": "2022-01-07",
+   "post_date": "2024-10-02"
+  },
+  {
+   "id": "spruce_pine",
+   "name": "Spruce Pine",
+   "county": "Mitchell",
+   "center": [
+    -82.0718,
+    35.89722
+   ],
+   "structures": 1982,
+   "assessed": 1592,
+   "severe": 233,
+   "severe_lo": 208,
+   "severe_hi": 257,
+   "review": 1267,
+   "displaced": 369,
+   "runtime_s": 76.7,
+   "expected": {
+    "no_damage": 517,
+    "affected": 467,
+    "minor": 375,
+    "major": 149,
+    "destroyed": 84
+   },
+   "pre_date": "2024-02-03",
+   "post_date": "2024-10-02"
+  },
+  {
+   "id": "swannanoa",
+   "name": "Swannanoa",
+   "county": "Buncombe",
+   "center": [
+    -82.39804,
+    35.59946
+   ],
+   "structures": 893,
+   "assessed": 823,
+   "severe": 119,
+   "severe_lo": 105,
+   "severe_hi": 133,
+   "review": 298,
+   "displaced": 144,
+   "runtime_s": 88.3,
+   "expected": {
+    "no_damage": 388,
+    "affected": 207,
+    "minor": 108,
+    "major": 50,
+    "destroyed": 69
+   },
+   "pre_date": null,
+   "post_date": null
+  },
+  {
+   "id": "chimney_rock",
+   "name": "Chimney Rock",
+   "county": "Rutherford",
+   "center": [
+    -82.2445,
+    35.43854
+   ],
+   "structures": 216,
+   "assessed": 193,
+   "severe": 49,
+   "severe_lo": 40,
+   "severe_hi": 57,
+   "review": 85,
+   "displaced": 26,
+   "runtime_s": 29.1,
+   "expected": {
+    "no_damage": 81,
+    "affected": 40,
+    "minor": 23,
+    "major": 18,
+    "destroyed": 30
+   },
+   "pre_date": null,
+   "post_date": null
+  },
+  {
+   "id": "burnsville",
+   "name": "Burnsville",
+   "county": "Yancey",
+   "center": [
+    -82.30098,
+    35.9181
+   ],
+   "structures": 674,
+   "assessed": 609,
+   "severe": 48,
+   "severe_lo": 39,
+   "severe_hi": 57,
+   "review": 213,
+   "displaced": 90,
+   "runtime_s": 73.2,
+   "expected": {
+    "no_damage": 296,
+    "affected": 172,
+    "minor": 92,
+    "major": 25,
+    "destroyed": 23
+   },
+   "pre_date": null,
+   "post_date": null
+  },
+  {
+   "id": "marshall",
+   "name": "Marshall",
+   "county": "Madison",
+   "center": [
+    -82.68393,
+    35.79715
+   ],
+   "structures": 291,
+   "assessed": 254,
+   "severe": 48,
+   "severe_lo": 38,
+   "severe_hi": 57,
+   "review": 131,
+   "displaced": 41,
+   "runtime_s": 49.5,
+   "expected": {
+    "no_damage": 94,
+    "affected": 66,
+    "minor": 45,
+    "major": 19,
+    "destroyed": 28
+   },
+   "pre_date": null,
+   "post_date": null
+  },
+  {
+   "id": "canton",
+   "name": "Canton",
+   "county": "Haywood",
+   "center": [
+    -82.83652,
+    35.53282
+   ],
+   "structures": 1046,
+   "assessed": 804,
+   "severe": 42,
+   "severe_lo": 34,
+   "severe_hi": 51,
+   "review": 246,
+   "displaced": 83,
+   "runtime_s": 87.0,
+   "expected": {
+    "no_damage": 417,
+    "affected": 232,
+    "minor": 112,
+    "major": 23,
+    "destroyed": 19
+   },
+   "pre_date": null,
+   "post_date": null
+  },
+  {
+   "id": "marion_df23",
+   "name": "Marion",
+   "county": "",
+   "center": [
+    -82.00847,
+    35.68365
+   ],
+   "structures": 341,
+   "assessed": 248,
+   "severe": 23,
+   "severe_lo": 16,
+   "severe_hi": 31,
+   "review": 103,
+   "displaced": 44,
+   "runtime_s": 34.6,
+   "expected": {
+    "no_damage": 131,
+    "affected": 61,
+    "minor": 33,
+    "major": 11,
+    "destroyed": 12
+   },
+   "pre_date": null,
+   "post_date": null
+  }
+ ],
+ "total": {
+  "areas": 8,
+  "structures": 7649,
+  "severe": 806,
+  "review": 3503,
+  "max_runtime_s": 88.3
+ },
+ "focus": {
+  "id": "old_fort",
+  "name": "Old Fort",
+  "county": "McDowell",
+  "center": [
+   -82.17861,
+   35.6217
+  ],
+  "structures": 2206,
+  "assessed": 1693,
+  "severe": 244,
+  "severe_lo": 222,
+  "severe_hi": 266,
+  "review": 1160,
+  "displaced": 318,
+  "runtime_s": 84.0,
+  "expected": {
+   "no_damage": 522,
+   "affected": 515,
+   "minor": 411,
+   "major": 176,
+   "destroyed": 69
+  },
+  "pre_date": "2022-01-07",
+  "post_date": "2024-10-02"
+ }
+}

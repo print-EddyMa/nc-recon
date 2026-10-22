@@ -34,9 +34,9 @@ export default {
         // Serif display — the register US government statistical / hazard
         // products use (Census, BLS, USWDS default). Reads as an official
         // instrument, not a generated landing page. Body + figures stay sans.
-        display: ['"Source Serif 4"', "Georgia", "ui-serif", "serif"],
-        sans: ['"Geist"', "ui-sans-serif", "system-ui", "sans-serif"],
-        mono: ['"Geist Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
+        display: ['"Source Serif 4 Variable"', '"Source Serif 4"', "Georgia", "ui-serif", "serif"],
+        sans: ['"Geist Variable"', '"Geist"', "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ['"Geist Mono Variable"', '"Geist Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
       },
       boxShadow: {
         1: "0 1px 2px rgb(var(--shadow) / 0.10), 0 1px 3px rgb(var(--shadow) / 0.08)",

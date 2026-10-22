@@ -160,6 +160,13 @@ export function useMapLibre({
     });
     mapRef.current = map;
 
+    // recording hook: same pattern as demo/Demo.tsx's __demoMap, gated behind
+    // ?rec=1 so it never runs in normal use. Lets the capture scripts drive
+    // the camera with frame-exact jumpTo() instead of live drag/animation.
+    if (new URLSearchParams(location.search).has("rec")) {
+      (window as unknown as { __ttMap?: maplibregl.Map }).__ttMap = map;
+    }
+
     // follow the theme
     let cur = resolved();
     const obs = new MutationObserver(() => {

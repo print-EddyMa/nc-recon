@@ -24,7 +24,11 @@ from typing import Any
 from .. import OPS_CACHE
 from ..provenance import Provenance, utc_now
 
-USER_AGENT = "NCRecon/2.0 (NC disaster damage decision support; ops mode)"
+# Federal APIs (weather.gov in particular) ask for a User-Agent that names the
+# application and a way to reach its operator. A deployment sets NCR_CONTACT
+# (an email or URL); the project page is the fallback.
+USER_AGENT = "NCRecon/2.0 (NC disaster damage decision support; {})".format(
+    os.environ.get("NCR_CONTACT", "").strip() or "+https://github.com/print-EddyMa/nc-recon")
 
 
 class SchemaError(ValueError):
