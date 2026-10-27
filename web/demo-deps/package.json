@@ -1,0 +1,11 @@
+{
+  "name": "ncrecon-demo-deps",
+  "private": true,
+  "description": "Pinned map stack for the offline pitch demo (demo.html) only. deck.gl's interleaved overlay, which the demo's non-interactive map needs, works with maplibre-gl 5 + deck.gl 9.3 and not with the maplibre 6 / deck.gl 9.4 the product ships. Never deployed: the production build excludes the demo.",
+  "dependencies": {
+    "@deck.gl/core": "9.3.11",
+    "@deck.gl/layers": "9.3.11",
+    "@deck.gl/mapbox": "9.3.11",
+    "maplibre-gl": "5.24.0"
+  }
+}

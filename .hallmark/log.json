@@ -1,0 +1,38 @@
+[
+  {
+    "date": "2026-10-26",
+    "macrostructure": "Product homepage: photo hero, statement, product rows, live demo, proof, use, CTA blocks, link footer",
+    "theme": "custom",
+    "theme_axes": "light / single neo-grotesk / monochrome",
+    "vibe": "palantir.com, nvidia.com, about.meta.com: one family, short copy, product rows",
+    "enrichment": "real CAP photograph, live WebGL terrain (lazy, external files)",
+    "brief": "De-AI the Groma site: clean, fast, easy"
+  },
+  {
+    "date": "2026-10-23",
+    "macrostructure": "Workbench (console) + editorial bands (public pages)",
+    "theme": "custom",
+    "theme_axes": "dark-first / high-contrast serif / warm metal",
+    "vibe": "obsidian, limestone, cast bronze; one brand with the site",
+    "enrichment": "none (real imagery and data only)",
+    "brief": "Groma app: brand alignment with the site; public check, index and owner record pages"
+  },
+  {
+    "date": "2026-10-22",
+    "macrostructure": "Map / Diagram",
+    "theme": "custom",
+    "theme_axes": "light / condensed-grotesk / cool (hydro)",
+    "vibe": "USGS quadrangle, survey field kit, highway signage",
+    "enrichment": "live WebGL terrain from real 3DEP + NC OneMap data; CSS 3D exploded anatomy",
+    "brief": "Groma site: interactive 3D explorer, anatomy of a call, usable downloads"
+  },
+  {
+    "date": "2026-10-21",
+    "macrostructure": "Split Studio",
+    "theme": "custom",
+    "theme_axes": "dark / classical-serif / chromatic-other (verdigris)",
+    "vibe": "Roman surveyor, basalt, verdigris, bronze",
+    "enrichment": "real imagery plate + Blender line render",
+    "brief": "Groma site redesign: three buyer paths"
+  }
+]

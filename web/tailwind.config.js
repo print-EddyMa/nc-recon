@@ -21,6 +21,22 @@ export default {
         "accent-soft": v("accent-soft"),
         "accent-ink": v("accent-ink"),
         meter: v("meter"),
+        brand: v("brand"),
+        review: v("review"),
+        "st-ok": v("st-ok"),
+        "st-warn": v("st-warn"),
+        "st-bad": v("st-bad"),
+        "st-unknown": v("st-unknown"),
+        // FEMA five-level damage scale (ColorBrewer YlOrRd with a grey base),
+        // data colours, identical in both themes. Keep in sync with FEMA_HEX
+        // in src/lib/ops.ts.
+        "f-none": "#9e9e9e",
+        "f-aff": "#fecc5c",
+        "f-min": "#fd8d3c",
+        "f-maj": "#f03b20",
+        "f-des": "#bd0026",
+        warn: v("warn-bg"),
+        "warn-ink": v("warn-ink"),
         // xView2 four-level damage ramp (semantic, theme-independent).
         // Keep in sync with DAMAGE[] in src/lib/damage.ts.
         dmg0: "#3fa06d",
@@ -29,12 +45,13 @@ export default {
         dmg3: "#a81b38",
       },
       fontFamily: {
-        // Serif display — the register US government statistical / hazard
-        // products use (Census, BLS, USWDS default). Reads as an official
-        // instrument, not a generated landing page. Body + figures stay sans.
-        display: ['"Source Serif 4"', "Georgia", "ui-serif", "serif"],
-        sans: ['"Geist"', "ui-sans-serif", "system-ui", "sans-serif"],
-        mono: ['"Geist Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
+        // One family with the site: titles are Public Sans, larger and tighter.
+        display: ['"Public Sans Variable"', '"Public Sans"', "ui-sans-serif", "system-ui", "sans-serif"],
+        // Public Sans: the US Web Design System typeface, the register the
+        // government users of this tool already read every day.
+        sans: ['"Public Sans Variable"', '"Public Sans"', "ui-sans-serif", "system-ui", "sans-serif"],
+        // IBM Plex Mono: every figure in a column, grid references, times.
+        mono: ['"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
       },
       boxShadow: {
         1: "0 1px 2px rgb(var(--shadow) / 0.10), 0 1px 3px rgb(var(--shadow) / 0.08)",

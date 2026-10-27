@@ -1,0 +1,29 @@
+# Groma behind Caddy (automatic HTTPS). Copy .env.example to .env first.
+#   docker compose up -d --build
+services:
+  ncrecon:
+    build: .
+    image: ncrecon:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NCR_TRUST_PROXY: "1"            # rate limits see the real client behind Caddy
+    volumes:
+      - ncrecon-data:/app/data          # assessments, labels, registry, caches
+    expose:
+      - "8000"
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on: [ncrecon]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      NCR_DOMAIN: ${NCR_DOMAIN:-localhost}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+volumes:
+  ncrecon-data:
+  caddy-data:

@@ -1,0 +1,139 @@
+# Context rules and evidence-channel settings (Phase J, fusion v1).
+#
+# status: provisional = hand-set from physics/definitions, NOT tuned on labels.
+# Tune on TUNE AOIs only (scripts/run.py ops-calibrate); never on TEST.
+status: provisional
+version: 2026-09-26.1
+
+geometry_limit_deg: 15          # pre/post off-nadir or sun-elevation difference
+
+# per-building masks
+cloud:
+  # Maxar visual products ship no cloud mask. Heuristic: bright, unsaturated,
+  # low-texture pixels. Over this fraction of footprint+ring -> E1/E2 unavailable.
+  bright_min: 205
+  sat_max: 0.12
+  unavailable_frac: 0.30
+haze:
+  # thin cloud / haze / cloud shadow on the post image, relative to pre
+  # (measured 2026-09-26 on Old Fort: haze chips sat 0.01-0.07, texture
+  # 0.14-0.56; real scenes sat >= 0.11, texture >= 0.6)
+  max_sat_ratio: 0.5
+  max_texture_ratio: 0.6
+canopy:
+  # excess-green (2G - R - B) over the roof. RGB only (no NIR in Maxar visual).
+  exg_min: 20
+  downweight_frac: 0.40         # > 40% of roof under canopy -> E1/E2 x0.4
+  downweight: 0.4
+nodata:
+  unavailable_frac: 0.20        # image edge / no-data inside footprint
+
+coreg:
+  max_local_shift_m: 6.0        # per-building post->pre search window
+  min_edge_ncc: 0.15            # below this after alignment -> MISREGISTERED
+                                # unless the pre chip shows a clear structure
+                                # and the post chip does not (then it is change)
+
+channels:
+  E1:
+    name: optical damage classifier (xView2 baseline CNN, post image only)
+    weight: 1.0
+    # With no fitted temperature, the CNN's softmax (over ReLU activations) is
+    # ~1.0 for almost every building and carries no confidence information.
+    # Label-only mode: the likelihood is the crosswalk row of the CNN's label.
+    uncalibrated_mode: label_only
+    weak_alignment_weight: 0.5   # footprint outline never found crisp roof edges in the post image
+  E2:
+    name: pixel change (co-registered, radiometrically matched)
+    weight: 0.6
+    # The raw change score's scale depends on the sensor pair (NC orthos
+    # 2023->2025: median 0.46; Maxar Old Fort: lower), so absolute cut-offs do
+    # not transfer. Bins are on the robust z-score of the score within the
+    # AOI + pair: z = (s - median) / (1.4826 * MAD). Assumes fewer than half
+    # the structures in an AOI are damaged (then the median is "unchanged").
+    # Unlike rank bins this does not force a damage share: an undamaged AOI
+    # produces small z everywhere.
+    bins: [1.0, 2.0, 3.5]
+    likelihood:
+      - [0.40, 0.30, 0.17, 0.09, 0.04]
+      - [0.25, 0.28, 0.25, 0.14, 0.08]
+      - [0.12, 0.18, 0.28, 0.25, 0.17]
+      - [0.05, 0.10, 0.20, 0.30, 0.35]
+  E4:
+    name: blue tarps
+    weight: 0.8
+    min_new_tarp_frac: 0.08      # tarp-blue share of roof not present pre-event
+    # a tarp means the roof is damaged and being repaired; its absence is NOT
+    # evidence of no damage (tarps lag the event), so "no tarp" = no evidence.
+    likelihood_tarp: [0.02, 0.10, 0.45, 0.35, 0.08]
+  E5:
+    name: flood depth -> FEMA matrix
+    weight: 1.0
+  E6:
+    name: lidar ground change around the building (analyze/ground_change.py)
+    # Post-event bare-earth lidar minus the 3DEP baseline, on a ring 2-10 m
+    # outside the walls. Independent of the imagery (a different sensor and
+    # survey), so not weighted down for correlation with E2. Likelihood rows
+    # live in ground_change.LIKELIHOOD; no flag is no evidence.
+    weight: 0.8
+  M1:
+    name: Groma damage model (ops/model/channel.py)
+    # off       never run
+    # alongside run next to E1 (both vote)
+    # replace   E1 is recorded as REPLACED_BY_M1 wherever M1 produced a call
+    # Missing weights or any model error leave M1 unavailable with a warning.
+    # replace since 2026-10-22, by the rule fixed before the run in
+    # docs/model/MODEL_CARD.md "Pre-registered evaluation: M1 on the
+    # pipeline's footprints (Altadena)". Gated to wildfire in hazards.yaml, so
+    # no other hazard changes. Altadena is now spent as a hold-out for M1.
+    mode: replace
+    weight: 1.0
+  H:
+    name: hazard footprint (where the hazard reached, how hard)
+    # Context, not an observation of the building: it says what the hazard
+    # could have done here. Rows are likelihoods over [no damage, affected,
+    # minor, major, destroyed], hand-set from definitions; provisional until
+    # fit on TUNE labels. Which hazards apply comes from config/hazards.yaml.
+    wildfire:
+      weight: 0.6
+      # perimeters are mapped from aircraft and satellites; within this band of
+      # the line the building could be on either side, so no evidence
+      edge_m: 60
+      inside: [0.30, 0.55, 0.65, 0.85, 1.00]    # many homes inside a perimeter survive
+      # well outside, fire damage is unlikely (wind can still do damage, so not decisive)
+      outside_beyond_m: 150
+      outside: [1.00, 0.25, 0.08, 0.04, 0.02]
+    earthquake:
+      weight: 0.5
+      mmi_bins: [6.0, 7.0, 8.0]                 # ShakeMap MMI at the building
+      likelihood:
+        - [1.00, 0.35, 0.12, 0.04, 0.02]        # below VI: structural damage rare
+        - [1.00, 0.75, 0.45, 0.20, 0.08]        # VI-VII: light damage common
+        - [0.70, 0.90, 1.00, 0.70, 0.40]        # VII-VIII: moderate damage
+        - [0.40, 0.70, 1.00, 1.00, 0.90]        # VIII and above: heavy damage, collapse
+    landslide:
+      # NCGS digitised most Helene polygons on the 2025 UNC Collaboratory
+      # orthos, the same post imagery E2 reads, so the two are correlated:
+      # weighted down rather than counted as independent evidence
+      weight: 0.5
+      # a building inside a mapped source, transport or deposit zone of this
+      # storm's slides; outside is no evidence (inventories are incomplete)
+      inside: [0.10, 0.35, 0.65, 1.00, 1.00]
+
+fusion:
+  prior: config                 # crosswalks.yaml class_prior
+  temperature: 1.0              # replaced by config/calibration/fusion_v1.json once fit
+  abstain:
+    tau: 0.50                   # top-class probability below this -> needs_review
+    nonadjacent_top2_min: 0.20  # 2nd class >= this and not adjacent to 1st -> review
+    conformal_max_set: 2        # set size >= 3 -> review (only once conformal is fit)
+    # Until probabilities are calibrated on labels, every Major / Destroyed
+    # call goes to a human: a smoke test of 12 Swannanoa CNN "destroyed" calls
+    # found ~7 correct, far below the 0.80 the prior crosswalk implies.
+    review_severe_until_calibrated: true
+  key_channels:                 # channels without which a call is not made
+    default: [E1]
+
+guards:
+  # floors, never ceilings; each logged as a reason code
+  field_report_trusted_weight: 3.0

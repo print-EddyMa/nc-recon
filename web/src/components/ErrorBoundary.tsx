@@ -18,7 +18,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("[NC Recon] render error", this.props.label ?? "", error, info);
+    console.error("[Groma] render error", this.props.label ?? "", error, info);
   }
 
   render() {

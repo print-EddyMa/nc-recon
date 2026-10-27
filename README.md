@@ -1,187 +1,132 @@
-# NC Recon
+# Groma
 
-A **North Carolina disaster application** with two halves:
+**Every building, after the disaster.** Groma calls the damage to every
+building from public imagery, lidar and field records, so search teams,
+emergency managers, insurers and aid groups start in the right place.
 
-- **Risk monitor** - the "before / during": NOAA NWPS river-flood **forecasts**,
-  USGS streamflow, NWS watches & warnings, NHC active-storm tracking, NASA FIRMS
-  active fire, NCDOT DriveNC cameras & closures, OpenFEMA disaster history,
-  live aircraft (ADS-B via adsb.lol), and (with a free key) ECONet / RAWS
-  current conditions from the NC State Climate Office CLOUDS API and TomTom
-  live traffic. This is what the app opens on.
-- **Damage assessment** - the "after": point it at an area of North Carolina,
-  and it pulls the pre/post Maxar Open Data imagery for that footprint, locates
-  every building, rates its damage on the four-level xView2 scale
-  (**no damage → minor → major → destroyed**), fuses two independent models plus
-  NC context priors into a per-building **confidence tier**, and puts the result
-  on an interactive 3-D map with a **human review queue** for the uncertain calls.
+Free during launch. Open source under the [Apache License 2.0](LICENSE).
+Pilots and questions: **ma.eddy.work@gmail.com**.
 
-Nothing is pre-baked. There is no bundled sample dataset - areas appear on the
-damage map only after the pipeline has assessed them (locally, or against a
-hosted assessment service).
+> Decision support. Not an official FEMA or state emergency management damage
+> assessment. Verify on the ground.
 
-## Quick start
+## What it does
+
+* **Assess.** Type a FEMA disaster number. Groma reads the declaration, finds
+  before and after imagery for any US state, finds every building, and gives
+  each one of FEMA's five damage levels with a probability and the evidence
+  behind it. Flood, wind, wildfire, earthquake and landslide.
+* **Verify.** Uncertain and severe calls go to people, who judge them blind,
+  with Civil Air Patrol photos of the building.
+* **Respond.** Roads likely cut, people cut off, lifelines at risk,
+  landing-zone candidates and 1 km search sectors in US National Grid, as KML
+  for TAK and Google Earth.
+* **Export.** FEMA's damage survey fields, GeoPackage, File Geodatabase, KML,
+  CSV, a situation brief, and the state's initial damage assessment packet in
+  the formats FEMA's July 2025 PDA guide accepts.
+* **Share.** A private, expiring record of one building for a verified owner
+  (for a FEMA appeal or an insurer), a public "is my street OK?" check that
+  never shows one home, and the Groma Index of public counts per area.
+* **Offline (beta).** Carry an assessed area to a field laptop with no network.
+
+## Who it's for
+
+| | What they get |
+|---|---|
+| Emergency management (counties, states, tribes) | Damage counts the day imagery arrives; the IDA packet; ranked search sectors |
+| Insurers and lenders | A call per building with its evidence, from a method you can inspect and re-run |
+| National Guard and responders | An offline field kit, TAK-ready KML, USNG sectors, landing-zone candidates |
+| Aid groups and nonprofits | Area-level counts for targeting cash and supplies, never one home |
+| Researchers and AI labs | Calls checked by people, field records to compare against, fresh test sets |
+| Residents | Through a county or legal aid partner: their street, and a private record of their home |
+
+## Results so far
+
+* **Eaton fire, 2025 (wildfire model, held out):** of 2,246 buildings CAL FIRE
+  inspected, when Groma called a building Major or Destroyed the inspectors
+  agreed 95.7% of the time, and Groma found 94.2% of the ones they marked that
+  way. One run, rule fixed before it ran; the wildfire model alone, not the
+  whole system. Details: [`docs/model/MODEL_CARD.md`](docs/model/MODEL_CARD.md).
+* **Swannanoa, Hurricane Helene:** 893 buildings in 88 seconds on one laptop.
+  Flood is harder: water inside a house does not show from above, so Groma
+  found 15 of the 64 homes county search teams recorded as Major or
+  Destroyed. Flood accuracy is still being validated, and every severe call
+  goes to people before it counts.
+
+## Get started
+
+### Run it (one container, HTTPS, both models built in)
 
 ```bash
-cd web
-npm install
-npm run refresh-nc
-npm run dev
+cp .env.example .env    # set TERRATRIAGE_TOKEN, NCR_OWNER_SECRET and NCR_DOMAIN
+docker compose up -d --build
 ```
 
-Open the printed `localhost` URL. That's the full risk monitor running on
-live public data, no backend required. See "Run it locally" below to also
-run the damage-assessment pipeline.
+The build downloads and checks both damage models: Groma's wildfire model and
+its encoder, and the general image model from this repo's
+[`model-general-v1`](https://github.com/print-EddyMa/nc-recon/releases/tag/model-general-v1) release.
+Open `https://<NCR_DOMAIN>/` and paste the token under **Sign in**. Full guide,
+security model and backups: [`docs/ops/DEPLOYMENT.md`](docs/ops/DEPLOYMENT.md).
+
+### Develop locally
+
+```bash
+# API and worker (Python 3.13)
+cd pipeline
+python3 -m venv .venv
+.venv/bin/pip install --index-url https://download.pytorch.org/whl/cpu torch==2.13.0 torchvision==0.28.0   # Linux; on macOS plain pip is fine
+.venv/bin/pip install -r requirements-dev.txt
+PYTHONPATH=src .venv/bin/python -m terratriage.ops.model.fetch_encoder   # wildfire model encoder
+NCR_DEV_OPEN=1 .venv/bin/python server.py           # :8000, auth off (dev only)
+.venv/bin/python -m pytest tests -q                  # offline suite
+
+# web (Node 22)
+cd web
+npm install
+echo "VITE_API_URL=http://127.0.0.1:8000" > .env.development.local
+npm run dev                                          # :5173
+```
+
+The general image model (flood and wind) is a 474 MB download; locally, see
+[`pipeline/weights/README.md`](pipeline/weights/README.md). Without it Groma
+runs and says that channel is off.
+
+## Documentation
+
+* Launch checklist (ready, and what still needs a person): [`docs/LAUNCH.md`](docs/LAUNCH.md)
+* Event playbook: [`docs/ops/OPERATIONS.md`](docs/ops/OPERATIONS.md)
+* Deployment and configuration: [`docs/ops/DEPLOYMENT.md`](docs/ops/DEPLOYMENT.md)
+* Any hazard, any state: [`docs/ops/ANY_HAZARD.md`](docs/ops/ANY_HAZARD.md)
+* Offline field packs: [`docs/ops/OFFLINE.md`](docs/ops/OFFLINE.md)
+* Response products: [`docs/response/README.md`](docs/response/README.md)
+* Verified ground truth: [`docs/truth/README.md`](docs/truth/README.md)
+* Models: [`docs/model/MODEL_CARD.md`](docs/model/MODEL_CARD.md), [`MODEL_CARD.md`](MODEL_CARD.md), [`BIAS_AUDIT.md`](BIAS_AUDIT.md)
+* Data sources and licences: [`docs/ops/DATA_SOURCES.md`](docs/ops/DATA_SOURCES.md), [`LICENSES.md`](LICENSES.md)
+* Design system: [`DESIGN.md`](DESIGN.md)
+* Website: [`site/`](site/) (`python3 site/build.py`)
 
 ## Layout
 
 ```
-pipeline/   Python. imagery + footprints + fusion model + NC priors -> GeoJSON
-              footprints.py   OSM / NC OneMap building polygons for an AOI
-              fusion.py       dual-model + calibration.json -> confidence tier
-              context.py      NC flood-stage / FEMA / terrain priors
-              server.py       the assessment service (POST /assess, NC-gated)
-              scripts/calibrate.py   tune the tier thresholds for an area
-web/        React/TS. NC risk dashboard + on-demand Assess + damage map + review
-              lib/nc.ts NC backbone (NWPS/USGS/NWS/NHC/FIRMS/DriveNC/FEMA/CLOUDS/aircraft)
-              screens/NCDashboard.tsx   the risk dashboard (the front door)
-              screens/Assess.tsx        drop an NC AOI -> run the pipeline
-docs/       how-it-works.html, design assets
+pipeline/
+  server.py                 FastAPI: /ops API, live feeds, serves the built web app
+  src/terratriage/ops/      plan, collect, process, analyze, disseminate, response, model, offline
+  config/                   events, hazards, context rules, crosswalks, FEMA damage matrix
+  tests/                    pytest (offline)
+web/                        React app: Assess, Verify, Conditions, Help; public check, index, owner record
+site/                       the public website
+docs/                       operations, deployment, models, data
 ```
 
-The two halves meet at one file: a GeoJSON `FeatureCollection` of building
-polygons, each with a `damage_class` (0-3), lon/lat, and - schema **1.1** - a
-`confidence_tier` (`high` / `review`), a `sources` dict (`{heuristic, cnn,
-margin}`, plus `priors`/`prior_effect` when `--nc-context` is used) and
-`footprint_source`. The schema is `pipeline/src/terratriage/contract.py`,
-mirrored in `web/src/lib/types.ts`. `web/public/data/events.json` (written by
-`run.py events registry`) is the registry of assessed NC areas - it ships as
-`[]`.
+## Pricing
 
-## Run it locally
+Free during launch: every feature, self-hosted or as a pilot we run with you.
+Paid hosting and support will come later and will be announced well before
+anything changes. To request a pilot: **ma.eddy.work@gmail.com**.
 
-### Web app
+## Licence, data and security
 
-```bash
-cd web
-npm install
-npm run refresh-nc         # seed public/data/nc/*_snapshot.geojson (offline fallback)
-npm run dev                # http://localhost:5173
-```
-
-The app is a static site. With no `VITE_API_URL` it runs fully - the NC risk
-dashboard is all live public feeds - and the **Assess** screen shows the CLI
-commands to run an assessment yourself. Copy `web/.env.example` to
-`web/.env.development.local` (dev only; never read by `vite build`) to set
-`VITE_API_URL` (a running assessment service), `VITE_FIRMS_KEY` (active-fire
-layer), or `VITE_BASE` (sub-path hosting).
-
-`refresh-nc` refreshes the committed snapshots the dashboard falls back to when
-a feed is unavailable: NWPS / USGS / NWS are also fetched live in-app
-(open, CORS-enabled); NHC and DriveNC are CORS-blocked in the browser so the
-snapshot is the only path. CLOUDS needs a free per-user hash - paste it in-app
-(Layers → key).
-
-### Assessment pipeline
-
-```bash
-cd pipeline
-python -m venv .venv && ./.venv/bin/pip install -r requirements.txt
-./.venv/bin/pip install torch torchvision      # optional: segmentation backend
-
-# optional: the real xView2 CMU baseline classifier (local only, needs conda)
-conda create -y -n terratriage-tf python=3.11
-conda run -n terratriage-tf pip install "tensorflow==2.15.1" "numpy<2" pillow
-
-# assess one NC area (Old Fort, McDowell County)
-./.venv/bin/python scripts/run.py fetch --event HurricaneHelene-Oct24 \
-    --area old_fort --lat 35.6293 --lon -82.1804 --event-date 2024-09-26 \
-    --name "Old Fort" --subtitle "McDowell County, NC"
-./.venv/bin/python scripts/run.py infer --area old_fort --source auto --nc-context
-./.venv/bin/python scripts/make_tiles.py --area old_fort
-./.venv/bin/python scripts/run.py events registry     # -> web/public/data/events.json
-./.venv/bin/python scripts/run.py events catalog      # -> web/public/data/maxar_catalog.json
-
-# tune the confidence-tier thresholds for that area (optional)
-./.venv/bin/python scripts/calibrate.py --area old_fort --labels labels.csv --write
-```
-
-`--source auto` uses NC OneMap building footprints for an AOI whose centre is in
-North Carolina when `TERRATRIAGE_NC_FOOTPRINTS_URL` points at an NC
-building-footprint ArcGIS FeatureServer, otherwise OpenStreetMap. `--nc-context`
-looks up nearest-gauge flood stage, active FEMA declarations, and terrain slope
-(network calls, fusion backend only); only a real moderate+ flood stage or
-steep terrain moves a borderline confidence tier - the FEMA declaration flag is
-recorded alongside each building for reference but never moves a tier by
-itself, and none of the three ever changes the damage class.
-`--backend auto` picks **fusion** when the CNN weights + `terratriage-tf` env are
-present, else `keras`, else `heuristic`.
-
-### Assessment service
-
-```bash
-cd pipeline
-./.venv/bin/python server.py                  # http://127.0.0.1:8000
-```
-
-Then set `VITE_API_URL=http://127.0.0.1:8000` for the web app and the Assess
-screen gains a one-click **Assess this area** button. The service only accepts
-AOIs inside North Carolina.
-
-## Deploy
-
-**Web**: `npm run build` → static `dist/`. Host anywhere (Netlify / Vercel /
-Pages / S3). Set `VITE_API_URL` at build time to wire in a hosted assessment
-service; without it the site is the live NC risk monitor plus the manual Assess
-instructions.
-
-**Assessment service** (optional):
-
-```bash
-docker build -t terratriage-api pipeline
-docker run -p 8000:8000 \
-  -e HOST=0.0.0.0 \
-  -e CORS_ORIGINS=https://your-web-host.example \
-  -e TERRATRIAGE_TOKEN=change-me \
-  -v terratriage-data:/app/data -v terratriage-served:/app/served \
-  terratriage-api
-```
-
-Config (all optional, env): `TERRATRIAGE_TOKEN` (bearer auth on `/assess` +
-`DELETE`), `CORS_ORIGINS`, `ALLOWED_BBOX` (`w,s,e,n`, default NC),
-`MAX_ACTIVE_JOBS`, `MAX_ASSESS_PER_HOUR`, `MAX_DATA_GB`, `HOST`, `PORT`,
-`TERRATRIAGE_NC_FOOTPRINTS_URL`, `TERRATRIAGE_TILES_DIR`,
-`TERRATRIAGE_WEB_DATA_DIR`. The hosted image runs the heuristic + torch
-segmentation backends; the Keras/TF CMU classifier is local-only.
-
-## Using it
-
-The app **opens on the NC risk monitor** (`#/`, or **g** then **n**). Toggle
-layers on the left; the right panel ranks the flood forecast, lists active NWS
-alerts, shows current conditions and fire weather, an **NC disaster history**
-panel (OpenFEMA), and the nearest DriveNC cameras + closures to the worst
-current risk point.
-
-**Assess** (`#/assess`, or **g** then **a**): click anywhere in North Carolina
-to drop an AOI, pick the Maxar event that covers it, and run the pipeline -
-one click with a service connected, or copyable commands without one. When it
-finishes, the **Damage map**, **Review** queue and **Summary** light up for
-that area (deep-linked `#/a/<area>/<screen>`).
-
-Keyboard: **⌘K** command menu, **?** shortcut list, **g** then
-`n`/`a`/`m`/`r`/`s`.
-
-## Credits & data
-
-Imagery: [Maxar Open Data](https://www.maxar.com/open-data) via the
-[opengeos/maxar-open-data](https://github.com/opengeos/maxar-open-data) STAC
-mirror. Footprints: OpenStreetMap (ODbL), NC OneMap. Model & code: xView2
-baseline (CMU SEI, BSD-3) and 1st-place solution (V. Durnov). NC risk & context:
-[NOAA NWPS](https://water.noaa.gov/), [USGS NWIS](https://waterservices.usgs.gov/),
-[NWS](https://www.weather.gov/documentation/services-web-api),
-[NHC](https://www.nhc.noaa.gov/), [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/),
-[NCDOT DriveNC](https://drivenc.gov/), [OpenFEMA](https://www.fema.gov/about/openfema/api),
-[USGS EPQS](https://apps.nationalmap.gov/epqs/), the NC State Climate Office
-[CLOUDS API](https://api.climate.ncsu.edu/), live aircraft via
-[adsb.lol](https://adsb.lol/), and (with a free key) [TomTom](https://www.tomtom.com/)
-traffic flow. Multi-source-fusion + human-review pattern after HOT's
-[fAIr](https://www.hotosm.org/). Basemap: CARTO. Map: MapLibre GL + deck.gl.
+Code: Apache-2.0 ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)). Groma reads
+public data whose own terms travel with the outputs (OpenStreetMap is ODbL;
+Maxar Open Data and the xView2 baseline model are non-commercial): see
+[`LICENSES.md`](LICENSES.md). Report a vulnerability privately: [`SECURITY.md`](SECURITY.md).

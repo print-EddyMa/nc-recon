@@ -1,0 +1,48 @@
+# Probabilistic crosswalks between damage vocabularies.
+#
+# FEMA ordinal classes (ops output):  no_damage < affected < minor < major < destroyed
+#
+# status: prior      = hand-set from definitions, NOT estimated from data
+#         estimated  = fit on TUNE truth (records the fit set + date)
+# Every crosswalk is a row-stochastic matrix P(fema_class | source_label).
+
+fema_classes: [no_damage, affected, minor, major, destroyed]
+
+xbd_to_fema:
+  status: prior
+  rationale: >
+    xBD labels are visual, from nadir imagery. FEMA categories hinge on
+    habitability and on water inside the home, which nadir imagery often cannot
+    see, so each xBD label spreads over adjacent FEMA classes. "no-damage" cannot
+    separate No damage from Affected; "minor-damage" spans Affected/Minor.
+  source_labels: [no-damage, minor-damage, major-damage, destroyed]
+  matrix:
+    - [0.70, 0.25, 0.05, 0.00, 0.00]   # no-damage
+    - [0.05, 0.40, 0.45, 0.10, 0.00]   # minor-damage
+    - [0.00, 0.05, 0.20, 0.65, 0.10]   # major-damage
+    - [0.00, 0.00, 0.02, 0.18, 0.80]   # destroyed
+
+nc_field_to_fema:
+  status: prior
+  rationale: >
+    Field categories read back from Survey123 / SARCOP layers. NCEM's IA
+    survey and the Helene SARCOP waypoints use FEMA's levels (unaffected,
+    affected, minor, major, destroyed); "Moderate" is accepted only for older
+    or out-of-state forms and maps to Minor-or-Major. Reports carry both the
+    lower and upper bound mapping; this matrix is the midpoint. Groma never
+    offers "Moderate" to a field team.
+  source_labels: [unaffected, affected, minor, moderate, major, destroyed]
+  matrix:
+    - [1.00, 0.00, 0.00, 0.00, 0.00]
+    - [0.00, 1.00, 0.00, 0.00, 0.00]
+    - [0.00, 0.00, 1.00, 0.00, 0.00]
+    - [0.00, 0.00, 0.50, 0.50, 0.00]
+    - [0.00, 0.00, 0.00, 1.00, 0.00]
+    - [0.00, 0.00, 0.00, 0.00, 1.00]
+  moderate_bounds: {lower: minor, upper: major}
+
+# Rough prior over FEMA classes inside a declared-disaster AOI before any
+# evidence. Deliberately flat-ish so evidence dominates. Not an estimate.
+class_prior:
+  status: prior
+  p: [0.40, 0.20, 0.18, 0.12, 0.10]

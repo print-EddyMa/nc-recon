@@ -4,7 +4,6 @@ import { ScatterplotLayer, GeoJsonLayer } from "@deck.gl/layers";
 import type { PickingInfo } from "@deck.gl/core";
 import { useMapLibre, type IControl } from "../lib/useMapLibre";
 import { prefersReducedMotion } from "../lib/motion";
-import { resolved as resolvedTheme } from "../lib/theme";
 import { useSettings } from "../lib/settings";
 import { liveRadarFrames, RADAR_ATTRIBUTION } from "../lib/radar";
 import LayerToggles, { type LayerRow } from "../components/map/LayerToggles";
@@ -20,10 +19,12 @@ import {
   ncStormTracks,
   ncCameras,
   ncClosures,
+  ncFiman,
+  ncPower,
+  ncShelters,
   ncStreamflow,
   ncFires,
   ncFemaHistory,
-  ncAircraft,
   NC_CENTER,
   NC_BBOX,
   NC_SEV_COLOR,
@@ -42,13 +43,15 @@ interface Props {
 type LayerId =
   | "climate"
   | "gauge"
+  | "fiman"
   | "flow"
   | "alert"
   | "storm"
   | "fire"
   | "camera"
   | "closure"
-  | "aircraft";
+  | "power"
+  | "shelter";
 
 const LAYER_META: Record<LayerId, { label: string; note: string }> = {
   climate: { label: "Current conditions", note: "ECONet + RAWS (CLOUDS API)" },
@@ -56,29 +59,39 @@ const LAYER_META: Record<LayerId, { label: string; note: string }> = {
     label: "River flood forecast",
     note: "NOAA NWPS / National Water Model",
   },
+  fiman: {
+    label: "NC flood gauges",
+    note: "NC Emergency Management FIMAN",
+  },
   flow: { label: "Streamflow", note: "USGS NWIS instantaneous values" },
   alert: { label: "Official alerts", note: "NWS watches & warnings" },
   storm: { label: "Active storm", note: "NHC cone & track" },
   fire: { label: "Active fire", note: "NASA FIRMS VIIRS" },
   camera: { label: "DOT cameras", note: "NCDOT DriveNC" },
   closure: { label: "Road closures", note: "NCDOT DriveNC" },
-  aircraft: { label: "Live aircraft", note: "ADS-B via adsb.lol" },
+  power: { label: "Power outages", note: "Duke Energy, by county" },
+  shelter: { label: "Open shelters", note: "FEMA ESF6 / American Red Cross" },
 };
 const LAYER_ORDER: LayerId[] = [
   "gauge",
+  "fiman",
   "flow",
   "alert",
+  "power",
+  "shelter",
   "climate",
   "fire",
   "storm",
   "closure",
   "camera",
-  "aircraft",
 ];
 
 const DEFAULT_ON: Record<LayerId, boolean> = {
   climate: true,
   gauge: true,
+  fiman: true,
+  power: true,
+  shelter: true,
   flow: false,
   alert: true,
   storm: true,
@@ -87,16 +100,13 @@ const DEFAULT_ON: Record<LayerId, boolean> = {
   // marks, they read as an emergency on an otherwise-calm map
   closure: false,
   camera: false,
-  // off by default: hundreds of routine flights read as clutter on a calm day
-  aircraft: false,
 };
 
-// cameras + closures + aircraft sit off the flood-severity ramp, so the
+// cameras + closures sit off the flood-severity ramp, so the
 // legend names them individually
 const CAMERA_RGB: [number, number, number] = [139, 148, 163];
 const CLOSURE_RGB: [number, number, number] = [232, 137, 74];
-const AIRCRAFT_RGB: [number, number, number] = [90, 150, 200];
-const AIRCRAFT_MIL_RGB: [number, number, number] = [163, 116, 217];
+const SHELTER_RGB: [number, number, number] = [62, 168, 140];
 
 const sevRGB = (s: number): [number, number, number] =>
   NC_SEV_COLOR[Math.max(-1, Math.min(3, s))];
@@ -108,7 +118,6 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
   const { containerRef, mapRef, ready, styleEpoch } = useMapLibre({
     center: [-78.7, 35.4],
     zoom: 6.7,
-    autoTilt: true,
   });
   const overlayRef = useRef<MapboxOverlay | null>(null);
   const reduced = prefersReducedMotion();
@@ -121,8 +130,10 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
   const [camera, setCamera] = useState<NCResult<NCPointFC> | null>(null);
   const [closure, setClosure] = useState<NCResult<NCPointFC> | null>(null);
   const [flow, setFlow] = useState<NCResult<NCPointFC> | null>(null);
+  const [fiman, setFiman] = useState<NCResult<NCPointFC> | null>(null);
+  const [power, setPower] = useState<NCResult<NCGeomFC> | null>(null);
+  const [shelter, setShelter] = useState<NCResult<NCPointFC> | null>(null);
   const [fire, setFire] = useState<NCResult<NCPointFC> | null>(null);
-  const [aircraft, setAircraft] = useState<NCResult<NCPointFC> | null>(null);
   const [history, setHistory] = useState<NCHistory | null>(null);
   const [selected, setSelected] = useState<{
     title: string;
@@ -263,67 +274,6 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
     }
   }, [radarIdx, radarOn, ready, mapRef, radarFrames]);
 
-  // --- real traffic congestion (TomTom flow tiles) ------------------------ //
-  // Road colour = live speed vs free-flow speed, per road segment. This is
-  // genuinely real per-segment data (not the synthetic "moving car" dots some
-  // open-source globe demos animate from aggregate flow when no traffic
-  // provider is configured) - deliberately declined here for that reason.
-  const [trafficOn, setTrafficOn] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem("terratriage:nc-traffic") === "1";
-    } catch {
-      return false;
-    }
-  });
-  useEffect(() => {
-    try {
-      localStorage.setItem("terratriage:nc-traffic", trafficOn ? "1" : "0");
-    } catch {
-      /* private window */
-    }
-  }, [trafficOn]);
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!ready || !map) return;
-    const id = "nc-traffic";
-    const safe = (fn: () => void) => {
-      try {
-        if (mapRef.current && map.getStyle()) fn();
-      } catch {
-        /* map style not ready / torn down */
-      }
-    };
-    const teardown = () =>
-      safe(() => {
-        if (map.getLayer(id)) map.removeLayer(id);
-        if (map.getSource(id)) map.removeSource(id);
-      });
-    const key = settings.tomtomKey;
-    if (!trafficOn || !key) {
-      teardown();
-      return;
-    }
-    safe(() => {
-      const style = resolvedTheme() === "dark" ? "relative0-dark" : "relative0";
-      const firstSymbol = map
-        .getStyle()
-        ?.layers?.find((l) => l.type === "symbol")?.id;
-      map.addSource(id, {
-        type: "raster",
-        tiles: [
-          `https://api.tomtom.com/traffic/map/4/tile/flow/${style}/{z}/{x}/{y}.png?key=${key}&thickness=10`,
-        ],
-        tileSize: 256,
-        attribution: "© TomTom",
-      });
-      map.addLayer(
-        { id, type: "raster", source: id, paint: { "raster-opacity": 0.85 } },
-        firstSymbol,
-      );
-    });
-    return teardown;
-  }, [ready, mapRef, trafficOn, settings.tomtomKey, styleEpoch]);
-
   // frame the map on North Carolina once it's ready, leaving room for the side
   // panels, so the state fills the view rather than the whole Southeast
   useEffect(() => {
@@ -363,6 +313,9 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
       ncFloodForecasts().then(setGauge);
       ncAlerts().then(setAlert);
       ncStreamflow().then(setFlow);
+      ncFiman().then(setFiman);
+      ncPower().then(setPower);
+      ncShelters().then(setShelter);
     };
     pull();
     const t = window.setInterval(pull, 5 * 60_000);
@@ -381,28 +334,19 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
     setFire(null);
     ncFires().then(setFire);
   }, [settings.firmsKey]);
-  // fetch once on mount so the layer row shows a real count before it's ever
-  // switched on; positions move fast, so re-poll on a much shorter cadence
-  // than the other feeds, but only while the layer is actually visible
-  useEffect(() => {
-    ncAircraft().then(setAircraft);
-  }, []);
-  useEffect(() => {
-    if (!on.aircraft) return;
-    const t = window.setInterval(() => ncAircraft().then(setAircraft), 20_000);
-    return () => window.clearInterval(t);
-  }, [on.aircraft]);
 
   const results: Record<LayerId, NCResult<NCPointFC | NCGeomFC> | null> = {
     climate,
     gauge,
+    fiman,
     flow,
+    power,
+    shelter,
     alert,
     storm,
     fire,
     camera,
     closure,
-    aircraft,
   };
 
   const flyTo = (coord: [number, number], zoom = 9) =>
@@ -419,10 +363,11 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
     type PF = NCPointFC["features"][number];
 
     // polygon-ish layers first (alerts, storm cone) so points sit on top
-    for (const id of ["alert", "storm"] as const) {
+    for (const id of ["power", "alert", "storm"] as const) {
       const res = results[id];
       if (!on[id] || !res || res.disabled) continue;
       const isStorm = id === "storm";
+      const isPower = id === "power";
       out.push(
         new GeoJsonLayer({
           id: `nc-${id}`,
@@ -432,7 +377,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
           filled: true,
           getFillColor: (f) => {
             const [r, g, b] = sevRGB((f as GF).properties.severity);
-            return [r, g, b, isStorm ? 55 : 34];
+            return [r, g, b, isStorm ? 55 : isPower ? 80 : 34];
           },
           getLineColor: (f) => {
             const [r, g, b] = sevRGB((f as GF).properties.severity);
@@ -459,23 +404,24 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
       );
     }
 
-    // point layers. cameras + closures + aircraft aren't on the hazard-severity // ramp, they get their own fixed marks so the ramp still means "flood risk".
+    // point layers. cameras + closures aren't on the hazard-severity // ramp, they get their own fixed marks so the ramp still means "flood risk".
     const FLOW_RGB: [number, number, number] = [90, 150, 200];
     for (const id of [
       "gauge",
+      "fiman",
       "flow",
       "climate",
       "fire",
+      "shelter",
       "closure",
       "camera",
-      "aircraft",
     ] as const) {
       const res = results[id];
       if (!on[id] || !res || res.disabled) continue;
       const isCam = id === "camera";
       const isClosure = id === "closure";
       const isFlow = id === "flow";
-      const isAircraft = id === "aircraft";
+      const isShelter = id === "shelter";
       out.push(
         new ScatterplotLayer({
           id: `nc-${id}`,
@@ -490,7 +436,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
             if (isCam) return 2.5;
             if (isClosure) return 3.5;
             if (isFlow) return 2.8;
-            if (isAircraft) return 3;
+            if (isShelter) return 5;
             const s = (f as PF).properties.severity;
             return s <= 0 ? 2.6 : 4 + s * 3;
           },
@@ -498,10 +444,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
             if (isCam) return [...CAMERA_RGB, 0];
             if (isClosure) return [...CLOSURE_RGB, 150];
             if (isFlow) return [...FLOW_RGB, 70];
-            if (isAircraft) {
-              const mil = (f as PF).properties.category === "Military";
-              return [...(mil ? AIRCRAFT_MIL_RGB : AIRCRAFT_RGB), 190];
-            }
+            if (isShelter) return [...SHELTER_RGB, 190];
             const s = (f as PF).properties.severity;
             const [r, g, b] = sevRGB(s);
             return [r, g, b, s <= 0 ? 45 : 70 + s * 55];
@@ -510,10 +453,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
             if (isCam) return [...CAMERA_RGB, 210];
             if (isClosure) return [...CLOSURE_RGB, 230];
             if (isFlow) return [...FLOW_RGB, 190];
-            if (isAircraft) {
-              const mil = (f as PF).properties.category === "Military";
-              return [...(mil ? AIRCRAFT_MIL_RGB : AIRCRAFT_RGB), 230];
-            }
+            if (isShelter) return [255, 255, 255, 230];
             const s = (f as PF).properties.severity;
             const [r, g, b] = sevRGB(s);
             return [r, g, b, s <= 0 ? 120 : 230];
@@ -524,7 +464,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
             const f = info.object as PF | undefined;
             if (!f) return;
             const c = f.geometry.coordinates as [number, number];
-            flyTo(c, id === "camera" || id === "closure" ? 11 : 10);
+            flyTo(c, id === "camera" || id === "closure" || id === "shelter" ? 11 : 10);
             setSelected({
               title: f.properties.title,
               detail:
@@ -544,7 +484,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [climate, gauge, flow, alert, storm, fire, camera, closure, aircraft, on]);
+  }, [climate, gauge, fiman, flow, alert, storm, fire, camera, closure, power, shelter, on]);
 
   useEffect(() => {
     if (!ready || !mapRef.current) return;
@@ -671,7 +611,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
 
   // cameras / closures / storm are snapshot-by-design; only a live-capable feed
   // falling back to a snapshot means we're actually offline
-  const anyStale = (["gauge", "flow", "alert", "climate"] as const).some(
+  const anyStale = (["gauge", "fiman", "flow", "alert", "climate"] as const).some(
     (id) => {
       const r = results[id];
       return r && !r.disabled && r.stale;
@@ -689,15 +629,14 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
       // `res.source` names the feed and sometimes tacks on its own count
       // ("USGS NWIS · 291 gages"); drop both the source-name prefix and a
       // leading count so the row doesn't read "291 · 291 gages"
-      if (!res.disabled)
+      if (!res.disabled && count === 0 && id === "power") metaLine = "none out · live";
+      else if (!res.disabled && count === 0 && id === "shelter")
+        metaLine = "none open · live";
+      else if (!res.disabled)
         metaLine = `${count.toLocaleString()} · ${res.source.replace(/^[^·]+·\s*/, "").replace(/^[\d,]+\s+/, "")}`;
       else if (id === "climate" || id === "fire")
         metaLine = "optional, add a free key";
       else if (id === "storm") metaLine = "none active";
-      else if (id === "aircraft")
-        metaLine = res.reason?.includes("unavailable")
-          ? "unavailable"
-          : "none in view";
       else metaLine = "unavailable";
     }
     return {
@@ -717,19 +656,6 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
     checked: radarOn,
     disabled: false,
     onToggle: () => setRadarOn((v) => !v),
-  });
-  layerRows.push({
-    id: "traffic",
-    label: "Traffic congestion",
-    meta: settings.tomtomKey
-      ? "TomTom · live road-segment speeds"
-      : "optional, add a free key",
-    checked: trafficOn,
-    disabled: !settings.tomtomKey,
-    reason: !settings.tomtomKey
-      ? "Add a free TomTom traffic key to colour every road by its real live speed vs free-flow. Real per-segment data, not a simulation."
-      : undefined,
-    onToggle: () => setTrafficOn((v) => !v),
   });
 
   const floodItems: RankedItem[] = floodRanked.map((f) => ({
@@ -753,37 +679,27 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
 
   const riskPanels = (
     <>
-      <section className="panel px-3.5 py-3.5">
-        <h2 className="section-title mb-2">Current conditions</h2>
-        {climate?.disabled ? (
-          <p className="text-2xs leading-relaxed text-ink-faint">
-            {climate.reason}
-          </p>
-        ) : climate ? (
-          <>
-            <StatTile
-              label="Stations reporting"
-              value={climate.headline ?? "-"}
-              sub="ECONet research + RAWS fire-weather stations, via the NC State Climate Office CLOUDS API."
-            />
-            {(() => {
-              const fire = (climate.data.features ?? []).filter(
-                (f) => f.properties.severity >= 2,
-              );
-              return fire.length ? (
-                <p className="mt-2 rounded-sm bg-dmg1/15 px-1.5 py-1 text-2xs text-dmg1">
-                  {fire.length} RAWS station{fire.length > 1 ? "s" : ""} at
-                  fire-weather risk (low fuel moisture + wind)
-                </p>
-              ) : null;
-            })()}
-          </>
-        ) : (
-          <div className="skel h-10" />
-        )}
-      </section>
+      {climate && !climate.disabled && (
+        <section className="px-3.5 py-3">
+          <h2 className="section-title mb-2">Current conditions</h2>
+          <StatTile
+            label="Stations reporting"
+            value={climate.headline ?? "-"}
+            sub="ECONet research + RAWS fire-weather stations, via the NC State Climate Office CLOUDS API."
+          />
+          {(() => {
+            const fire = (climate.data.features ?? []).filter((f) => f.properties.severity >= 2);
+            return fire.length ? (
+              <p className="mt-2 rounded-sm bg-dmg1/15 px-1.5 py-1 text-2xs text-dmg1">
+                {fire.length} RAWS station{fire.length > 1 ? "s" : ""} at fire-weather risk (low fuel moisture +
+                wind)
+              </p>
+            ) : null;
+          })()}
+        </section>
+      )}
 
-      <section className="panel px-3.5 py-3.5">
+      <section className="px-3.5 py-3">
         <div className="mb-2 flex items-baseline justify-between">
           <h2 className="section-title">Flood forecast</h2>
           <span className="cap">{gauge?.headline ?? "…"}</span>
@@ -791,14 +707,17 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
         {gauge ? (
           <RankedList
             items={floodItems}
-            empty="Every forecast gauge in NC is below flood stage. NWM forecasts extend to ungauged creeks too, a rise shows here before a gauge is under water."
+            empty="No river forecasts above action stage."
           />
         ) : (
-          <div className="skel h-16" />
+          <p className="flex items-center gap-2 text-xs text-ink-faint">
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-line-strong border-t-transparent" />
+            Loading river forecasts…
+          </p>
         )}
       </section>
 
-      <section className="panel px-3.5 py-3.5">
+      <section className="px-3.5 py-3">
         <div className="mb-2 flex items-baseline justify-between">
           <h2 className="section-title">Official alerts</h2>
           <span className="cap">{alert?.headline ?? "…"}</span>
@@ -815,7 +734,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
       </section>
 
       {fire && !fire.disabled && fire.data.features.length > 0 && (
-        <section className="panel px-3.5 py-3.5">
+        <section className="px-3.5 py-3">
           <div className="mb-2 flex items-baseline justify-between">
             <h2 className="section-title">Active fire</h2>
             <span className="cap">{fire.headline ?? "…"}</span>
@@ -828,7 +747,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
         </section>
       )}
 
-      <section className="panel px-3.5 py-3.5">
+      <section className="px-3.5 py-3">
         <div className="mb-2 flex items-baseline justify-between">
           <h2 className="section-title">NC disaster history</h2>
           <span className="cap">{history ? "OpenFEMA" : "…"}</span>
@@ -869,7 +788,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
       </section>
 
       {storm && !storm.disabled && (
-        <section className="panel px-3.5 py-3.5">
+        <section className="px-3.5 py-3">
           <h2 className="section-title mb-1.5">Active storm</h2>
           <ul className="space-y-1">
             {(storm.data.features ?? []).map((f) => (
@@ -892,7 +811,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
 
       {elevatedRisk &&
         (nearbyCameras.length > 0 || nearbyClosures.length > 0) && (
-          <section className="panel px-3.5 py-3.5">
+          <section className="px-3.5 py-3">
             <h2 className="section-title mb-1.5">Ground truth near the risk</h2>
             {nearbyClosures.length > 0 && (
               <div className="mb-2">
@@ -944,19 +863,17 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
       <aside className="absolute left-3 top-3 z-20 flex max-h-[calc(100%-1.5rem)] w-[18rem] max-w-[calc(100vw-1.5rem)] flex-col gap-3 overflow-y-auto sm:left-4 sm:top-4">
         <section className="panel px-4 py-3.5">
           <div className="flex items-baseline justify-between">
-            <h1 className="font-display text-lg font-semibold leading-tight text-ink">
-              North Carolina
-            </h1>
+            <h1 className="title-display whitespace-nowrap text-[17px] leading-tight text-ink">Conditions · North Carolina</h1>
             <span className="flex items-center gap-1.5 text-2xs text-ink-faint">
               <span
-                className={`h-1.5 w-1.5 rounded-full ${anyStale ? "bg-dmg1" : "bg-accent"}`}
+                className={`h-1.5 w-1.5 rounded-full ${anyStale ? "bg-st-warn" : "bg-st-ok"}`}
               />
               {anyStale ? "cached" : "live"}
             </span>
           </div>
           <p className="mt-1 text-xs leading-relaxed text-ink-dim">
-            Flood forecasts, warnings, storm tracking and road conditions, the
-            hours before and during a disaster.
+            Rivers, warnings, power, shelters, storms and roads, before and during a
+            disaster. Live feeds cover North Carolina today.
           </p>
           <button
             onClick={onOpenAssess}
@@ -993,7 +910,12 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
           <div className={layersOpen ? "mt-2.5" : "hidden"}>
             <LayerToggles rows={layerRows} />
 
-            {(settings.cloudsKey || climate?.disabled) && (
+            <details className="mt-2 text-2xs text-ink-faint">
+              <summary className="cursor-pointer hover:text-ink">Optional data keys</summary>
+              <p className="mt-1.5 leading-relaxed">
+                A free NC State Climate Office CLOUDS key adds current conditions: temperature, wind, rain
+                and fire-weather stations.
+              </p>
               <KeyForm
                 hasKey={!!settings.cloudsKey}
                 placeholder="CLOUDS API hash"
@@ -1001,14 +923,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
                 onAdd={(v) => set("cloudsKey", v)}
                 onRemove={() => set("cloudsKey", undefined)}
               />
-            )}
-            <KeyForm
-              hasKey={!!settings.tomtomKey}
-              placeholder="TomTom traffic key"
-              removeLabel="remove TomTom key"
-              onAdd={(v) => set("tomtomKey", v)}
-              onRemove={() => set("tomtomKey", undefined)}
-            />
+            </details>
 
             <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 border-t border-line pt-2.5">
               {[-1, 0, 1, 2, 3].map((s) => (
@@ -1042,9 +957,9 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
               <span className="flex items-center gap-1.5 text-2xs text-ink-faint">
                 <span
                   className="h-2 w-2 rounded-full"
-                  style={{ background: `rgb(${AIRCRAFT_RGB.join(",")})` }}
+                  style={{ background: `rgb(${SHELTER_RGB.join(",")})` }}
                 />
-                aircraft
+                open shelter
               </span>
             </div>
 
@@ -1052,15 +967,21 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
               onClick={onOpenAbout}
               className="pressable mt-3 border-t border-line pt-2.5 text-2xs text-ink-faint hover:text-ink"
             >
-              About NC Recon
+              About Groma
             </button>
           </div>
         </section>
       </aside>
 
       {/* right: NC risk now, full panel on md+ */}
-      <aside className="absolute right-3 top-3 z-20 hidden max-h-[calc(100%-1.5rem)] w-[20rem] flex-col gap-3 overflow-y-auto md:flex lg:right-4 lg:top-4">
-        {riskPanels}
+      <aside className="absolute right-3 top-3 z-20 hidden max-h-[calc(100%-1.5rem)] w-[20rem] flex-col overflow-y-auto md:flex lg:right-4 lg:top-4">
+        <div className="panel divide-y divide-line overflow-hidden">
+          <div className="flex items-center justify-between px-3.5 py-2.5">
+            <span className="text-sm font-semibold text-ink">Now</span>
+            <span className="text-xs text-ink-faint">{anyStale ? "some feeds cached" : "all feeds live"}</span>
+          </div>
+          {riskPanels}
+        </div>
       </aside>
 
       {/* mobile: a compact state strip that opens the full sheet. Right edge
@@ -1068,7 +989,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
           the sheet's rounded corner doesn't sit on top of the compass button. */}
       <div className="absolute bottom-3 left-3 right-14 z-20 md:hidden">
         {riskOpen ? (
-          <div className="panel flex max-h-[70vh] flex-col gap-3 overflow-y-auto p-3">
+          <div className="panel flex max-h-[70vh] flex-col divide-y divide-line overflow-y-auto">
             <button
               onClick={() => setRiskOpen(false)}
               className="pressable cap self-end text-ink-faint hover:text-ink"

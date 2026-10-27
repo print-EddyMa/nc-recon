@@ -1,0 +1,93 @@
+# Groma ops event registry.
+#
+# Incident dates are NOT written here: they are pulled from OpenFEMA
+# DisasterDeclarationsSummaries by disaster number (see ops/plan/events.py) and
+# cached. What lives here is our own analysis plan: which AOIs belong to the
+# event, whether each is a TUNE area (thresholds, calibration and crosswalks may
+# be fit on it) or a TEST area (never used for fitting; held out for honest
+# accuracy numbers), and the pre/post imagery windows relative to the incident.
+#
+# Hard rules checked for every event (tests/test_events.py):
+#   pre.end  <  incident.begin
+#   post.start >= incident.begin
+#   no AOI id appears in both TUNE and TEST
+
+events:
+  helene-2024-nc:
+    name: Hurricane / Tropical Storm Helene (NC)
+    disaster_numbers: [4827]
+    state: NC
+    hazards: [riverine_flood, flash_flood, landslide, wind]
+    maxar_event: HurricaneHelene-Oct24
+    eri_prefix: 2024_Hurricane_Helene
+    # NCGS landslide inventory polygons tagged with this storm (channel H)
+    landslide_storm: Helene
+    # post-event imagery, in order of preference, for new operational areas
+    post_sources: [nc_helene_2025, eri, maxar]
+    windows:
+      # days relative to OpenFEMA incidentBeginDate (2024-09-25)
+      pre_days: [-1500, -1]
+      # 250 days admits the spring-2025 NC Collaboratory leaf-off collection,
+      # whose date is only known as "spring 2025" (Jan 1 - May 31 = day 98-248).
+      # Later imagery shows a different scene (debris cleared, tarps, repairs,
+      # demolitions); the gap is recorded per run as POST_IMAGE_<n>D_AFTER.
+      post_days: [0, 250]
+    aois:
+      old_fort:
+        role: TUNE
+        county: McDowell
+        center: [-82.1804, 35.6293]
+      spruce_pine:
+        role: TUNE
+        county: Mitchell
+        center: [-82.075, 35.912]
+      swannanoa:
+        # re-roled TEST -> TUNE on 2026-09-26: its imagery was inspected and
+        # drove three rule changes (E2 z-score, haze floor, severe-call review)
+        # before any labels existed, so it can no longer be held out
+        role: TUNE
+        county: Buncombe
+        center: [-82.399, 35.598]
+        imagery: nc_2020_2023 -> nc_helene_2025   # no Maxar post coverage
+      chimney_rock:
+        role: TEST
+        county: Rutherford
+        center: [-82.2465, 35.4395]   # village on US-64 / Rocky Broad River
+        imagery: nc_2020_2023 -> nc_helene_2025
+      marshall:
+        role: TEST
+        county: Madison
+        center: [-82.684, 35.797]
+        status: candidate   # Madison Co. is outside the NC Helene 2025 ortho collection; ERI only (post-only)
+      canton:
+        role: TEST   # fresh hold-out; do not view chips before labels exist
+        county: Haywood
+        center: [-82.8374, 35.5329]
+        imagery: nc_2020_2023 -> nc_helene_2025
+      burnsville:
+        role: TEST   # fresh hold-out; do not view chips before labels exist
+        county: Yancey
+        center: [-82.3009, 35.9173]
+        imagery: nc_2020_2023 -> nc_helene_2025
+
+  wildfire-2025-ca-dr4856:
+    # second hazard, second state: the any-disaster engine on a wildfire.
+    # Drafted with `run.py ops-event-from-fema --disaster 4856`.
+    name: Wildfires and Straight-Line Winds (CA, DR-4856-CA)
+    disaster_numbers: [4856]
+    state: CA
+    hazards: [wildfire]
+    maxar_event: WildFires-LosAngeles-Jan-2025
+    eri_prefix: 2025_California_Fires
+    post_sources: [eri]
+    windows:
+      pre_days: [-1500, -1]
+      post_days: [0, 180]
+    aois:
+      altadena:
+        # Eaton fire. Held out from the start: assessed and compared with
+        # CAL FIRE's inspections in aggregate; chips never opened, nothing tuned.
+        role: TEST
+        county: Los Angeles
+        center: [-118.145, 34.19]
+        imagery: naip -> eri

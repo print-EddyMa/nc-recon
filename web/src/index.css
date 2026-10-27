@@ -1,38 +1,54 @@
-@import url("https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Geist:wght@400;450;500;600&family=Geist+Mono:wght@400;500&display=swap");
+/* Hallmark · system: Groma (amends DESIGN.md, 2026-10-26: one sans family with the site)
+ * genre: utilitarian instrument · theme: custom (obsidian / limestone, cast bronze for interaction)
+ * one family: Public Sans (USWDS) for titles and text · figures: IBM Plex Mono
+ * Self-hosted (bundled by Vite): the UI renders the same with no internet, which
+ * an EOC on a satellite link or a field laptop cannot take for granted. */
+@import "@fontsource-variable/public-sans/wght.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  /* -------- light theme (default) -------- */
+  /* -------- light theme: limestone (daylight, field laptops, print) -------- */
   :root {
     color-scheme: light;
 
-    --canvas: 250 249 246;
-    --surface: 255 255 255;
-    --surface-2: 244 243 239;
-    --line: 227 224 217;
-    --line-strong: 200 197 188;
-    --ink: 28 29 33;
-    --ink-dim: 92 96 104;
-    --ink-faint: 138 142 150;
-    --accent: 37 99 235;
-    --accent-soft: 224 234 254;
+    --canvas: 238 234 226;
+    --surface: 250 248 243;
+    --surface-2: 232 226 215;
+    --line: 221 213 199;
+    --line-strong: 191 181 164;
+    --ink: 24 21 18;
+    --ink-dim: 75 68 59;
+    --ink-faint: 111 102 90;
+    /* cast bronze: interaction, "this is live" and the brand. Never severity:
+       it sits darker and browner than every step of the damage ramp. */
+    --accent: 142 91 39;
+    --accent-soft: 241 230 214;
     --accent-ink: 255 255 255;
-    --meter: 71 85 105;
-    --shadow: 30 34 44;
+    --brand: 142 91 39;
+    /* needs-review outline: a blue that stays legible over aerial imagery
+       and is off the damage ramp */
+    --review: 37 99 235;
+    --meter: 75 68 59;
+    --shadow: 24 21 18;
+
+    /* FEMA Community Lifelines status (stabilized / stabilizing / not / unknown) */
+    --st-ok: 46 125 78;
+    --st-warn: 176 120 0;
+    --st-bad: 178 34 52;
+    --st-unknown: 120 128 124;
 
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
-    /* type scale - restrained, report register, not magazine.
-       Display caps at ~2.75rem so a headline never becomes drama on a
-       1280-1440px operations screen. */
-    --text-display: clamp(1.9rem, 2.4vw + 1rem, 2.6rem);
-    --text-display-s: clamp(1.55rem, 1.4vw + 1rem, 1.9rem);
+    --text-display: clamp(1.6rem, 1.4vw + 1rem, 2.1rem);
+    --text-display-s: clamp(1.3rem, 0.9vw + 1rem, 1.6rem);
 
-    /* spacing - 4px base, named by role */
     --space-3xs: 0.125rem;
     --space-2xs: 0.25rem;
     --space-xs: 0.5rem;
@@ -44,40 +60,52 @@
     --space-3xl: 6rem;
   }
 
-  /* -------- dark theme -------- */
+  /* -------- dark theme: basalt (EOC wall, night shift) -------- */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --canvas: 15 17 21;
-      --surface: 23 25 30;
-      --surface-2: 32 35 41;
-      --line: 42 46 54;
-      --line-strong: 62 67 78;
-      --ink: 233 234 232;
-      --ink-dim: 158 161 168;
-      --ink-faint: 108 112 121;
-      --accent: 74 128 246;
-      --accent-soft: 28 42 74;
-      --accent-ink: 255 255 255;
-      --meter: 132 148 168;
+      --canvas: 14 13 11;
+      --surface: 23 21 18;
+      --surface-2: 32 29 25;
+      --line: 44 40 35;
+      --line-strong: 67 61 53;
+      --ink: 237 230 218;
+      --ink-dim: 181 171 156;
+      --ink-faint: 138 128 114;
+      --accent: 210 160 106;
+      --accent-soft: 46 36 24;
+      --accent-ink: 18 14 10;
+      --brand: 210 160 106;
+      --review: 96 165 250;
+      --meter: 181 171 156;
       --shadow: 0 0 0;
+      --st-ok: 87 171 115;
+      --st-warn: 226 177 60;
+      --st-bad: 232 93 104;
+      --st-unknown: 124 131 127;
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --canvas: 15 17 21;
-    --surface: 23 25 30;
-    --surface-2: 32 35 41;
-    --line: 42 46 54;
-    --line-strong: 62 67 78;
-    --ink: 233 234 232;
-    --ink-dim: 158 161 168;
-    --ink-faint: 108 112 121;
-    --accent: 74 128 246;
-    --accent-soft: 28 42 74;
-    --accent-ink: 255 255 255;
-    --meter: 132 148 168;
+    --canvas: 14 13 11;
+    --surface: 23 21 18;
+    --surface-2: 32 29 25;
+    --line: 44 40 35;
+    --line-strong: 67 61 53;
+    --ink: 237 230 218;
+    --ink-dim: 181 171 156;
+    --ink-faint: 138 128 114;
+    --accent: 210 160 106;
+    --accent-soft: 46 36 24;
+    --accent-ink: 18 14 10;
+    --brand: 210 160 106;
+    --review: 96 165 250;
+    --meter: 181 171 156;
     --shadow: 0 0 0;
+    --st-ok: 87 171 115;
+    --st-warn: 226 177 60;
+    --st-bad: 232 93 104;
+    --st-unknown: 124 131 127;
   }
 
   html {
@@ -94,7 +122,7 @@
     background: rgb(var(--canvas));
     color: rgb(var(--ink));
     font-family: theme("fontFamily.sans");
-    font-feature-settings: "cv11", "ss01";
+    font-size: 14px;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -110,14 +138,16 @@
     border-radius: 3px;
   }
 
+  /* Headings are the body face at weight: in a dense console a second
+     typeface on every heading reads as decoration. Screen titles and the
+     wordmark are the same face, larger and tighter (.title-display). */
   h1,
   h2,
   h3 {
-    font-family: theme("fontFamily.display");
-    font-weight: 600;
-    line-height: 1.16;
-    letter-spacing: -0.006em;
-    font-optical-sizing: auto;
+    font-family: theme("fontFamily.sans");
+    font-weight: 650;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
     text-wrap: balance;
     color: rgb(var(--ink));
   }
@@ -168,6 +198,106 @@
     background: rgb(var(--surface));
     border: 1px solid rgb(var(--line));
     border-radius: 10px;
+  }
+
+  /* one text-field style for every form in the app */
+  .field {
+    display: block;
+    width: 100%;
+    height: 2rem;
+    border-radius: 6px;
+    border: 1px solid rgb(var(--line-strong));
+    background: rgb(var(--canvas));
+    padding: 0 0.625rem;
+    font-size: 0.875rem;
+    color: rgb(var(--ink));
+  }
+  .field::placeholder {
+    color: rgb(var(--ink-faint));
+  }
+  .field:hover {
+    border-color: rgb(var(--ink-faint));
+  }
+  select.field {
+    padding-right: 1.75rem;
+  }
+  .field[aria-invalid="true"] {
+    border-color: rgb(var(--st-bad));
+  }
+
+  /* the wordmark, screen and document titles: the body face, larger and tighter */
+  .title-display {
+    font-family: theme("fontFamily.display");
+    font-weight: 600;
+    font-style: normal;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+  }
+
+  /* public pages (check, index, owner record): light like the site, one sans family */
+  .public-wrap {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding-left: max(20px, env(safe-area-inset-left, 0px));
+    padding-right: max(20px, env(safe-area-inset-right, 0px));
+  }
+  /* public pages' buttons: pills, like the site */
+  .btn-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0 1.25rem;
+    border-radius: 999px;
+    border: 1px solid rgb(var(--line-strong));
+    background: transparent;
+    color: rgb(var(--ink));
+    font-size: 0.9375rem;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out), color 160ms var(--ease-out);
+  }
+  .btn-pill:hover {
+    border-color: rgb(var(--ink));
+  }
+  .btn-pill.primary {
+    background: rgb(var(--ink));
+    border-color: rgb(var(--ink));
+    color: rgb(var(--surface));
+  }
+  .btn-pill.primary:hover {
+    opacity: 0.86;
+  }
+  .btn-pill:disabled {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+  .field-lg {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: 2.875rem;
+    border-radius: 10px;
+    border: 1px solid rgb(var(--line-strong));
+    background: rgb(var(--surface));
+    padding: 0 0.875rem;
+    font-size: 1rem;
+    color: rgb(var(--ink));
+  }
+  .field-lg::placeholder {
+    color: rgb(var(--ink-faint));
+  }
+  .field-lg:hover {
+    border-color: rgb(var(--ink-faint));
+  }
+
+  /* a section label inside a panel: small, sentence case, quiet */
+  .label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgb(var(--ink-dim));
   }
 
   /* a full-width hairline rule between blocks in a document */
@@ -359,4 +489,20 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* operational warning banner (disclaimer, stale data). AA contrast both themes. */
+:root {
+  --warn-bg: 255 244 214;
+  --warn-ink: 58 42 0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --warn-bg: 58 42 0;
+    --warn-ink: 255 233 173;
+  }
+}
+:root[data-theme="dark"] {
+  --warn-bg: 58 42 0;
+  --warn-ink: 255 233 173;
 }

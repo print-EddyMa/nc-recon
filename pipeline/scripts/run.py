@@ -29,7 +29,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "src"))
 
-RAW = os.path.join(ROOT, "data", "raw")
+from terratriage.ops import RAW_DIR as RAW  # noqa: E402 - NCR_RAW_DIR, default data/raw
 OUT = os.path.join(ROOT, "data", "output")
 CACHE = os.path.join(ROOT, "data", "cache")
 # where the web app (or the hosted service) reads registries + area GeoJSON.
@@ -220,6 +220,169 @@ def cmd_validate(a):
     v.build_map(gj, pre, post, os.path.join(OUT, f"{a.area}_check.html"))
 
 
+def cmd_ops_assess(a):
+    from terratriage.ops.pipeline import run_area
+
+    run_area(a.area, limit=a.limit, night=not a.day)
+
+
+def cmd_ops_event_from_fema(a):
+    from terratriage.ops.plan.bootstrap import create_from_declaration, draft_from_declaration
+
+    if a.write:
+        ev, d = create_from_declaration(a.disaster, a.id)
+        print(f"registered {ev.id}: {ev.name}, hazards {', '.join(ev.hazards)}, "
+              f"post sources {', '.join(ev.post_sources)}")
+    else:
+        d = draft_from_declaration(a.disaster)
+    print(json.dumps(d.to_dict(), indent=2))
+
+
+def cmd_ops_field_reference(a):
+    from terratriage.ops.analyze.field_reference import compare_area, format_summary
+
+    print(format_summary(compare_area(a.area, a.source, allow_test=a.allow_test)))
+
+
+def cmd_ops_ground_change(a):
+    from terratriage.ops.analyze import ground_change
+
+    ground_change.main(["--area", a.area] + (["--allow-test"] if a.allow_test else []))
+
+
+def cmd_ops_fetch(a):
+    from terratriage.ops.collect.imagery_fetch import fetch_pair
+
+    kw = {"eri_prefix": a.eri_prefix} if a.eri_prefix else {}
+    fetch_pair(a.area, a.lon, a.lat, half_m=a.half_m, pre=a.pre, post=a.post, **kw)
+
+
+def cmd_ops_health(a):
+    from terratriage.ops.collect import health
+
+    res = health.run()
+    health.print_table(res)
+    if any(h.status == "down" and h.source != "usgs_waterservices_legacy" for h in res):
+        sys.exit(1)
+
+
+def cmd_ops_export(a):
+    from terratriage.ops.disseminate.exports import export_area
+
+    export_area(a.area, mode="responder")
+
+
+def cmd_ops_eval(a):
+    from terratriage.ops.analyze import evaluate
+
+    rep = evaluate.evaluate()
+    print(evaluate.write_report(rep))
+    print(json.dumps(rep["labels"], indent=2))
+
+
+def cmd_ops_calibrate(a):
+    from terratriage.ops.analyze import evaluate
+
+    print(json.dumps(evaluate.calibrate(), indent=2))
+
+
+def cmd_ops_impact(a):
+    from terratriage.ops.analyze import impact
+
+    out = impact.run(a.area)
+    print(json.dumps({k: v for k, v in out.items() if k != "tracts"}, indent=2))
+    for t in out.get("tracts", [])[:8]:
+        print(t)
+
+
+def cmd_ops_aggregate(a):
+    from terratriage.ops.disseminate.aggregate import aggregate
+
+    print(aggregate(a.area))
+
+
+def cmd_ops_reference(a):
+    from terratriage.ops.analyze import fema_reference
+
+    out = fema_reference.run(a.area)
+    print(out["caveat"])
+    for w in out["warnings"]:
+        print(f"WARNING: {w}")
+    for r in out["zips"]:
+        f = (r["fema"] or {}).get("owners") or {}
+        print(f"ZIP {r['zip']}: {r['homes_assessed']} homes assessed here, "
+              f"~{r['expected_major_plus']} expected Major or Destroyed | FEMA owners: "
+              f"{int(f.get('approved', 0))} approved of {int(f.get('registrations', 0))} registered, "
+              f"{int(f.get('approved_over_25k', 0))} over $25,000, {int(f.get('max_grants', 0))} maximum grants")
+    print(f"{out['unplaced_structures']} structures have no address and could not be placed in a ZIP code")
+
+
+def cmd_ops_sarcop(a):
+    from terratriage.ops.analyze import sarcop_reference
+
+    r = sarcop_reference.compare_area(a.area, allow_test=a.allow_test)
+    print(sarcop_reference.format_summary(r))
+
+
+def cmd_truth_status(a):
+    from terratriage.ops import truth
+
+    print(json.dumps(truth.area_status(a.area) if a.area else truth.metrics(), indent=2))
+
+
+def cmd_truth_release(a):
+    from terratriage.ops import truth
+
+    print(json.dumps(truth.release(a.area), indent=2))
+
+
+def cmd_truth_export(a):
+    from terratriage.ops import truth
+
+    data, sheet = truth.export([a.area] if a.area else None, keep=True)
+    out = a.out or "ncrecon-verify-dataset.zip"
+    with open(out, "wb") as fh:
+        fh.write(data)
+    print(f"[truth] {sheet['records']} verified records -> {out}")
+
+
+def cmd_ops_brief(a):
+    from terratriage.ops.disseminate.brief import brief
+
+    print(brief(a.area))
+
+
+def cmd_ops_ida(a):
+    from terratriage.ops.disseminate.ida import build
+
+    out = build(a.area)
+    for k, v in out["files"].items():
+        print(f"{k}: {v}")
+
+
+def cmd_ops_backup(a):
+    """Archive what cannot be re-derived: truth labels, the ops registry,
+    assessment outputs + run manifests. Imagery and caches are re-fetchable."""
+    import tarfile
+    import time as _t
+
+    out = a.out or os.path.join(ROOT, "data", f"ncrecon-backup-{_t.strftime('%Y%m%dT%H%M%SZ', _t.gmtime())}.tar.gz")
+    items = [("data/labels", "labels"), ("data/ops_registry.yaml", "ops_registry.yaml"),
+             ("data/audit.log", "audit.log"),
+             (os.environ.get("NCR_OWNER_REVOKED") or "data/owner_revoked.json", "owner_revoked.json"),
+             ("data/output/ops", "output_ops"),
+             (os.environ.get("NCR_RUNS_DIR") or "runs", "runs"),
+             (os.environ.get("NCR_CALIBRATION_DIR") or "config/calibration", "calibration")]
+    n = 0
+    with tarfile.open(out, "w:gz") as tar:
+        for rel, arc in items:
+            p = rel if os.path.isabs(rel) else os.path.join(ROOT, rel)
+            if os.path.exists(p):
+                tar.add(p, arcname=arc)
+                n += 1
+    print(f"[backup] {n} item(s) -> {out}")
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -276,6 +439,80 @@ def main():
     v = sub.add_parser("validate")
     v.add_argument("--area", required=True)
     v.set_defaults(fn=cmd_validate)
+
+    o = sub.add_parser("ops-assess", help="ops mode: fused, calibrated-where-possible, provenance-carrying assessment")
+    o.add_argument("--area", required=True)
+    o.add_argument("--limit", type=int, default=None)
+    o.add_argument("--day", action="store_true", help="use daytime occupant estimates (default: night)")
+    o.set_defaults(fn=cmd_ops_assess)
+
+    oe = sub.add_parser("ops-event-from-fema",
+                        help="ops mode: draft (or --write) an event for any disaster from its FEMA number")
+    oe.add_argument("--disaster", type=int, required=True, help="FEMA disaster number, e.g. 4856")
+    oe.add_argument("--id", default=None, help="event id (default: <hazard>-<year>-<state>-dr<number>)")
+    oe.add_argument("--write", action="store_true", help="register the event in the ops registry")
+    oe.set_defaults(fn=cmd_ops_event_from_fema)
+
+    of = sub.add_parser("ops-fetch", help="ops mode: co-gridded pre/post pair (NC orthos or NAIP -> NC orthos or NOAA ERI)")
+    of.add_argument("--area", required=True)
+    of.add_argument("--lon", type=float, required=True)
+    of.add_argument("--lat", type=float, required=True)
+    of.add_argument("--half-m", type=float, default=800.0)
+    of.add_argument("--pre", default="nc_2020_2023", choices=["nc_2020_2023", "naip"])
+    of.add_argument("--post", default="nc_helene_2025", choices=["nc_helene_2025", "eri"])
+    of.add_argument("--eri-prefix", default=None, help="NOAA ERI event folder, e.g. 2024_Hurricane_Helene")
+    of.set_defaults(fn=cmd_ops_fetch)
+
+    sub.add_parser("ops-health", help="ops mode: live status of every data source").set_defaults(fn=cmd_ops_health)
+    ox = sub.add_parser("ops-export", help="ops mode: GeoJSON/CSV/KML/GPKG/FileGDB/Survey123 (responder)")
+    ox.add_argument("--area", required=True)
+    ox.set_defaults(fn=cmd_ops_export)
+    oi = sub.add_parser("ops-impact", help="ops mode: expected displaced people + tract need index")
+    oi.add_argument("--area", required=True)
+    oi.set_defaults(fn=cmd_ops_impact)
+    og = sub.add_parser("ops-aggregate", help="ops mode: public tract-level product (no PII)")
+    og.add_argument("--area", required=True)
+    og.set_defaults(fn=cmd_ops_aggregate)
+    ob = sub.add_parser("ops-brief", help="ops mode: one-page situation brief (HTML + text)")
+    ob.add_argument("--area", required=True)
+    ob.set_defaults(fn=cmd_ops_brief)
+    oa = sub.add_parser("ops-ida", help="ops mode: initial damage assessment packet in FEMA PDA formats (responder)")
+    oa.add_argument("--area", required=True)
+    oa.set_defaults(fn=cmd_ops_ida)
+    tv = sub.add_parser("truth-status", help="Groma Verify: verification progress (one area or all)")
+    tv.add_argument("--area")
+    tv.set_defaults(fn=cmd_truth_status)
+    tr = sub.add_parser("truth-release", help="Groma Verify: write verified consensus into the protocol label file")
+    tr.add_argument("--area", required=True)
+    tr.set_defaults(fn=cmd_truth_release)
+    te = sub.add_parser("truth-export", help="Groma Verify: dataset of verified labels + datasheet (zip)")
+    te.add_argument("--area")
+    te.add_argument("--out")
+    te.set_defaults(fn=cmd_truth_export)
+    sp_sar = sub.add_parser("ops-sarcop", help="ops mode: Groma calls beside Buncombe's Helene SAR field categories (comparison, not validation)")
+    sp_sar.add_argument("--area", required=True)
+    sp_sar.add_argument("--allow-test", action="store_true", help="permit a TEST (hold-out) area")
+    sp_sar.set_defaults(fn=cmd_ops_sarcop)
+    ofr = sub.add_parser("ops-field-reference",
+                         help="ops mode: calls beside published building damage records (CAL FIRE DINS, FEMA, NEMAC, SARCOP)")
+    ofr.add_argument("--area", required=True)
+    ofr.add_argument("--source", default=None, choices=["dins", "fema_hgda", "nemac", "sarcop"],
+                     help="default: chosen from the event's hazard, state and year")
+    ofr.add_argument("--allow-test", action="store_true", help="permit a TEST (hold-out) area")
+    ofr.set_defaults(fn=cmd_ops_field_reference)
+    ogc = sub.add_parser("ops-ground-change",
+                         help="ops mode: lidar ground change around each building (NC 2025 QL1 vs 3DEP)")
+    ogc.add_argument("--area", required=True)
+    ogc.add_argument("--allow-test", action="store_true", help="permit a TEST (hold-out) area")
+    ogc.set_defaults(fn=cmd_ops_ground_change)
+    orf = sub.add_parser("ops-reference", help="ops mode: FEMA housing assistance by ZIP beside the assessment")
+    orf.add_argument("--area", required=True)
+    orf.set_defaults(fn=cmd_ops_reference)
+    obk = sub.add_parser("ops-backup", help="ops mode: archive labels, registry, outputs")
+    obk.add_argument("--out", default=None)
+    obk.set_defaults(fn=cmd_ops_backup)
+    sub.add_parser("ops-eval", help="ops mode: accuracy report from data/labels").set_defaults(fn=cmd_ops_eval)
+    sub.add_parser("ops-calibrate", help="ops mode: fit temperature + conformal on TUNE labels").set_defaults(fn=cmd_ops_calibrate)
 
     a = p.parse_args()
     a.fn(a)

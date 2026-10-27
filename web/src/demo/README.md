@@ -17,7 +17,7 @@ Every visual is **real data, pre-fetched and baked** into `web/public/demo/`:
 | 6 Sensor network | camera pulls out, gauges cascade in radially | `sensors.json` - real NWPS + NWIS locations |
 | 7 Flood flash | a western-NC river reach, rising-level indicator | picked from `sensors.json` |
 | 8 History scrub | Fran → Floyd → … → Matthew → Florence → Helene fly past | `history.json` - real OpenFEMA declarations |
-| 9 Title card | the NC Recon logo, flat, no glow | `ncrecon-logo-dark.svg` |
+| 9 Title card | the Groma logo, flat, no glow | `ncrecon-logo-dark.svg` |
 
 The CARTO dark-matter basemap is **self-hosted** under `public/demo/basemap/`
 (style + every vector tile / glyph / sprite the camera path crosses) so

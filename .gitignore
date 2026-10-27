@@ -32,6 +32,15 @@ web/.vite/
 # pipeline data cache
 pipeline/data/cache/*
 !pipeline/data/cache/.gitkeep
+# model training data and checkpoints (ops/model); weights ship separately
+pipeline/data/model/*
+!pipeline/data/model/weights/
+pipeline/data/model/weights/*
+!pipeline/data/model/weights/groma-dmg-v0.npz
+!pipeline/data/model/weights/groma-dmg-v0.json
+!pipeline/data/model/weights/groma-dmg-v0.prereg.altadena.json
+# Groma Verify store: judgments carry verifier names
+pipeline/data/truth/*
 pipeline/vendor_xview2_1st/
 
 # web build
@@ -58,6 +67,30 @@ web/public/data/*.geojson
 
 # Demo-video production pipeline (Blender scene, footage, submission docs) is
 # not part of the app and is not tracked in this repo.
-video/
+video/*
+# launch video: build scripts and credits are versioned; renders and media stay local
+!video/launch/
+video/launch/*
+!video/launch/*.py
+!video/launch/*.md
 docs/CAC_SUBMISSION_QA.md
 docs/CAC_VIDEO_SCRIPT.md
+
+# ops-mode run manifests and generated outputs
+pipeline/runs/
+reports/*.json
+web/dist-demo/
+
+# runtime state of a local server: responder audit trail, operational
+# registry, job list, analyst labels, calibration fits
+pipeline/data/audit.log
+pipeline/data/ops_registry.yaml*
+pipeline/data/jobs.json*
+pipeline/data/labels/
+pipeline/data/calibration/
+
+# private: strategy, outreach contacts and research notes stay off the public repo
+docs/strategy/
+docs/outreach/
+research_notes/
+reports/Groma launchable product ideas.md

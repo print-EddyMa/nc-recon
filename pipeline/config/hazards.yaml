@@ -1,0 +1,106 @@
+# Hazard profiles: one engine, any disaster.
+#
+# Every assessment ends in the same answer (FEMA's five damage levels with a
+# probability each). What differs by hazard is which evidence applies, where
+# the hazard's footprint comes from, and how long after the incident post-event
+# imagery is still a picture of the damage rather than of the recovery.
+#
+# channels: evidence channels that carry information for this hazard
+#   E1 optical damage classifier   E2 pixel change   E4 blue tarps
+#   E5 flood depth vs. first floor E6 lidar ground change (deposit / scour)
+#   H  hazard footprint / intensity prior
+#   M1 Groma's own damage model (ops/model; trained on public-domain imagery),
+#      wildfire only until it is evaluated on other hazards
+# footprint: hazard-footprint sources (collect/hazard_footprints.py); status
+#   built = used in assessments, planned = documented, not wired yet
+# post_days: default post-event imagery window, days after incident begin
+
+incident_types:
+  # OpenFEMA DisasterDeclarationsSummaries.incidentType -> hazards
+  Hurricane: [wind, riverine_flood, coastal_surge]
+  Typhoon: [wind, coastal_surge, riverine_flood]
+  Tropical Storm: [wind, riverine_flood]
+  Tropical Depression: [riverine_flood]
+  Coastal Storm: [coastal_surge, wind]
+  Flood: [riverine_flood, flash_flood]
+  Dam/Levee Break: [riverine_flood]
+  Severe Storm: [wind, flash_flood, tornado]
+  Severe Storm(s): [wind, flash_flood, tornado]
+  Tornado: [tornado]
+  Straight-Line Winds: [wind]
+  Fire: [wildfire]
+  Earthquake: [earthquake]
+  Mud/Landslide: [landslide]
+  Tsunami: [coastal_surge]
+  Volcanic Eruption: [volcanic]
+  Severe Ice Storm: [winter]
+  Winter Storm: [winter]
+  Snowstorm: [winter]
+  Other: [other]
+
+hazards:
+  riverine_flood:
+    label: River flooding
+    channels: [E1, E2, E4, E5, E6]
+    footprint:
+      gauge_crests: built          # NCEM peak stage (NC); NWPS and USGS elsewhere
+      high_water_marks: planned    # USGS STN, any event
+    post_days: [0, 250]
+  flash_flood:
+    label: Flash flooding
+    channels: [E1, E2, E4, E5, E6]
+    footprint:
+      gauge_crests: built
+      high_water_marks: planned
+    post_days: [0, 250]
+  coastal_surge:
+    label: Storm surge
+    channels: [E1, E2, E4]
+    footprint:
+      high_water_marks: planned
+    post_days: [0, 120]
+  wind:
+    label: Hurricane and straight-line wind
+    channels: [E1, E2, E4]
+    footprint:
+      nhc_wind_swath: planned
+    post_days: [0, 120]
+  tornado:
+    label: Tornado
+    channels: [E1, E2, E4]
+    footprint:
+      nws_damage_tracks: planned   # NWS DAT; also the tornado reference set, so not both
+    post_days: [0, 90]
+  wildfire:
+    label: Wildfire
+    channels: [E1, E2, H, M1]
+    footprint:
+      fire_perimeters: built       # NIFC WFIGS
+    post_days: [0, 180]
+  earthquake:
+    label: Earthquake
+    channels: [E1, E2, H]
+    footprint:
+      shakemap: built              # USGS ShakeMap MMI grid
+    post_days: [0, 120]
+  landslide:
+    label: Landslide and debris flow
+    channels: [E1, E2, E6, H]
+    footprint:
+      landslide_inventory: built   # NCGS (NC); USGS event inventories
+    post_days: [0, 250]
+  volcanic:
+    label: Volcanic eruption
+    channels: [E1, E2]
+    footprint: {}
+    post_days: [0, 180]
+  winter:
+    label: Winter storm (roof collapse)
+    channels: [E1, E2]
+    footprint: {}
+    post_days: [0, 60]
+  other:
+    label: Other occurrence
+    channels: [E1, E2, E4]
+    footprint: {}
+    post_days: [0, 120]

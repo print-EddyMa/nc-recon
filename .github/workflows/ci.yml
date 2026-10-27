@@ -1,0 +1,46 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: pipeline } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13" }
+      - run: sudo apt-get update && sudo apt-get install -y libexpat1
+      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch==2.13.0 torchvision==0.28.0
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest tests -q        # offline; `-m live` hits upstreams
+      - run: pip install pip-audit cyclonedx-bom
+      - run: pip-audit -r requirements.txt --strict   # runtime dependencies only
+      - run: cyclonedx-py requirements requirements.txt -o sbom-python.cdx.json
+      - uses: actions/upload-artifact@v4
+        with: { name: sbom-python, path: pipeline/sbom-python.cdx.json }
+
+  web:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: npm ci --ignore-scripts
+      - run: npx tsc -b
+      - run: npm run lint
+      - run: npx vite build
+      - run: npm audit --omit=dev --audit-level=high   # what ships; dev toolchain advisories are reported, not blocking
+      - run: npm audit || true
+      - run: npm sbom --omit=dev --sbom-format cyclonedx > sbom-web.cdx.json
+      - uses: actions/upload-artifact@v4
+        with: { name: sbom-web, path: web/sbom-web.cdx.json }
+
+  image:
+    runs-on: ubuntu-latest
+    needs: [pipeline, web]
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --build-arg GROMA_GENERAL_MODEL=0 -t groma:ci .   # skip the 500 MB general-model download in CI

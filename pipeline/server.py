@@ -1,4 +1,4 @@
-"""Assessment service for NC Recon.
+"""Assessment service for Groma.
 
 The web app reads GeoJSON + tiles + the event registry as static files and needs
 no backend. This service adds on-demand assessment of a North Carolina area:
@@ -43,6 +43,7 @@ import time
 import urllib.request
 import uuid
 from collections import deque
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -53,7 +54,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
 sys.path.insert(0, SRC)
 OUT = os.path.join(ROOT, "data", "output")
-RAW = os.path.join(ROOT, "data", "raw")
+RAW = os.environ.get("NCR_RAW_DIR") or os.path.join(ROOT, "data", "raw")
 CACHE = os.path.join(ROOT, "data", "cache")
 DATA = os.path.join(ROOT, "data")
 # these mirror scripts/run.py + scripts/make_tiles.py so a container deploy
@@ -93,13 +94,84 @@ _AREA_RE = re.compile(r"[a-z0-9_]{1,40}")
 _EVENT_RE = re.compile(r"[A-Za-z0-9._-]{1,80}")
 _NAME_STRIP_RE = re.compile(r"[^\w \-.,]", re.UNICODE)
 
-app = FastAPI(title="NC Recon", version="1.2")
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    _recover_after_restart()
+    yield
+
+
+app = FastAPI(title="Groma", version="1.2", lifespan=_lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS or ["http://localhost:5173"],
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["authorization", "content-type"],
 )
+
+from terratriage.ops import guard  # noqa: E402
+from terratriage.ops.api import router as ops_router  # noqa: E402
+from terratriage.ops.photos_api import router as photos_router  # noqa: E402
+from terratriage.ops.response_api import router as response_router  # noqa: E402
+from terratriage.ops.offline.api import router as offline_router  # noqa: E402
+from terratriage.ops.owner_api import router as owner_router  # noqa: E402
+
+app.include_router(ops_router)
+app.include_router(photos_router)
+app.include_router(response_router)
+app.include_router(offline_router)
+app.include_router(owner_router)
+
+
+@app.middleware("http")
+async def _guard(request: Request, call_next):
+    """Per-client rate limits and browser security headers on every response
+    (API and web app alike). See terratriage.ops.guard."""
+    wait = guard.check(request)
+    if wait:
+        return JSONResponse(
+            {"detail": "too many requests; slow down"},
+            status_code=429,
+            headers={"Retry-After": str(int(wait) + 1)},
+        )
+    if guard.needs_network(request.method, request.url.path):
+        # NCR_OFFLINE=1: refuse routes that would reach the internet, clearly
+        resp = JSONResponse({"detail": "this needs a network; the server is running offline (NCR_OFFLINE=1)"},
+                            status_code=503)
+    else:
+        resp = await call_next(request)
+    for k, v in _SECURITY_HEADERS.items():
+        resp.headers.setdefault(k, v)
+    # API answers are never cached by a browser or a shared proxy; the built
+    # web assets keep the validators StaticFiles already sets
+    if request.url.path.startswith(_API_PREFIXES):
+        resp.headers.setdefault("Cache-Control", "no-store")
+    return resp
+
+
+_API_PREFIXES = ("/ops", "/feed", "/events", "/catalog", "/health")
+
+
+_SECURITY_HEADERS = guard.security_headers(os.environ.get("NCR_WEB_DIST", "").strip() or None)
+
+
+
+def _recover_after_restart() -> None:
+    """Runs once when the server starts serving (not on import: a test run or a
+    script that merely imports this module must never touch a live data
+    directory). Marks interrupted jobs lost and drops the areas they left
+    half-registered."""
+    try:
+        from terratriage.ops.jobs import prune_orphans, restore
+
+        lost = restore()
+        if lost:
+            print(f"[server] {len(lost)} assessment job(s) were interrupted by the restart: marked lost")
+        pruned = prune_orphans()
+        if pruned:
+            print(f"[server] pruned unfinished operational areas: {pruned}")
+    except Exception as ex:  # noqa: BLE001
+        print(f"[server] restart recovery skipped: {ex}")
+
 
 USGS_URL = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson"
 GDACS_URL = "https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH"
@@ -113,11 +185,9 @@ def _safe_area(area: str) -> str:
 
 
 def _require_token(authorization: str | None) -> None:
-    if not TOKEN:
-        return
-    expected = f"Bearer {TOKEN}"
-    if not authorization or authorization != expected:
-        raise HTTPException(401, "missing or invalid bearer token")
+    from terratriage.ops import auth
+
+    auth.check(authorization)  # fails closed: no token + no dev flag -> 403
 
 
 def _clean_name(s: str | None, limit: int = 80) -> str | None:
@@ -183,22 +253,53 @@ _FEEDS: dict[str, tuple[str, int]] = {
         300,
     ),
     "nws": ("https://api.weather.gov/alerts/active?area=NC", 180),
-    "nwis": (
-        "https://waterservices.usgs.gov/nwis/iv/?format=json&stateCd=nc"
-        "&parameterCd=00060,00065&siteType=ST&siteStatus=active",
-        300,
-    ),
-    # ADS-B snapshot centred on NC, 250nm radius (adsb.lol's max) covers the
-    # whole state from this point. Keyless, ODbL-licensed; short TTL since
-    # positions move fast. https://api.adsb.lol
-    "aircraft": ("https://api.adsb.lol/v2/point/35.55/-79.2/250", 15),
 }
 _FEED_CACHE: dict[str, tuple[float, bytes, str]] = {}
-_FEED_UA = "NCRecon/1.0 (Congressional App Challenge; +https://github.com/)"
+from terratriage.ops.collect.base import USER_AGENT as _FEED_UA  # noqa: E402  (names a contact)
+
+
+# Feeds the server composes itself (several upstream calls -> one normalized
+# GeoJSON), rather than passing one URL through. USGS streamflow moved off the
+# legacy NWIS WaterServices (503 since Aug 2026, decommission Q1 2027) onto the
+# api.waterdata.usgs.gov OGC API, whose NC query needs a site-list join.
+_COMPOSED_TTL = {"usgs_water": 300, "drivenc_closures": 300, "drivenc_cameras": 3600, "nhc": 600,
+                 "fiman": 300, "power": 600, "shelters": 900}
+
+
+def _composed(name: str) -> bytes:
+    if name == "usgs_water":
+        from terratriage.ops.collect.usgs_water import USGSWater
+
+        layer = USGSWater().fetch()
+        fc = dict(layer.data)
+        fc["provenance"] = layer.provenance.to_dict()
+        fc["warnings"] = layer.warnings
+        return json.dumps(fc).encode()
+    if name in ("drivenc_closures", "drivenc_cameras", "nhc", "fiman", "power", "shelters"):
+        from terratriage.ops.collect import nc_feeds
+
+        fn = {"drivenc_closures": nc_feeds.drivenc_closures, "drivenc_cameras": nc_feeds.drivenc_cameras,
+              "nhc": nc_feeds.nhc_storms, "fiman": nc_feeds.fiman_gauges, "power": nc_feeds.duke_outages,
+              "shelters": nc_feeds.fema_shelters}[name]
+        return json.dumps(fn()).encode()
+    raise KeyError(name)
 
 
 @app.get("/feed/{name}")
 def feed(name: str):
+    if name in _COMPOSED_TTL:
+        hit = _FEED_CACHE.get(name)
+        if hit and time.time() - hit[0] < _COMPOSED_TTL[name]:
+            return Response(content=hit[1], media_type=hit[2])
+        try:
+            body = _composed(name)
+            _FEED_CACHE[name] = (time.time(), body, "application/geo+json")
+            return Response(content=body, media_type="application/geo+json")
+        except Exception as ex:  # noqa: BLE001
+            if hit:
+                return Response(content=hit[1], media_type=hit[2], headers={"X-Stale": "1"})
+            print(f"[server] composed feed {name} failed, no cache: {ex}")
+            return Response(content=b"{}", media_type="application/json", headers={"X-Stale": "miss"})
     spec = _FEEDS.get(name)
     if not spec:
         raise HTTPException(404, "unknown feed")
@@ -623,12 +724,27 @@ def tile(area: str, kind: str, z: int, x: int, y: int, empty: int = 0):
     )
 
 
+# --------------------------------------------------------------------------- #
+# single-container deployment: serve the built web app from the same origin
+# (NCR_WEB_DIST=/app/web). Mounted last so every API route above wins.
+# --------------------------------------------------------------------------- #
+_WEB_DIST = os.environ.get("NCR_WEB_DIST", "").strip()
+if _WEB_DIST and os.path.isdir(_WEB_DIST):
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/", StaticFiles(directory=_WEB_DIST, html=True), name="web")
+
+
 if __name__ == "__main__":
     import uvicorn
 
+    from terratriage.ops import auth
+
     # 127.0.0.1 for local dev; containers/hosts set HOST=0.0.0.0
+    host = os.environ.get("HOST", "127.0.0.1")
+    auth.startup_check(host)
     uvicorn.run(
         app,
-        host=os.environ.get("HOST", "127.0.0.1"),
+        host=host,
         port=int(os.environ.get("PORT", "8000")),
     )
