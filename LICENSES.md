@@ -2,7 +2,7 @@
 
 | Component | License | Obligation for Groma outputs |
 |---|---|---|
-| Groma code | (project) | — |
+| Groma code, web app and site | Apache-2.0 (`LICENSE`, `NOTICE`) | Keep the licence and notice when redistributing. Data outputs carry the obligations of the sources below. |
 | OpenStreetMap footprints (gap-fill) | ODbL 1.0 | Attribution "© OpenStreetMap contributors"; a derived *database* including them must be ODbL. Exports mark `footprint_source = osm`. Open question (OSMF Horizontal Layers guideline): merging OSM and USA Structures outlines in one building layer makes that layer a derivative database; the damage attributes are kept in Groma's own table keyed by footprint id so the county's assessment data is not pulled under ODbL. |
 | FEMA USA Structures | CC BY 4.0 (per the Esri item's licence statement, checked 2026-10-07) | Credit FEMA / ORNL with the CC BY notice. Addresses are PII-adjacent: responder mode only. |
 | USACE NSI 2022 | US Government work | Credit USACE. |
@@ -29,7 +29,7 @@
 | DOE/ORNL ODIN outages | unstated | Shown live to responders only; not redistributed or archived until terms are confirmed. |
 | ESA WorldCover 2021 | CC BY 4.0 | Attribution "© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium". |
 | Census population estimates (Vintage 2024) | US Government work; public domain | Credit US Census Bureau. |
-| Groma damage model training data (NAIP via Planetary Computer, NOAA ERI, CAL FIRE DINS labels) | NAIP public domain; ERI US Government work; DINS State of California, as-is | No non-commercial restriction from the data. The ImageNet initialisation of the encoder is recorded in the model card; a from-scratch variant (`--scratch`) avoids it. Weights are not committed to git. |
+| Groma damage model training data (NAIP via Planetary Computer, NOAA ERI, CAL FIRE DINS labels) | NAIP public domain; ERI US Government work; DINS State of California, as-is | No non-commercial restriction from the data. The ImageNet initialisation of the encoder is recorded in the model card; a from-scratch variant (`--scratch`) avoids it. The trained weights (`pipeline/data/model/weights/groma-dmg-v0.*`) ship with the code under Apache-2.0. |
 | CDC/ATSDR SVI 2022 | US Government work | Credit CDC/ATSDR; cache a versioned snapshot. |
 | xView2 baseline weights / xBD | xView2 challenge terms (non-commercial) | Note in model outputs. |
 | CARTO basemaps (web) | CARTO attribution terms | Attribution shown on map. |

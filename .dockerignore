@@ -10,6 +10,7 @@ docs/screen-recording
 video
 reports
 pipeline/data
+!pipeline/data/model/weights
 pipeline/runs
 pipeline/vendor_xview2_1st
 pipeline/weights/*.hdf5
@@ -27,3 +28,4 @@ web/public/demo
 web/demo.html
 web/public/intro
 web/intro.html
+pipeline/data/model/weights/*attempt*

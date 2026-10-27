@@ -92,3 +92,24 @@ Type: Barlow Condensed, Overpass, Overpass Mono (SIL OFL 1.1), loaded from Googl
 | Damage density | `site/assets/terrain/heat.png`, expected Major + Destroyed per building smoothed 70 m |
 
 Nothing unbuilt is described in the present tense; offline packs are labelled (beta).
+
+---
+
+# Version 3, the story cut (98 s)
+
+Script and research: [SCRIPT_v3.md](SCRIPT_v3.md). Built by `compose_v3.py`, `render.py --html composition_v3.html --out picture_v3.mp4` and `score_v3.py` (captures from `capture_v2.py`, including `area.png`). Renders: `build/groma_launch_v3.mp4`, `_web.mp4`, `_preview.mp4` (101 s).
+
+- **No voice.** Dated text cards carry the story. Type: Source Serif 4 (SIL OFL 1.1), from `web/node_modules/@fontsource-variable/source-serif-4`.
+- **Music and ambience:** original, synthesised by `score_v3.py` (rain and river, piano, low strings, bell). No samples, no third-party licence.
+- **Per-building damage** appears only for the showcase home the public site already shows (17S LV 7253 4080). The app screens are Swannanoa (TUNE).
+- **New pictures:** Civil Air Patrol frame DSC_1463, 2024-09-29, mission 24-C-5836: crews mustering at a staging site. Captioned as "crews and search teams" because the people in it cannot be identified further.
+
+| Card | Source |
+|---|---|
+| September 27, 2024: Helene floods the Swannanoa valley | NCEM Peak_Stage_Helene crest times (2024-09-27), DATA_SOURCES.md |
+| Civil Air Patrol, September 28 and 29, 2024 | CAP frame folders `20240928T232313Z`, `20240929T171054Z` |
+| More than 100 teams, 80,000 damage assessments by early October | DHS Science and Technology, 2024-10-07 (docs/research/responder-workflows-2026-10-22.md) |
+| 4% of FEMA's incident workforce available after Helene and Milton | GAO-25-108598 |
+| Destroyed, 76% likely; Major 22%; Minor 3% | `site/assets/terrain/layers.json` `anatomy` |
+| 893 buildings in 88 seconds | `swannanoa.geojson` (893 features; `runtime_sec` 88.3) |
+| 2,246 buildings checked by CAL FIRE inspectors; agreed 96% of the time when Groma called a building destroyed or badly damaged (95.7%) | `docs/model/MODEL_CARD.md`, pre-registered held-out evaluation of the wildfire model on Altadena (Eaton fire): 2,246 matched, Major or Destroyed precision 0.957. Replaced the Swannanoa 15 of 19 card, which was hard to read. |

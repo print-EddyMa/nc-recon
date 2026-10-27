@@ -2,19 +2,22 @@
 
 Writes two copies from template.html, assets/chips.json and assets/terrain/
 (baked from real public data by assets/prep_terrain.py):
-  site/index.html     a complete static page (drop the folder on any static host)
+  site/index.html     a complete static page (serve the folder from any static host)
   site/artifact.html  the same page without the document wrapper, for publishing
+
+Images and the elevation grid are separate files in assets/web/ (written by
+assets/web_assets.py) so the page itself stays small; publish that folder with
+the page, at the same relative paths.
 
 Set CONTACT before launch (an email or URL shown in the pilot section).
 """
-import base64
 import json
 import os
 import re
 import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-CONTACT = ""          # e.g. "pilots@your-domain.org"; when set, "Request a briefing" buttons appear
+CONTACT = "ma.eddy.work@gmail.com"  # shown on the site: pilot requests, questions, the hosted-plan list
 REPO = "https://github.com/print-EddyMa/nc-recon"
 EXAMPLE = "e874056f"  # Swannanoa manufactured home: search team and model both say Destroyed
 
@@ -32,6 +35,10 @@ MARK_INNER = (
 MARK = f'<svg viewBox="0 0 64 64" aria-hidden="true">{MARK_INNER}</svg>'
 
 
+WEB_FILES = ("hero.webp", "hero-960.webp", "poster.webp", "post.webp", "pre.webp", "heat.png", "ground.png",
+             "dem.json", "anatomy_change.webp", "anatomy_ground.png", "chip_pre.jpg", "chip_post.jpg")
+
+
 def main() -> None:
     t = open(os.path.join(HERE, "template.html"), encoding="utf-8").read()
     rec = json.load(open(os.path.join(HERE, "assets", "chips.json"), encoding="utf-8"))[EXAMPLE]
@@ -41,37 +48,36 @@ def main() -> None:
     bars = "".join(f'<i style="height:{max(2, round(100 * p[k]))}%;background:{c}"></i>' for k, c in zip(levels, colours))
     ring = lambda r: " ".join(f"{x},{y}" for x, y in r)  # noqa: E731
     favicon = open(os.path.join(HERE, "logo.svg"), encoding="utf-8").read()
-    brief = f'<a class="btn" href="mailto:{CONTACT}?subject=Groma%20briefing">Request a briefing</a>' if CONTACT else ""
-    ins = json.load(open(os.path.join(HERE, "assets", "instrument.json"), encoding="utf-8"))
-    instrument = (f'<figure class="instrument" aria-hidden="true" style="aspect-ratio:{ins["w"]}/{ins["h"]}">'
-                  f'<i class="br" style="--m:url({ins["bronze"]})"></i><i class="ln" style="--m:url({ins["lines"]})"></i></figure>')
+    assert CONTACT, "set CONTACT: the site's pilot and pricing buttons mail it"
+    brief = (f'<a href="mailto:{CONTACT}?subject=Groma%20pilot%20request"><span class="arr" aria-hidden="true">→</span>'
+             '<b>Request a free pilot</b><span>For an emergency management office, an insurer, a Guard unit or an aid group.</span></a>'
+             if CONTACT else
+             '<a href="#explore"><span class="arr" aria-hidden="true">↑</span><b>See it work</b>'
+             '<span>Turn the Swannanoa valley in 3D, with the damage, roads cut and search sectors.</span></a>')
     terr = os.path.join(HERE, "assets", "terrain")
-
-    def uri(name: str, mime: str) -> str:
-        with open(os.path.join(terr, name), "rb") as fh:
-            return f"data:{mime};base64," + base64.b64encode(fh.read()).decode()
-
+    missing = [f for f in WEB_FILES if not os.path.exists(os.path.join(HERE, "assets", "web", f))]
+    assert not missing, f"run python3 site/assets/web_assets.py first: {missing}"
     layers = json.load(open(os.path.join(terr, "layers.json"), encoding="utf-8"))
-    with open(os.path.join(terr, "dem.u16"), "rb") as fh:
-        dem = base64.b64encode(fh.read()).decode()
-    assets = {"post": uri("post.jpg", "image/jpeg"), "pre": uri("pre.jpg", "image/jpeg"),
-              "heat": uri("heat.png", "image/png"), "ground": uri("ground.png", "image/png"), "dem": dem}
+    # heavy files stay outside the page (assets/web, written by assets/web_assets.py) and load
+    # only when the 3D map comes into view
+    web = "assets/web/"
+    assets = {"post": web + "post.webp", "pre": web + "pre.webp", "heat": web + "heat.png",
+              "ground": web + "ground.png", "dem": web + "dem.json"}
     as_json = lambda o: json.dumps(o, separators=(",", ":")).replace("</", "<\\/")  # noqa: E731
     subs = {
         "__LAYERS__": as_json(layers), "__ASSETS__": as_json(assets),
-        "__POSTER__": uri("poster.jpg", "image/jpeg"), "__ANAT_CHANGE__": uri("anatomy_change.jpg", "image/jpeg"),
-        "__ANAT_GROUND__": uri("anatomy_ground.png", "image/png"),
+        "__ANAT_CHANGE__": web + "anatomy_change.webp", "__ANAT_GROUND__": web + "anatomy_ground.png",
         "__N_STRUCT__": f"{layers['structures']:,}", "__USNG__": layers["anatomy"]["usng"],
         "__MARK_INNER__": MARK_INNER, "__MARK__": MARK,
         "__FAVICON__": urllib.parse.quote(favicon.split("<title>")[0] + favicon.split("</title>")[1]),
-        "__PRE__": rec["pre"], "__POST__": rec["post"],
+        "__PRE__": web + "chip_pre.jpg", "__POST__": web + "chip_post.jpg",
         "__RING_PRE__": ring(rec["pre_ring"]), "__RING_POST__": ring(rec["post_ring"]),
         "__PROB_BARS__": bars, "__NCR_SHORT__": rec["ncr_id"][:8],
         "__P_DESTROYED__": str(round(100 * p["destroyed"])), "__P_MAJOR__": str(round(100 * p["major"])),
         "__P_MINOR__": str(round(100 * p["minor"])),
         "__J_ND__": str(p["no_damage"]), "__J_AF__": str(p["affected"]), "__J_MI__": str(p["minor"]),
         "__J_MA__": str(p["major"]), "__J_DE__": str(p["destroyed"]),
-        "__BRIEF__": brief, "__REPO__": REPO, "__INSTRUMENT__": instrument,
+        "__BRIEF__": brief, "__REPO__": REPO, "__CONTACT__": CONTACT,
     }
     for k, v in subs.items():
         t = t.replace(k, v)

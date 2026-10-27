@@ -352,6 +352,14 @@ def cmd_ops_brief(a):
     print(brief(a.area))
 
 
+def cmd_ops_ida(a):
+    from terratriage.ops.disseminate.ida import build
+
+    out = build(a.area)
+    for k, v in out["files"].items():
+        print(f"{k}: {v}")
+
+
 def cmd_ops_backup(a):
     """Archive what cannot be re-derived: truth labels, the ops registry,
     assessment outputs + run manifests. Imagery and caches are re-fetchable."""
@@ -361,6 +369,7 @@ def cmd_ops_backup(a):
     out = a.out or os.path.join(ROOT, "data", f"ncrecon-backup-{_t.strftime('%Y%m%dT%H%M%SZ', _t.gmtime())}.tar.gz")
     items = [("data/labels", "labels"), ("data/ops_registry.yaml", "ops_registry.yaml"),
              ("data/audit.log", "audit.log"),
+             (os.environ.get("NCR_OWNER_REVOKED") or "data/owner_revoked.json", "owner_revoked.json"),
              ("data/output/ops", "output_ops"),
              (os.environ.get("NCR_RUNS_DIR") or "runs", "runs"),
              (os.environ.get("NCR_CALIBRATION_DIR") or "config/calibration", "calibration")]
@@ -467,6 +476,9 @@ def main():
     ob = sub.add_parser("ops-brief", help="ops mode: one-page situation brief (HTML + text)")
     ob.add_argument("--area", required=True)
     ob.set_defaults(fn=cmd_ops_brief)
+    oa = sub.add_parser("ops-ida", help="ops mode: initial damage assessment packet in FEMA PDA formats (responder)")
+    oa.add_argument("--area", required=True)
+    oa.set_defaults(fn=cmd_ops_ida)
     tv = sub.add_parser("truth-status", help="Groma Verify: verification progress (one area or all)")
     tv.add_argument("--area")
     tv.set_defaults(fn=cmd_truth_status)

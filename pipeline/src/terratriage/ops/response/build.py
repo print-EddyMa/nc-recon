@@ -158,8 +158,8 @@ def build(area: str, *, skip: tuple[str, ...] = (), write: bool = True) -> dict[
         "schema": "groma.response/1", "area": area, "run_id": ar.run.get("run_id"),
         "generated_utc": utc_now(), "disclaimer": DISCLAIMER,
         "summary": summary,
-        "access": {k: v for k, v in (acc or {}).items() if k not in ("per_building", "per_point", "layer_roads")}
-        if acc else None,
+        "access": {**{k: v for k, v in (acc or {}).items() if k not in ("per_building", "per_point", "layer_roads")},
+                   "isolated_ids": _isolated_ids(acc)} if acc else None,
         "resources": {"lifelines": (res or {}).get("lifelines"), "status_rule": (res or {}).get("status_rule"),
                       "facilities": [{k: f[k] for k in ("id", "kind", "lifeline", "name", "lon", "lat", "status",
                                                         "reasons", "critical", "min_to_hospital")}
@@ -213,6 +213,17 @@ def _water_lifeline(res: dict | None, wat: dict | None) -> None:
 
 def _feature(geom, props):
     return {"type": "Feature", "geometry": geom, "properties": props}
+
+
+def _isolated_ids(acc: dict[str, Any]) -> dict[str, list[str]]:
+    """Per scenario, the buildings with no road out (for FEMA's count and list
+    of inaccessible homes in the IDA packet)."""
+    out: dict[str, list[str]] = {}
+    for nid, rec in (acc.get("per_building") or {}).items():
+        for scen, r in rec.items():
+            if (r or {}).get("access") == "isolated":
+                out.setdefault(scen, []).append(nid)
+    return {k: sorted(v) for k, v in out.items()}
 
 
 def _layers(acc, res, lz, sec) -> dict[str, Any]:

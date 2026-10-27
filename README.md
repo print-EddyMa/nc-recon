@@ -1,116 +1,131 @@
 # Groma
 
-Building-by-building disaster damage assessment for emergency management.
+**Every building, after the disaster.** Groma calls the damage to every
+building from public imagery, lidar and field records, so search teams,
+emergency managers, insurers and aid groups start in the right place.
 
-After a declared (or provisional) event, point Groma at a town. Its first
-proving ground is Hurricane Helene in western North Carolina. It pulls before- and after-event imagery (NC OneMap orthos, NOAA
-emergency aerials or Maxar Open Data), finds every structure (FEMA USA
-Structures, OpenStreetMap, USACE National Structure Inventory), and estimates
-each structure's **FEMA damage level with a probability**. Uncertain and
-severe calls go to a **human review queue**, and every call carries its reasons
-and the evidence it could not check. It estimates **people likely displaced**
-and ranks census tracts by need. Outputs are GeoJSON, CSV with US National
-Grid, KML, GeoPackage, File Geodatabase, a Survey123 field sheet, homes in the
-field layout of FEMA's IA damage survey, and a
-one-page situation brief. A **Conditions** map shows live river gauges and
-flood forecasts (USGS, NOAA and NC Emergency Management's FIMAN network), NWS
-alerts, power outages by county, open shelters, road closures, DOT cameras and
-active storms.
+Free during launch. Open source under the [Apache License 2.0](LICENSE).
+Pilots and questions: **ma.eddy.work@gmail.com**.
 
-> Decision-support tool. Not an official FEMA or NC Emergency Management
-> damage assessment. Verify on the ground. **Accuracy is not yet validated**:
-> no public structure-level ground truth exists for Helene in NC, so the
-> system measures itself only from analyst labels
-> (`docs/ops/LABELING_PROTOCOL.md`, `reports/ACCURACY_REPORT.md`).
+> Decision support. Not an official FEMA or state emergency management damage
+> assessment. Verify on the ground.
 
-No paid services or keys are used. Optional free keys add layers (see Help).
+## What it does
 
-## Deploy (one container + HTTPS)
+* **Assess.** Type a FEMA disaster number. Groma reads the declaration, finds
+  before and after imagery for any US state, finds every building, and gives
+  each one of FEMA's five damage levels with a probability and the evidence
+  behind it. Flood, wind, wildfire, earthquake and landslide.
+* **Verify.** Uncertain and severe calls go to people, who judge them blind,
+  with Civil Air Patrol photos of the building.
+* **Respond.** Roads likely cut, people cut off, lifelines at risk,
+  landing-zone candidates and 1 km search sectors in US National Grid, as KML
+  for TAK and Google Earth.
+* **Export.** FEMA's damage survey fields, GeoPackage, File Geodatabase, KML,
+  CSV, a situation brief, and the state's initial damage assessment packet in
+  the formats FEMA's July 2025 PDA guide accepts.
+* **Share.** A private, expiring record of one building for a verified owner
+  (for a FEMA appeal or an insurer), a public "is my street OK?" check that
+  never shows one home, and the Groma Index of public counts per area.
+* **Offline (beta).** Carry an assessed area to a field laptop with no network.
+
+## Who it's for
+
+| | What they get |
+|---|---|
+| Emergency management (counties, states, tribes) | Damage counts the day imagery arrives; the IDA packet; ranked search sectors |
+| Insurers and lenders | A call per building with its evidence, from a method you can inspect and re-run |
+| National Guard and responders | An offline field kit, TAK-ready KML, USNG sectors, landing-zone candidates |
+| Aid groups and nonprofits | Area-level counts for targeting cash and supplies, never one home |
+| Researchers and AI labs | Calls checked by people, field records to compare against, fresh test sets |
+| Residents | Through a county or legal aid partner: their street, and a private record of their home |
+
+## Results so far
+
+* **Eaton fire, 2025 (wildfire model, held out):** of 2,246 buildings CAL FIRE
+  inspected, when Groma called a building Major or Destroyed the inspectors
+  agreed 95.7% of the time, and Groma found 94.2% of the ones they marked that
+  way. One run, rule fixed before it ran; the wildfire model alone, not the
+  whole system. Details: [`docs/model/MODEL_CARD.md`](docs/model/MODEL_CARD.md).
+* **Swannanoa, Hurricane Helene:** 893 buildings in 88 seconds on one laptop.
+  Flood is harder: water inside a house does not show from above, so Groma
+  found 15 of the 64 homes county search teams recorded as Major or
+  Destroyed. Flood accuracy is still being validated, and every severe call
+  goes to people before it counts.
+
+## Get started
+
+### Run it (one container, HTTPS, both models built in)
 
 ```bash
-cp /path/to/xview2_cmu_classifier.onnx pipeline/weights/   # damage model, not in git
-cp .env.example .env        # set TERRATRIAGE_TOKEN (long random) and NCR_DOMAIN
+cp .env.example .env    # set TERRATRIAGE_TOKEN, NCR_OWNER_SECRET and NCR_DOMAIN
 docker compose up -d --build
 ```
 
-Open `https://<NCR_DOMAIN>/`, paste the token under Operations → Responder
-access. Full guide, security model, backups: [`docs/ops/DEPLOYMENT.md`](docs/ops/DEPLOYMENT.md).
+The build downloads and checks both damage models (Groma's wildfire model and
+its encoder, and the general xView2 baseline image model, converted to ONNX).
+Open `https://<NCR_DOMAIN>/` and paste the token under **Sign in**. Full guide,
+security model and backups: [`docs/ops/DEPLOYMENT.md`](docs/ops/DEPLOYMENT.md).
 
-## Use
-
-* **Operations** (home): a map of every assessed area; **New assessment**
-  (pick a point, see the square it will cover, check imagery, run); jobs in
-  progress with their step, run time and a cancel button; inside an area, the
-  structures over the before / after imagery the assessment read, structure
-  cards, a review queue with keyboard labeling, the situation brief, GIS
-  export, public tract summary, FEMA assistance by ZIP code, **Run again**;
-  data-source status and accuracy.
-* **Conditions**: statewide live hazards.
-* **Help**: how to read every number, what the system cannot see.
-
-Event playbook: [`docs/ops/OPERATIONS.md`](docs/ops/OPERATIONS.md).
-Verified ground truth (blind multi-verifier labeling, consensus, dataset):
-[`docs/truth/README.md`](docs/truth/README.md).
-Working with NC emergency offices: [`docs/outreach/PLAN.md`](docs/outreach/PLAN.md)
-(plan, first email, printable one-pager).
-
-## Develop locally
+### Develop locally
 
 ```bash
-# API + worker (Python 3.13)
+# API and worker (Python 3.13)
 cd pipeline
-python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
-NCR_DEV_OPEN=1 .venv/bin/python server.py          # :8000, auth off (dev only)
-.venv/bin/python -m pytest tests -q                 # offline suite; -m live hits upstreams
+python3 -m venv .venv
+.venv/bin/pip install --index-url https://download.pytorch.org/whl/cpu torch==2.13.0 torchvision==0.28.0   # Linux; on macOS plain pip is fine
+.venv/bin/pip install -r requirements-dev.txt
+PYTHONPATH=src .venv/bin/python -m terratriage.ops.model.fetch_encoder   # wildfire model encoder
+NCR_DEV_OPEN=1 .venv/bin/python server.py           # :8000, auth off (dev only)
+.venv/bin/python -m pytest tests -q                  # offline suite
 
 # web (Node 22)
 cd web
 npm install
 echo "VITE_API_URL=http://127.0.0.1:8000" > .env.development.local
-npm run dev                                         # :5173
+npm run dev                                          # :5173
 ```
 
-Pipeline CLI (`pipeline/scripts/run.py`): `ops-health`, `ops-fetch`,
-`ops-assess`, `ops-impact`, `ops-export`, `ops-brief`, `ops-aggregate`,
-`ops-reference`, `ops-eval`, `ops-calibrate`, `ops-backup`. More in
-[`pipeline/README.md`](pipeline/README.md).
+The general image model (flood and wind) is a 500 MB download converted with
+TensorFlow 2.15; locally, see [`pipeline/weights/README.md`](pipeline/weights/README.md).
+Without it Groma runs and says that channel is off.
+
+## Documentation
+
+* Launch checklist (ready, and what still needs a person): [`docs/LAUNCH.md`](docs/LAUNCH.md)
+* Event playbook: [`docs/ops/OPERATIONS.md`](docs/ops/OPERATIONS.md)
+* Deployment and configuration: [`docs/ops/DEPLOYMENT.md`](docs/ops/DEPLOYMENT.md)
+* Any hazard, any state: [`docs/ops/ANY_HAZARD.md`](docs/ops/ANY_HAZARD.md)
+* Offline field packs: [`docs/ops/OFFLINE.md`](docs/ops/OFFLINE.md)
+* Response products: [`docs/response/README.md`](docs/response/README.md)
+* Verified ground truth: [`docs/truth/README.md`](docs/truth/README.md)
+* Models: [`docs/model/MODEL_CARD.md`](docs/model/MODEL_CARD.md), [`MODEL_CARD.md`](MODEL_CARD.md), [`BIAS_AUDIT.md`](BIAS_AUDIT.md)
+* Data sources and licences: [`docs/ops/DATA_SOURCES.md`](docs/ops/DATA_SOURCES.md), [`LICENSES.md`](LICENSES.md)
+* Design system: [`DESIGN.md`](DESIGN.md)
+* Website: [`site/`](site/) (`python3 site/build.py`)
 
 ## Layout
 
 ```
 pipeline/
   server.py                 FastAPI: /ops API, live feeds, serves the built web app
-  src/terratriage/ops/      operational pipeline (GEOINT cycle)
-    plan/                   events (OpenFEMA), windows, TUNE/TEST/OPS areas
-    collect/                connectors with health checks
-    process/                geodesy-aware imagery, co-registration, alignment, structures
-    analyze/                evidence channels, fusion, calibration, evaluation, impact
-    disseminate/            exports, brief, public aggregates, map tiles
-    api.py jobs.py auth.py  HTTP API, assessment queue, access control
-  config/                   events, context rules, crosswalks, FEMA damage matrix
-  tests/                    pytest
-web/
-  src/screens/              Ops, NCDashboard (Conditions), Help
-  src/demo/, demo-deps/     offline pitch demo (separate build: npm run demo:build)
-docs/ops/                   deployment, operations, data sources, labeling, status
-MODEL_CARD.md BIAS_AUDIT.md LICENSES.md
+  src/terratriage/ops/      plan, collect, process, analyze, disseminate, response, model, offline
+  config/                   events, hazards, context rules, crosswalks, FEMA damage matrix
+  tests/                    pytest (offline)
+web/                        React app: Assess, Verify, Conditions, Help; public check, index, owner record
+site/                       the public website
+docs/                       operations, deployment, models, data
 ```
 
-## Pitch demo
+## Pricing
 
-The scripted demo from the Congressional App Challenge is kept as an offline
-recording tool with its own pinned map stack: `npm run demo:dev`,
-`npm run demo:build`, `npm run demo:validate`. It is not part of the deployed
-app. The pre-operational build is tagged `cac-v2-demo-stable`.
+Free during launch: every feature, self-hosted or as a pilot we run with you.
+Paid hosting and support will come later and will be announced well before
+anything changes. To request a pilot: **ma.eddy.work@gmail.com**.
 
-Beside it, `web/intro.html` is a longer self-running intro in the product's
-own vocabulary (FEMA levels, the current Old Fort assessment, every assessed
-town): [`web/src/intro/README.md`](web/src/intro/README.md).
+## Licence, data and security
 
-## Credits and licenses
-
-Data: USGS, NOAA (NWPS, NWS, NHC, NGS ERI), NCDOT DriveNC, OpenFEMA, FEMA USA
-Structures, USACE NSI, NC OneMap / NC Collaboratory, Maxar Open Data
-(CC BY-NC 4.0), OpenStreetMap contributors (ODbL), CDC/ATSDR SVI, CARTO
-basemaps. Model: xView2 baseline classifier (non-commercial terms). See
-[`LICENSES.md`](LICENSES.md).
+Code: Apache-2.0 ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)). Groma reads
+public data whose own terms travel with the outputs (OpenStreetMap is ODbL;
+Maxar Open Data and the xView2 baseline model are non-commercial): see
+[`LICENSES.md`](LICENSES.md). Report a vulnerability privately: [`SECURITY.md`](SECURITY.md).

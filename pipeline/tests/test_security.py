@@ -44,6 +44,7 @@ RESPONDER_GETS = [
     "/ops/areas/old_fort/responder",
     "/ops/areas/old_fort/brief.html",
     "/ops/areas/old_fort/export.zip",
+    "/ops/areas/old_fort/ida.zip",
     "/ops/areas/old_fort/references",
     "/ops/labels/old_fort",
     "/ops/photos/old_fort/0000",

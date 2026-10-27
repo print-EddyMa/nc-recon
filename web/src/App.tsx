@@ -7,6 +7,7 @@ import { useOffline } from "./lib/offline";
 import { useTheme } from "./lib/theme";
 import { API_URL } from "./lib/catalog";
 import { DISCLAIMER } from "./lib/ops";
+import { GromaMark } from "./components/ui/GromaMark";
 
 // Groma, operational build. The frame is three bands:
 //   top     brand, the four jobs (Assess, Verify, Conditions, Help), system state
@@ -16,8 +17,21 @@ const Ops = lazy(() => import("./screens/Ops"));
 const NCDashboard = lazy(() => import("./screens/NCDashboard"));
 const Help = lazy(() => import("./screens/Help"));
 const Verify = lazy(() => import("./screens/Verify"));
+const Record = lazy(() => import("./screens/Record"));
+const Check = lazy(() => import("./screens/Check"));
+const IndexPage = lazy(() => import("./screens/IndexPage"));
 
 type Screen = "ops" | "conditions" | "verify" | "help";
+
+/** Pages for the public and for owners: no operator chrome around them. */
+function publicPage(): { kind: "record"; token: string } | { kind: "check" | "index" } | null {
+  const h = window.location.hash;
+  const r = h.match(/^#\/record\/([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)$/);
+  if (r) return { kind: "record", token: r[1] };
+  if (h.startsWith("#/check")) return { kind: "check" };
+  if (h.startsWith("#/index")) return { kind: "index" };
+  return null;
+}
 
 function parseHash(): { screen: Screen; area: string | null } {
   const h = window.location.hash;
@@ -36,26 +50,31 @@ const NAV: { id: Screen; label: string; icon: IconName; hint: string }[] = [
   { id: "help", label: "Help", icon: "book", hint: "How to read and use every output" },
 ];
 
-/** The groma: a Roman surveyor's staff, cross-arm and plumb lines. Strokes
- * follow the text colour; the plumb bobs and finial are the bronze brand. */
-export function GromaMark({ className }: { className?: string }) {
-  const bronze = { fill: "rgb(var(--brand))" };
-  return (
-    <svg viewBox="0 0 64 64" className={className} aria-hidden>
-      <g fill="none" stroke="currentColor" strokeLinecap="round">
-        <line x1="32" y1="9" x2="32" y2="55" strokeWidth="3.6" />
-        <line x1="9" y1="15" x2="55" y2="15" strokeWidth="3.6" />
-        <line x1="6" y1="56" x2="58" y2="56" strokeWidth="3.6" />
-        <line x1="12" y1="15" x2="12" y2="39" strokeWidth="1.8" />
-        <line x1="52" y1="15" x2="52" y2="39" strokeWidth="1.8" />
-      </g>
-      <path d="M12 38.5l-3.6 3.4 3.6 6 3.6-6zM52 38.5l-3.6 3.4 3.6 6 3.6-6z" style={bronze} />
-      <circle cx="32" cy="9" r="2.8" style={bronze} />
-    </svg>
-  );
+export default function App() {
+  const [page, setPage] = useState(publicPage);
+  useEffect(() => {
+    const onHash = () => setPage(publicPage());
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+  if (page)
+    return (
+      <Suspense fallback={<div className="grid h-full place-items-center text-sm text-ink-dim">Loading…</div>}>
+        <ErrorBoundary label="This page">
+          {page.kind === "record" ? (
+            <Record key={page.token} token={page.token} />
+          ) : page.kind === "index" ? (
+            <IndexPage />
+          ) : (
+            <Check />
+          )}
+        </ErrorBoundary>
+      </Suspense>
+    );
+  return <Console />;
 }
 
-export default function App() {
+function Console() {
   const [{ screen, area }, setRoute] = useState(parseHash);
   // undefined until the server says; Conditions waits so no live feed is asked
   // for from an offline laptop
@@ -104,7 +123,7 @@ export default function App() {
             aria-label="Groma, assessments"
           >
             <GromaMark className="h-6 w-6 shrink-0 sm:h-7 sm:w-7" />
-            <span className="title-display hidden text-[17px] tracking-[0.22em] sm:inline">GROMA</span>
+            <span className="title-display hidden text-[19px] sm:inline">Groma</span>
           </a>
           <nav aria-label="Main" className="flex h-full items-stretch gap-0.5">
             {NAV.map((n) => {

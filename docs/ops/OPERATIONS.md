@@ -42,6 +42,25 @@ cd pipeline
    survey, verify-first rows on top, to load as a layer for field teams);
    **Situation brief** for leadership; **Public summary** (tract level, no
    addresses) for public maps.
+5. **FEMA damage assessment packet** (More actions, or `run.py ops-ida --area X`)
+   for the state's IDA: `<area>_ida.xlsx` (IA homes in FEMA survey fields,
+   counts by level and dwelling type, roads cut with reasons, a site-visit
+   schedule), `<area>_ida.gpkg`, and `<area>_pda_narrative.html`, FEMA's PDA
+   narrative (Appendix F of the July 2025 PDA guide) pre-filled where imagery
+   can answer; every other item says "Not observed from imagery". Run the
+   response products (Respond tab) first so inaccessible homes are counted.
+   Inaccessible is its own column: a home keeps its remote level.
+6. **Owner records.** For an owner or renter whom a partner (legal aid, the
+   county call centre) has verified, open the building and use **Owner record →
+   Create owner link**: a private link, 7 to 90 days, showing that building's
+   call, before and after images and evidence, printable for a FEMA appeal or
+   an insurer. Withdraw it from the same panel. Set `NCR_OWNER_SECRET` on the
+   server (links are refused without it outside dev mode). Never for TEST areas.
+7. **Public pages**, no building-level data: `#/check` answers "how does my
+   street look" with banded shares for the buildings within about 250 m (no
+   answer under 8 buildings); `#/index` and `GET /ops/index` are the Groma
+   Index, preliminary counts with 80% ranges per area, for newsrooms, aid groups
+   and other apps.
 
 ## T+2 to T+6 weeks
 1. `run.py ops-eval` → accuracy report (TUNE and TEST separately).

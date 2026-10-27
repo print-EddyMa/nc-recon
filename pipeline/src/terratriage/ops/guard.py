@@ -26,6 +26,8 @@ FEED_PER_MIN = int(os.environ.get("NCR_RATE_FEED_PER_MIN", "120"))
 # (imagery catalogs, a 15-20 MB photo download): cheap to ask for, expensive to
 # answer, and the upstreams may block us if we relay a flood
 UPSTREAM_PER_MIN = int(os.environ.get("NCR_RATE_UPSTREAM_PER_MIN", "30"))
+# the public "is my house OK?" check: low, so nobody can sweep a town with it
+LOOKUP_PER_MIN = int(os.environ.get("NCR_RATE_LOOKUP_PER_MIN", "20"))
 WINDOW_S = 60.0
 EXEMPT_PATHS = ("/health",)
 
@@ -89,6 +91,8 @@ def limit_for(method: str, path: str) -> tuple[str, int]:
     burst of map reads cannot lock an analyst out of submitting a label."""
     if _upstream(path):
         return "upstream", UPSTREAM_PER_MIN
+    if path == "/ops/lookup" or path.startswith("/ops/owner/record") or path == "/ops/owner/chip":
+        return "lookup", LOOKUP_PER_MIN
     if method in ("POST", "PUT", "PATCH", "DELETE"):
         return "write", WRITE_PER_MIN
     if path.startswith("/feed/"):

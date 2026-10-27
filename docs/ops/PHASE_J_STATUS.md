@@ -145,7 +145,7 @@ verified labels and keeps them as data. `ops/truth.py`:
   Individual Assistance damage survey as deployed in Survey123 (form V2.7,
   read from a public deployment because FEMA's v4.1.0 template page was not
   reachable), plus `ncr_` columns; verify-first rows on top. To confirm against
-  NCEM's authoritative survey (ask in `docs/outreach/PLAN.md`).
+  NCEM's authoritative survey.
 * **Field-sheet categories fixed:** the Survey123 sheet offered "moderate",
   which is not a FEMA level; it now offers unaffected, affected, minor, major,
   destroyed, inaccessible.
@@ -164,7 +164,6 @@ verified labels and keeps them as data. `ops/truth.py`:
   show (E5 is unavailable in Swannanoa: its gauges stopped before the crest)
   and the months between the team visits and the spring 2025 imagery. Kept out
   of `data/labels` and the accuracy report; TEST areas are refused.
-* **Outreach plan, email and one-pager** in `docs/outreach/`.
 * Tests: 173 pass offline.
 
 ## First water-surface source for flood depth (2026-10-07)

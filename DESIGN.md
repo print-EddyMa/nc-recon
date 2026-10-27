@@ -5,9 +5,12 @@ Locked design system for the Groma web app (`web/`) and site (`site/`).
 truth; amend there and here together. Screens **share** this system: a new
 screen uses the kit in `web/src/components/ui/kit.tsx`, not its own look.
 
-Last full pass: 2026-10-22 (Groma rename, operations-console redesign). The
-research behind it (FEMA lifelines toolkit, WCAG 2.2, NASA Worldview, NN/g,
-USWDS) is summarised at the end.
+Last full pass: 2026-10-26 (de-AI pass after studying palantir.com,
+nvidia.com and about.meta.com: one sans family for app and site, a light-first
+site, short copy; public pages). Before that, 2026-10-23 (one brand with the
+site: obsidian and limestone, cast bronze; public pages). Before that, 2026-10-22 (Groma
+rename, operations-console redesign). The research behind it (FEMA lifelines
+toolkit, WCAG 2.2, NASA Worldview, NN/g, USWDS) is summarised at the end.
 
 ---
 
@@ -23,13 +26,13 @@ Roman surveyor's groma: an instrument that measures the same way every time.
   KPI cards
 - **Macrostructure** · Workbench: top bar, rail (list) · map · inspector
   (tabs), status bar at the bottom
-- **Mode** · light (limestone) and dark (basalt), both first-class; system
+- **Mode** · light (limestone) and dark (obsidian), both first-class; system
   default. Dark is for the EOC wall and night shift (a dimmable dark theme, not
   a red-light mode: night-vision practice moved away from red).
 
 ## The frame (App shell)
 
-- **Top bar, 48 px.** Groma mark + GROMA wordmark; the four jobs: **Assess**,
+- **Top bar, 48 px.** Groma mark + "Groma" (Public Sans, semibold); the four jobs: **Assess**,
   **Verify**, **Conditions**, **Help** (icon + label, accent underline on the
   current one); right side: data-source status (one dot summarising every
   feed, list on click), responder access (key), theme.
@@ -103,20 +106,33 @@ Tokens are space-separated `R G B` triples on `:root`, redeclared for dark
 under `@media (prefers-color-scheme: dark) :root:not([data-theme=light])` and
 `:root[data-theme=dark]`. Tailwind reads them as `rgb(var(--x) / <alpha>)`.
 
-| Token | Light (limestone) | Dark (basalt) | Role |
+| Token | Light (limestone) | Dark (obsidian) | Role |
 |---|---|---|---|
-| `--canvas` | `#ECEEEA` | `#0D1012` | page ground |
-| `--surface` | `#FAFBF8` | `#14191B` | panels, bars |
-| `--surface-2` | `#E5E8E3` | `#1C2225` | insets, tracks, skeletons |
-| `--line` / `--line-strong` | `#D6DBD5` / `#B7BEB8` | `#272F33` / `#3A454A` | hairlines |
-| `--ink` / `-dim` / `-faint` | `#161B1D` / `#4C5552` / `#68716D` | `#E9E7E0` / `#A4A9A3` / `#7C837F` | text |
-| `--accent` | `#2C7A66` verdigris | `#63B59C` | interaction and "this is live" only |
-| `--brand` | `#8E5F27` bronze | `#C9954B` | the mark's plumb bobs only |
+| `--canvas` | `#EEEAE2` | `#0E0D0B` | page ground |
+| `--surface` | `#FAF8F3` | `#171512` | panels, bars |
+| `--surface-2` | `#E8E2D7` | `#201D19` | insets, tracks, skeletons |
+| `--line` / `--line-strong` | `#DDD5C7` / `#BFB5A4` | `#2C2823` / `#433D35` | hairlines |
+| `--ink` / `-dim` / `-faint` | `#181512` / `#4B443B` / `#6F665A` | `#EDE6DA` / `#B5AB9C` / `#8A8072` | text |
+| `--accent` | `#8E5B27` cast bronze | `#D2A06A` | interaction, "this is live" and the brand |
+| `--brand` | `#8E5B27` | `#D2A06A` | the mark's plumb bobs |
 | `--review` | `#2563EB` | `#60A5FA` | needs-review outline: off the damage ramp, legible on imagery |
 | `--st-ok/warn/bad/unknown` | green / amber / red / grey | lighter for dark | system and lifeline status in UI chrome |
 
-**Accent discipline.** Verdigris is interaction, never severity, under ~5 % of
-any view. No gradients, no glow, no glass.
+**Accent discipline.** Bronze is interaction and brand, never severity, under
+~5 % of any view. It sits darker and browner than every step of the damage
+ramp, and the map never uses it for a damage level (only the extent of a new
+assessment). No gradients, no glow, no glass. The website uses the same
+values (`site/template.html`).
+
+**Public pages** (`#/check`, `#/index`, `#/record/...`, `screens/public/Shell.tsx`)
+look like the site: a light sticky top bar, large medium-weight titles, black
+pill buttons (`.btn-pill`), large fields (`.field-lg`), monochrome except for
+damage data, and the disclaimer in the footer. They never show operator
+chrome or anything that needs a token.
+
+**The site** (`site/template.html`) is light-first and monochrome: white
+ground, near-black type and buttons, colour only in data (the damage ramp,
+map layers). Bronze survives only in the mark's plumb bobs.
 
 ### Damage scale (data, identical in both themes)
 
@@ -150,9 +166,11 @@ Bundled with `@fontsource` (works offline on a field laptop).
   650, not a second typeface.
 - **IBM Plex Mono** (400/500/600) - every figure in a column, grid references,
   times, keys. `.tnum` on anything that lines up.
-- **Marcellus** - the GROMA wordmark and document titles only (`.title-display`).
-  Roman inscriptional capitals: the brand's surveyor lineage. Never body text,
-  never italic.
+- **One family.** Screen titles, the wordmark and public-page titles are Public
+  Sans too (`.title-display`: semibold, tight tracking; big public titles
+  medium weight). Palantir, NVIDIA and Meta each use one family; a display
+  serif on dark read as a generated site. No Roman numerals or other
+  ornament: steps are numbered 01, 02 in mono.
 
 Sizes: body 14 px, dense panels 13 px, captions 11-12 px, inspector titles
 18 px, figures 28 px mono. USNG at the precision the data supports (10 m for

@@ -8,6 +8,7 @@ import { GeoJsonLayer, PathLayer, PolygonLayer, ScatterplotLayer, TextLayer } fr
 import type { PickingInfo } from "@deck.gl/core";
 import { Marker } from "maplibre-gl";
 import { toast } from "sonner";
+import OwnerLink from "../components/ops/OwnerLink";
 import { useMapLibre, type IControl } from "../lib/useMapLibre";
 import { useTheme } from "../lib/theme";
 import {
@@ -24,6 +25,7 @@ import {
   createEvent,
   deleteArea,
   downloadExport,
+  downloadIda,
   eventFromFema,
   fmtDuration,
   imageryDate,
@@ -97,8 +99,8 @@ const hexRgb = (h: string): [number, number, number] => [
 ];
 /** the needs-review outline: blue, off the damage ramp, legible on imagery */
 const REVIEW: [number, number, number] = [37, 99, 235];
-/** the interface accent (verdigris), for the extent a new assessment covers */
-const ACCENT: [number, number, number] = [44, 122, 102];
+/** the interface accent (bronze), for the extent a new assessment covers */
+const ACCENT: [number, number, number] = [142, 91, 39];
 const NC_CENTER: [number, number] = [-81.2, 35.5];
 
 /** Which of the assessment's own images sits under the structures. */
@@ -975,7 +977,7 @@ function Overview({
   const events = new Set(rows.map((a) => a.event?.id)).size;
   return (
     <div className="p-4 md:min-h-0 md:flex-1 md:overflow-y-auto">
-      <h1 className="text-lg">Overview</h1>
+      <h1 className="title-display text-[24px]">Overview</h1>
       {rows.length > 0 ? (
         <p className="mt-1 text-[13px] text-ink-dim">
           {rows.length} assessed area{rows.length > 1 ? "s" : ""} across {events} event{events > 1 ? "s" : ""}.
@@ -1143,7 +1145,7 @@ function AreaInspector({
       <header className="shrink-0 px-4 pt-3">
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-lg">{areaTitle(areaId, p.aoi.name)}</h1>
+            <h1 className="title-display truncate text-[24px]">{areaTitle(areaId, p.aoi.name)}</h1>
             <div className="truncate text-xs text-ink-dim" title={p.event.name}>
               {p.event.name} · {p.event.declarations.join(", ") || "provisional event"}
               {p.aoi.county ? ` · ${p.aoi.county} County` : ""}
@@ -1178,6 +1180,19 @@ function AreaInspector({
                   Download public summary
                   <div className="text-xs text-ink-faint">Counts only, no addresses: safe to share</div>
                 </a>
+                <button
+                  className="rounded px-2.5 py-1.5 text-left text-ink hover:bg-surface-2"
+                  onClick={() => {
+                    close();
+                    const t = toast.loading("Building the damage assessment packet…");
+                    downloadIda(areaId)
+                      .then(() => toast.success("Packet downloaded", { id: t }))
+                      .catch((e: Error) => toast.error(e.message, { id: t }));
+                  }}
+                >
+                  FEMA damage assessment packet
+                  <div className="text-xs text-ink-faint">Excel, GeoPackage and PDA narrative for the state. Has addresses</div>
+                </button>
                 {p.aoi.role === "OPS" && (
                   <button
                     className="rounded px-2.5 py-1.5 text-left text-ink hover:bg-surface-2 disabled:opacity-45"
@@ -1919,6 +1934,11 @@ function StructureCard({
             </dd>
           </dl>
         </Disclosure>
+        {assessed && !offline && (
+          <Disclosure title="Owner record" meta="private link">
+            <OwnerLink areaId={areaId} ncrId={p.ncr_id} />
+          </Disclosure>
+        )}
       </div>
     </div>
   );
@@ -2818,7 +2838,7 @@ function NewAssessment({
   return (
     <div className="flex flex-col md:min-h-0 md:flex-1">
       <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line px-4">
-        <h1 className="text-sm">New assessment</h1>
+        <h1 className="title-display text-[20px]">New assessment</h1>
         <button className={btnClass("ghost", "sm", "ml-auto w-7 px-0")} onClick={onClose} aria-label="Close">
           <Icon name="x" />
         </button>

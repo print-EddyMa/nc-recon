@@ -1,6 +1,9 @@
 # Groma pipeline + ops service runtime (pinned from the tested venv, Python 3.13).
-# Dev/test extras: requirements-dev.txt. Legacy segmentation path (torch) and the
-# TF conda env are NOT needed to run ops mode.
+# Dev/test extras: requirements-dev.txt. The TF conda env is only for converting
+# the general image model (scripts/export_onnx.py; the Docker build does it).
+# torch + torchvision run Groma's wildfire model (ops/model). On Linux, install the
+# CPU build first to avoid the multi-GB CUDA wheels:
+#   pip install --index-url https://download.pytorch.org/whl/cpu torch==2.13.0 torchvision==0.28.0
 fastapi==0.141.1
 uvicorn[standard]==0.52.4
 pydantic==2.13.5
@@ -19,3 +22,5 @@ scipy==1.18.1
 scikit-image==0.26.0
 onnxruntime==1.30.0
 requests==2.34.2
+torch==2.13.0
+torchvision==0.28.0

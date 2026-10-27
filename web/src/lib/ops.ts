@@ -173,7 +173,7 @@ export const setResponderToken = (v: string) => lsSet(TOKEN_KEY, v.trim());
 export const labelerName = () => ls(LABELER_KEY);
 export const setLabelerName = (v: string) => lsSet(LABELER_KEY, v.trim());
 
-function authHeaders(): HeadersInit {
+export function authHeaders(): HeadersInit {
   const t = responderToken();
   return t ? { Authorization: `Bearer ${t}` } : {};
 }
@@ -487,9 +487,19 @@ export async function postLabel(body: {
   return r.json();
 }
 
-export async function downloadExport(area: string): Promise<void> {
+export function downloadExport(area: string): Promise<void> {
+  return downloadZip(area, "export.zip", `groma-${area}-responder.zip`);
+}
+
+/** Initial damage assessment packet in FEMA's PDA formats: Excel, GeoPackage
+ * and the PDA narrative, pre-filled from the run (responder only). */
+export function downloadIda(area: string): Promise<void> {
+  return downloadZip(area, "ida.zip", `groma-${area}-ida.zip`);
+}
+
+async function downloadZip(area: string, file: string, name: string): Promise<void> {
   const r = await fetch(
-    `${API_URL}/ops/areas/${encodeURIComponent(area)}/export.zip`,
+    `${API_URL}/ops/areas/${encodeURIComponent(area)}/${file}`,
     { headers: authHeaders() },
   );
   if (!r.ok) {
@@ -505,7 +515,7 @@ export async function downloadExport(area: string): Promise<void> {
   const blob = await r.blob();
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `groma-${area}-responder.zip`;
+  a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }

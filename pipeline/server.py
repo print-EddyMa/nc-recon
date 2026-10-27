@@ -113,11 +113,13 @@ from terratriage.ops.api import router as ops_router  # noqa: E402
 from terratriage.ops.photos_api import router as photos_router  # noqa: E402
 from terratriage.ops.response_api import router as response_router  # noqa: E402
 from terratriage.ops.offline.api import router as offline_router  # noqa: E402
+from terratriage.ops.owner_api import router as owner_router  # noqa: E402
 
 app.include_router(ops_router)
 app.include_router(photos_router)
 app.include_router(response_router)
 app.include_router(offline_router)
+app.include_router(owner_router)
 
 
 @app.middleware("http")

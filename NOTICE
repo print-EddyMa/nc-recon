@@ -1,0 +1,9 @@
+Groma
+Copyright 2026 The Groma authors
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Groma reads public data from third parties (imagery, elevation, building
+inventories, field records). Their licences and the attribution each needs are
+listed in LICENSES.md; outputs that include OpenStreetMap data are subject to
+the ODbL, and anything built on Maxar Open Data is non-commercial.

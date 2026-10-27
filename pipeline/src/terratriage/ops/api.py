@@ -168,6 +168,14 @@ def area(area: str, request: Request, authorization: str | None = Header(default
 @router.get("/areas/{area}/chip/{ncr_id}/{kind}.png")
 def chip(area: str, ncr_id: str, kind: str, request: Request, size: int = 256, pad_m: float = 12.0,
          authorization: str | None = Header(default=None)):
+    _responder(request, authorization)
+    return Response(chip_png(area, ncr_id, kind, size, pad_m), media_type="image/png",
+                    headers={"Cache-Control": "private, max-age=3600",
+                             "Cross-Origin-Resource-Policy": "cross-origin"})
+
+
+def chip_png(area: str, ncr_id: str, kind: str, size: int = 256, pad_m: float = 12.0) -> bytes:
+    """Before or after image around one building, its outline drawn on top."""
     import numpy as np
     import rasterio
     from PIL import Image, ImageDraw
@@ -178,7 +186,6 @@ def chip(area: str, ncr_id: str, kind: str, request: Request, size: int = 256, p
     from .geodesy import transformer
     from .process import imagery
 
-    _responder(request, authorization)
     if kind not in ("pre", "post") or not _UUID.fullmatch(ncr_id):
         raise HTTPException(400, "bad chip request")
     fc = _load(area)
@@ -217,9 +224,7 @@ def chip(area: str, ncr_id: str, kind: str, request: Request, size: int = 256, p
         draw.ellipse([size / 2 - r, size / 2 - r, size / 2 + r, size / 2 + r], outline=(74, 128, 246), width=2)
     buf = io.BytesIO()
     img.save(buf, format="PNG")
-    return Response(buf.getvalue(), media_type="image/png",
-                    headers={"Cache-Control": "private, max-age=3600",
-                             "Cross-Origin-Resource-Policy": "cross-origin"})
+    return buf.getvalue()
 
 
 # 1x1 transparent PNG: "no imagery here" without a console-spamming 404
@@ -552,6 +557,26 @@ def export_zip(area: str, request: Request, authorization: str | None = Header(d
                 z.write(full, os.path.relpath(full, d))
     return Response(buf.getvalue(), media_type="application/zip",
                     headers={"Content-Disposition": f'attachment; filename="groma-{area}-responder.zip"'})
+
+
+@router.get("/areas/{area}/ida.zip")
+def ida_zip(area: str, request: Request, authorization: str | None = Header(default=None)):
+    """Initial damage assessment packet in FEMA's PDA formats (disseminate/ida.py)."""
+    from .disseminate import ida
+
+    _responder(request, authorization)  # IA rows carry street addresses
+    _load(area)
+    audit.record("ida_packet", request, area)
+    try:
+        out = ida.build(_area(area))
+    except ValueError as ex:
+        raise HTTPException(409, str(ex)) from ex
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in sorted(os.listdir(out["dir"])):
+            z.write(os.path.join(out["dir"], f), f)
+    return Response(buf.getvalue(), media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="groma-{area}-ida.zip"'})
 
 
 # --------------------------------------------------------------------------- #

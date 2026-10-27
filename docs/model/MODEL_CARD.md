@@ -26,8 +26,7 @@ git-ignored; they are not in the repository.
 
 E1 is trained on xBD, whose terms are non-commercial. A model trained only on
 public-domain imagery and public labels carries no such restriction from its
-data. That is what lets Groma use it in paid products (see
-docs/strategy/BUSINESS_MODEL.md).
+data. That is what lets Groma use it in paid products later.
 
 ## Training data (every source and its licence)
 
@@ -275,6 +274,24 @@ Where M1 still misses, by DINS level (rows) and M1's call (columns):
   there.
 - **Unchanged features:** loading from the local file gives the same
   features as before; the maximum difference on test input was 0.0.
+
+## Release and licence (launch, 2026-10-26)
+
+* **Groma's wildfire model** (`pipeline/data/model/weights/groma-dmg-v0.npz`
+  and `.json`) ships with the code under Apache-2.0. Its encoder is the
+  torchvision ResNet-18 ImageNet checkpoint (BSD-3), downloaded and
+  SHA-256-checked at install (`terratriage.ops.model.fetch_encoder`); the
+  Docker image builds it in.
+* **The general image model** used for flood and wind (xView2 CMU baseline,
+  trained on xBD) is not redistributed: the Docker build downloads it from the
+  public xView2 baseline release, checks its SHA-256 and converts it to ONNX.
+  Its terms are non-commercial, which fits Groma while it is free. **Before any
+  paid plan**, flood and wind need a model trained only on commercially usable
+  data, the way the wildfire model was.
+* **What is measured:** only the wildfire model, once, on Eaton (above). The
+  full pipeline with it has not yet been scored on a new fire, and flood,
+  wind, earthquake and landslide calls are not validated. Every product says
+  so where its numbers appear.
 
 ## Limits
 

@@ -113,10 +113,27 @@ def _dwelling(p: dict[str, Any]) -> str | None:
     return None
 
 
-def _fema_ia(area: str, fc: dict[str, Any], rows: list[dict[str, Any]], d: str) -> tuple[str, str, int]:
+def state_name(fc: dict[str, Any]) -> str:
+    """The event's state, from its declaration ("DR-4827-NC" -> "North Carolina")
+    or the area's own state field; "" when neither says."""
+    from ..plan.bootstrap import STATES
+
+    run = fc.get("properties") or {}
+    for d in (run.get("event") or {}).get("declarations") or []:
+        code = str(d).rsplit("-", 1)[-1].upper()
+        if code in STATES:
+            return STATES[code]
+    st = str((run.get("aoi") or {}).get("state") or "").strip()
+    return STATES.get(st.upper(), st)
+
+
+def fema_ia_rows(fc: dict[str, Any], rows: list[dict[str, Any]]) -> tuple[list[dict], list[dict], int]:
+    """Residential rows in FEMA's IA survey layout (see FEMA_IA_NOTE), verify-first
+    then most severe, with matching point features; plus how many non-homes were left out."""
     from ..analyze.fema_reference import zip_of
 
     run = fc["properties"]
+    state = state_name(fc)
     ev = run.get("event") or {}
     aoi = run.get("aoi") or {}
     generated = run.get("generated_utc") or utc_now()
@@ -147,7 +164,7 @@ def _fema_ia(area: str, fc: dict[str, Any], rows: list[dict[str, Any]], d: str) 
             "collection_date": fema.get("IMG_DATE") or "",
             "event_name": ev.get("name") or fema.get("EVENT_NAME"),
             "street_address": addr.split(",")[0].strip() if addr else "",
-            "stateterritory": "North Carolina",
+            "stateterritory": state,
             "county": aoi.get("county") or "",
             "zipcode": zip_of(addr) or "",
             "what_event_type_caused_the_dama": event_type,
@@ -175,8 +192,11 @@ def _fema_ia(area: str, fc: dict[str, Any], rows: list[dict[str, Any]], d: str) 
     order = {"destroyed": 0, "major": 1, "minor": 2, "affected": 3, "unaffected": 4, "": 5}
     idx = sorted(range(len(out_rows)), key=lambda i: (out_rows[i]["ncr_needs_review"] != "yes",
                                                       order.get(out_rows[i]["level_of_damage_assessed"], 5)))
-    out_rows = [out_rows[i] for i in idx]
-    feats = [feats[i] for i in idx]
+    return [out_rows[i] for i in idx], [feats[i] for i in idx], skipped
+
+
+def _fema_ia(area: str, fc: dict[str, Any], rows: list[dict[str, Any]], d: str) -> tuple[str, str, int]:
+    out_rows, feats, skipped = fema_ia_rows(fc, rows)
     cols = list(FEMA_IA_FIELDS) + ["ncr_id", "ncr_assessment_type", "ncr_probability", "ncr_needs_review",
                                    "ncr_usng_10m", "ncr_lat", "ncr_lon"]
     csv_path = os.path.join(d, f"{area}_fema_ia.csv")

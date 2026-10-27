@@ -88,3 +88,9 @@ pipeline/data/ops_registry.yaml*
 pipeline/data/jobs.json*
 pipeline/data/labels/
 pipeline/data/calibration/
+
+# private: strategy, outreach contacts and research notes stay off the public repo
+docs/strategy/
+docs/outreach/
+research_notes/
+reports/Groma launchable product ideas.md

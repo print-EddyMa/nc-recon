@@ -1,13 +1,12 @@
-/* Hallmark · system: Groma operations console (amends DESIGN.md, 2026-10-22)
- * genre: utilitarian instrument · theme: custom (basalt / limestone, verdigris, bronze)
- * display: Marcellus (wordmark only) · body: Public Sans (USWDS) · figures: IBM Plex Mono
+/* Hallmark · system: Groma (amends DESIGN.md, 2026-10-26: one sans family with the site)
+ * genre: utilitarian instrument · theme: custom (obsidian / limestone, cast bronze for interaction)
+ * one family: Public Sans (USWDS) for titles and text · figures: IBM Plex Mono
  * Self-hosted (bundled by Vite): the UI renders the same with no internet, which
  * an EOC on a satellite link or a field laptop cannot take for granted. */
 @import "@fontsource-variable/public-sans/wght.css";
 @import "@fontsource/ibm-plex-mono/400.css";
 @import "@fontsource/ibm-plex-mono/500.css";
 @import "@fontsource/ibm-plex-mono/600.css";
-@import "@fontsource/marcellus/400.css";
 
 @tailwind base;
 @tailwind components;
@@ -18,25 +17,25 @@
   :root {
     color-scheme: light;
 
-    --canvas: 236 238 234;
-    --surface: 250 251 248;
-    --surface-2: 229 232 227;
-    --line: 214 219 213;
-    --line-strong: 183 190 184;
-    --ink: 22 27 29;
-    --ink-dim: 76 85 82;
-    --ink-faint: 104 113 109;
-    /* verdigris: interaction and "this is live". Never severity. */
-    --accent: 44 122 102;
-    --accent-soft: 214 232 225;
+    --canvas: 238 234 226;
+    --surface: 250 248 243;
+    --surface-2: 232 226 215;
+    --line: 221 213 199;
+    --line-strong: 191 181 164;
+    --ink: 24 21 18;
+    --ink-dim: 75 68 59;
+    --ink-faint: 111 102 90;
+    /* cast bronze: interaction, "this is live" and the brand. Never severity:
+       it sits darker and browner than every step of the damage ramp. */
+    --accent: 142 91 39;
+    --accent-soft: 241 230 214;
     --accent-ink: 255 255 255;
-    /* bronze: the brand mark only */
-    --brand: 142 95 39;
+    --brand: 142 91 39;
     /* needs-review outline: a blue that stays legible over aerial imagery
        and is off the damage ramp */
     --review: 37 99 235;
-    --meter: 76 85 82;
-    --shadow: 22 27 29;
+    --meter: 75 68 59;
+    --shadow: 24 21 18;
 
     /* FEMA Community Lifelines status (stabilized / stabilizing / not / unknown) */
     --st-ok: 46 125 78;
@@ -65,20 +64,20 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --canvas: 13 16 18;
-      --surface: 20 25 27;
-      --surface-2: 28 34 37;
-      --line: 39 47 51;
-      --line-strong: 58 69 74;
-      --ink: 233 231 224;
-      --ink-dim: 164 169 163;
-      --ink-faint: 124 131 127;
-      --accent: 99 181 156;
-      --accent-soft: 27 48 42;
-      --accent-ink: 13 26 22;
-      --brand: 201 149 75;
+      --canvas: 14 13 11;
+      --surface: 23 21 18;
+      --surface-2: 32 29 25;
+      --line: 44 40 35;
+      --line-strong: 67 61 53;
+      --ink: 237 230 218;
+      --ink-dim: 181 171 156;
+      --ink-faint: 138 128 114;
+      --accent: 210 160 106;
+      --accent-soft: 46 36 24;
+      --accent-ink: 18 14 10;
+      --brand: 210 160 106;
       --review: 96 165 250;
-      --meter: 164 169 163;
+      --meter: 181 171 156;
       --shadow: 0 0 0;
       --st-ok: 87 171 115;
       --st-warn: 226 177 60;
@@ -88,20 +87,20 @@
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --canvas: 13 16 18;
-    --surface: 20 25 27;
-    --surface-2: 28 34 37;
-    --line: 39 47 51;
-    --line-strong: 58 69 74;
-    --ink: 233 231 224;
-    --ink-dim: 164 169 163;
-    --ink-faint: 124 131 127;
-    --accent: 99 181 156;
-    --accent-soft: 27 48 42;
-    --accent-ink: 13 26 22;
-    --brand: 201 149 75;
+    --canvas: 14 13 11;
+    --surface: 23 21 18;
+    --surface-2: 32 29 25;
+    --line: 44 40 35;
+    --line-strong: 67 61 53;
+    --ink: 237 230 218;
+    --ink-dim: 181 171 156;
+    --ink-faint: 138 128 114;
+    --accent: 210 160 106;
+    --accent-soft: 46 36 24;
+    --accent-ink: 18 14 10;
+    --brand: 210 160 106;
     --review: 96 165 250;
-    --meter: 164 169 163;
+    --meter: 181 171 156;
     --shadow: 0 0 0;
     --st-ok: 87 171 115;
     --st-warn: 226 177 60;
@@ -140,8 +139,8 @@
   }
 
   /* Headings are the body face at weight: in a dense console a second
-     typeface on every heading reads as decoration. Marcellus is kept for the
-     wordmark and document titles (.title-display). */
+     typeface on every heading reads as decoration. Screen titles and the
+     wordmark are the same face, larger and tighter (.title-display). */
   h1,
   h2,
   h3 {
@@ -226,11 +225,72 @@
     border-color: rgb(var(--st-bad));
   }
 
-  /* the wordmark and document titles: Roman inscriptional capitals */
+  /* the wordmark, screen and document titles: the body face, larger and tighter */
   .title-display {
     font-family: theme("fontFamily.display");
-    font-weight: 400;
-    letter-spacing: 0.01em;
+    font-weight: 600;
+    font-style: normal;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+  }
+
+  /* public pages (check, index, owner record): light like the site, one sans family */
+  .public-wrap {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding-left: max(20px, env(safe-area-inset-left, 0px));
+    padding-right: max(20px, env(safe-area-inset-right, 0px));
+  }
+  /* public pages' buttons: pills, like the site */
+  .btn-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0 1.25rem;
+    border-radius: 999px;
+    border: 1px solid rgb(var(--line-strong));
+    background: transparent;
+    color: rgb(var(--ink));
+    font-size: 0.9375rem;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out), color 160ms var(--ease-out);
+  }
+  .btn-pill:hover {
+    border-color: rgb(var(--ink));
+  }
+  .btn-pill.primary {
+    background: rgb(var(--ink));
+    border-color: rgb(var(--ink));
+    color: rgb(var(--surface));
+  }
+  .btn-pill.primary:hover {
+    opacity: 0.86;
+  }
+  .btn-pill:disabled {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+  .field-lg {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: 2.875rem;
+    border-radius: 10px;
+    border: 1px solid rgb(var(--line-strong));
+    background: rgb(var(--surface));
+    padding: 0 0.875rem;
+    font-size: 1rem;
+    color: rgb(var(--ink));
+  }
+  .field-lg::placeholder {
+    color: rgb(var(--ink-faint));
+  }
+  .field-lg:hover {
+    border-color: rgb(var(--ink-faint));
   }
 
   /* a section label inside a panel: small, sentence case, quiet */

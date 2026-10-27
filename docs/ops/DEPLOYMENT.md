@@ -10,20 +10,19 @@ Caddy sits in front for HTTPS. No paid services or keys are required.
   more cores make assessments faster). About 3 GB for the image, plus data.
 * Outbound HTTPS to the public data sources (USGS, NOAA, FEMA, NC OneMap,
   NOAA ERI on AWS, Maxar Open Data on AWS, OpenStreetMap Overpass, USACE NSI).
-* The damage model file `xview2_cmu_classifier.onnx` (not in git; see
-  "Model" below).
+* Nothing else: both damage models are fetched, checked and built into the
+  image (see "Models" below).
 
 ## First deployment
 
 ```bash
-git clone <repo> nc-recon && cd nc-recon
-# 1. model: copy it into pipeline/weights/ (or mount it, see below)
-cp /path/to/xview2_cmu_classifier.onnx pipeline/weights/
-# 2. settings
+git clone https://github.com/print-EddyMa/nc-recon groma && cd groma
+# 1. settings
 cp .env.example .env
 python3 -c "import secrets; print(secrets.token_urlsafe(32))"   # paste into TERRATRIAGE_TOKEN
+python3 -c "import secrets; print(secrets.token_urlsafe(32))"   # paste into NCR_OWNER_SECRET
 #    set NCR_DOMAIN to the host name analysts will use
-# 3. build + start
+# 2. build + start (downloads and converts both damage models; the first build takes a while)
 docker compose up -d --build
 docker compose logs -f ncrecon     # wait for "Uvicorn running"
 ```
@@ -62,13 +61,21 @@ Open `https://<NCR_DOMAIN>/`. Analysts paste the token once under
   dependency (`pip-audit`, `npm audit --omit=dev`) and publishes a CycloneDX
   SBOM for the image's Python and JavaScript dependencies.
 
-## Model
+## Models
 
-The CNN is the xView2 baseline classifier exported to ONNX
-(`pipeline/scripts/export_onnx.py`, run once in the TensorFlow conda env).
-SHA-256 `711fbdd47d99c4e1d5e7d6a84ec5c8d1c8a5eaeb84ea90d1969e10cd02fdb18f`.
-Either bake it in (copy to `pipeline/weights/` before `docker compose build`)
-or mount it:
+Both are built into the image by the Dockerfile:
+
+* **Groma's wildfire model**: weights in git (`pipeline/data/model/weights`,
+  copied to `/app/model`, `NCR_MODEL_DIR`), plus its ResNet-18 encoder,
+  downloaded from download.pytorch.org and SHA-256-checked at build
+  (`TORCH_HOME=/app/torch`). It runs on CPU PyTorch.
+* **The general image model** (flood and wind): the `model` build stage
+  downloads the xView2 baseline weights from the public release, checks the
+  SHA-256 and converts them to ONNX with TensorFlow 2.15, which never reaches
+  the runtime image. `--build-arg GROMA_GENERAL_MODEL=0` skips it (CI does).
+  Non-commercial terms: see `docs/model/MODEL_CARD.md`.
+
+To use your own copy of the general model instead, mount it:
 
 ```yaml
     volumes:
@@ -135,6 +142,8 @@ Verified by blackholing hosts in the container (`--add-host=<host>:127.0.0.1`).
 | Variable | Default | Meaning |
 |---|---|---|
 | `TERRATRIAGE_TOKEN` | (none; required when exposed) | responder bearer token |
+| `NCR_OWNER_SECRET` | (none; owner links refused) | signs private owner-record links; changing it invalidates every link |
+| `NCR_OWNER_REVOKED` | `data/owner_revoked.json` | ids of withdrawn owner links |
 | `NCR_DOMAIN` | localhost | Caddy host name |
 | `NCR_CENSUS_API_KEY` | (none) | free; enables seasonal-home adjustment |
 | `NCR_USGS_API_KEY` | (none) | free; higher USGS rate limits |
@@ -144,5 +153,6 @@ Verified by blackholing hosts in the container (`--add-host=<host>:127.0.0.1`).
 | `NCR_CONTACT` | project URL | email or URL sent in the User-Agent to federal APIs (weather.gov asks for one) |
 | `NCR_TRUST_PROXY` | off (compose sets 1) | read the client address from `X-Forwarded-For` |
 | `NCR_RATE_WRITE_PER_MIN` / `NCR_RATE_READ_PER_MIN` / `NCR_RATE_FEED_PER_MIN` | 30 / 600 / 120 | per-client rate limits |
+| `NCR_RATE_LOOKUP_PER_MIN` | 20 | public street check and owner records, per client |
 | `NCR_CSP_CONNECT` | (none) | extra origins the browser may call directly |
 | `NCR_DEV_OPEN` | off | local development only |

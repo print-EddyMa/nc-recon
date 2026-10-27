@@ -226,7 +226,7 @@ export default function Verify() {
     <div className="h-full overflow-y-auto">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <section className="min-w-0">
-          <h1 className="text-lg">Verify</h1>
+          <h1 className="title-display text-[28px]">Verify</h1>
           <p className="mt-1 text-[13px] text-ink-dim">
             Judge one building at a time from its imagery. You never see the model's call.
           </p>
@@ -274,7 +274,25 @@ export default function Verify() {
           </div>
 
           {!worker ? (
-            <p className="mt-8 text-ink-dim">Enter your name to start. It is stored with each answer so agreement can be measured.</p>
+            <div className="mt-8 max-w-xl">
+              <p className="title-display text-[22px] leading-tight text-ink">
+                Every answer here becomes ground truth for the next disaster.
+              </p>
+              <ol className="mt-5 grid gap-3 text-sm">
+                {[
+                  ["Enter your name or initials above.", "It is stored with each answer so agreement can be measured."],
+                  ["Look at the after image of one outlined building.", "Pick the FEMA level it shows, or say you can't tell."],
+                  ["Two agreeing answers settle a building.", "Disagreements go to an analyst; nobody sees the model's call."],
+                ].map(([a, b], i) => (
+                  <li key={a} className="grid grid-cols-[2rem_1fr] gap-2">
+                    <span className="tnum font-mono text-[13px] leading-6 text-ink-faint">{String(i + 1).padStart(2, "0")}</span>
+                    <span>
+                      <b className="font-semibold text-ink">{a}</b> <span className="text-ink-dim">{b}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
           ) : !task ? (
             <p className="mt-8 flex items-center gap-2 text-ink-dim">
               <Spinner /> Loading…
@@ -362,7 +380,12 @@ export default function Verify() {
                 <dd className="text-right">{status.released}</dd>
               </dl>
             ) : (
-              <p className="mt-2 text-ink-dim">…</p>
+              <div className="mt-2 grid gap-1.5" aria-label="Loading this area's progress">
+                <div className="skel h-2" />
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="skel h-3.5" style={{ width: `${88 - i * 9}%` }} />
+                ))}
+              </div>
             )}
           </div>
           <div>

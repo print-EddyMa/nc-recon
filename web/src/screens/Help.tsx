@@ -18,6 +18,7 @@ const SECTIONS: [string, string][] = [
   ["keys", "Keyboard"],
   ["access", "Access and privacy"],
   ["sources", "Data sources"],
+  ["contact", "Contact and licence"],
 ];
 
 export default function Help() {
@@ -40,7 +41,7 @@ export default function Help() {
         </nav>
 
         <article className="max-w-[68ch] text-[15px] leading-relaxed text-ink">
-          <h1 className="title-display text-[28px] tracking-[0.04em]">Using Groma</h1>
+          <h1 className="title-display text-[34px]">Using Groma</h1>
           <p className="mt-3 flex gap-2 rounded border border-st-warn/40 bg-st-warn/10 px-3 py-2 text-sm font-medium">
             {DISCLAIMER}
           </p>
@@ -64,7 +65,7 @@ export default function Help() {
                 provisional event.
               </li>
               <li>
-                Name the place and click <b>Pick the centre on the map</b>, or type coordinates. The green square
+                Name the place and click <b>Pick the centre on the map</b>, or type coordinates. The bronze square
                 is the ground the assessment will cover; outlined boxes are areas already assessed.
               </li>
               <li>Choose the size. Small (0.8 km across) takes about 2 minutes; large (2.4 km) 10 or more.</li>
@@ -277,6 +278,17 @@ export default function Help() {
               Imagery, Maxar Open Data (CC BY-NC 4.0), NIFC fire perimeters, USGS ShakeMap, NC Geological Survey
               landslides, CDC/ATSDR SVI. The status dot in the top bar shows each source's state and when it was last
               checked. Details: docs/ops/DATA_SOURCES.md.
+            </p>
+          </Section>
+
+          <Section id="contact" title="Contact and licence">
+            <p>
+              Groma is free during launch and open source under the Apache License 2.0. For a pilot, a question or a
+              problem, write to{" "}
+              <a className="underline" href="mailto:ma.eddy.work@gmail.com">
+                ma.eddy.work@gmail.com
+              </a>
+              . Report a security problem privately to the same address with "Groma security" in the subject.
             </p>
           </Section>
         </article>

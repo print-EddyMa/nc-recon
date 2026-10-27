@@ -45,9 +45,8 @@ export default {
         dmg3: "#a81b38",
       },
       fontFamily: {
-        // Marcellus: the Groma wordmark and document titles only (Roman
-        // inscriptional capitals, the brand's surveyor lineage).
-        display: ['"Marcellus"', '"Trajan Pro"', "Optima", "Georgia", "serif"],
+        // One family with the site: titles are Public Sans, larger and tighter.
+        display: ['"Public Sans Variable"', '"Public Sans"', "ui-sans-serif", "system-ui", "sans-serif"],
         // Public Sans: the US Web Design System typeface, the register the
         // government users of this tool already read every day.
         sans: ['"Public Sans Variable"', '"Public Sans"', "ui-sans-serif", "system-ui", "sans-serif"],

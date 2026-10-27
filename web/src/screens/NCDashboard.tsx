@@ -863,7 +863,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
       <aside className="absolute left-3 top-3 z-20 flex max-h-[calc(100%-1.5rem)] w-[18rem] max-w-[calc(100vw-1.5rem)] flex-col gap-3 overflow-y-auto sm:left-4 sm:top-4">
         <section className="panel px-4 py-3.5">
           <div className="flex items-baseline justify-between">
-            <h1 className="text-base leading-tight text-ink">Conditions · North Carolina</h1>
+            <h1 className="title-display whitespace-nowrap text-[17px] leading-tight text-ink">Conditions · North Carolina</h1>
             <span className="flex items-center gap-1.5 text-2xs text-ink-faint">
               <span
                 className={`h-1.5 w-1.5 rounded-full ${anyStale ? "bg-st-warn" : "bg-st-ok"}`}

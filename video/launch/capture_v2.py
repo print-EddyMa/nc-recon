@@ -12,6 +12,7 @@ Writes assets/app2/:
   orbit/0000.png ...   frame-exact 3D orbit of Swannanoa (app's ?rec=1 hook)
   respond.png          Respond tab: lifelines, landing zones, sectors
   stepper_*.png        typing a FEMA disaster number; the declaration it finds
+  area.png             Swannanoa assessed (Overview tab)
   overview.png         every assessed area, worst first (area level)
   verify.png           blind review with a Civil Air Patrol photo
   export.png           export menu: FEMA survey, KML, GeoPackage, File Geodatabase
@@ -78,6 +79,12 @@ if (want("orbit")) {
     await mapIdle(p);
     await p.screenshot({ path: `${out}/orbit/${String(i).padStart(4, "0")}.png` });
   }
+  await p.close();
+}
+if (want("area")) {
+  const p = await newPage(2);
+  await openArea(p, base, "Swannanoa");
+  await p.screenshot({ path: out + "/area.png" });
   await p.close();
 }
 if (want("respond")) {
