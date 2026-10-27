@@ -31,7 +31,7 @@
 | Census population estimates (Vintage 2024) | US Government work; public domain | Credit US Census Bureau. |
 | Groma damage model training data (NAIP via Planetary Computer, NOAA ERI, CAL FIRE DINS labels) | NAIP public domain; ERI US Government work; DINS State of California, as-is | No non-commercial restriction from the data. The ImageNet initialisation of the encoder is recorded in the model card; a from-scratch variant (`--scratch`) avoids it. The trained weights (`pipeline/data/model/weights/groma-dmg-v0.*`) ship with the code under Apache-2.0. |
 | CDC/ATSDR SVI 2022 | US Government work | Credit CDC/ATSDR; cache a versioned snapshot. |
-| xView2 baseline weights / xBD | xView2 challenge terms (non-commercial) | Note in model outputs. |
+| xView2 baseline classifier (CMU SEI) | BSD-3-Clause, Copyright 2019 Carnegie Mellon University (`licenses/xview2-baseline-BSD-3.txt`); distributed as ONNX in the `model-general-v1` release | Keep the BSD-3 notice. Trained on xBD (CC BY-NC-SA 4.0 data): treat its outputs as non-commercial. |
 | CARTO basemaps (web) | CARTO attribution terms | Attribution shown on map. |
 | MapLibre GL JS, deck.gl, React (web) | BSD-3 / MIT | Bundled; notices in the built assets. |
 | onnxruntime | MIT | Runtime for the exported damage model. |

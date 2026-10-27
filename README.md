@@ -62,8 +62,9 @@ cp .env.example .env    # set TERRATRIAGE_TOKEN, NCR_OWNER_SECRET and NCR_DOMAIN
 docker compose up -d --build
 ```
 
-The build downloads and checks both damage models (Groma's wildfire model and
-its encoder, and the general xView2 baseline image model, converted to ONNX).
+The build downloads and checks both damage models: Groma's wildfire model and
+its encoder, and the general image model from this repo's
+[`model-general-v1`](https://github.com/print-EddyMa/nc-recon/releases/tag/model-general-v1) release.
 Open `https://<NCR_DOMAIN>/` and paste the token under **Sign in**. Full guide,
 security model and backups: [`docs/ops/DEPLOYMENT.md`](docs/ops/DEPLOYMENT.md).
 
@@ -86,9 +87,9 @@ echo "VITE_API_URL=http://127.0.0.1:8000" > .env.development.local
 npm run dev                                          # :5173
 ```
 
-The general image model (flood and wind) is a 500 MB download converted with
-TensorFlow 2.15; locally, see [`pipeline/weights/README.md`](pipeline/weights/README.md).
-Without it Groma runs and says that channel is off.
+The general image model (flood and wind) is a 474 MB download; locally, see
+[`pipeline/weights/README.md`](pipeline/weights/README.md). Without it Groma
+runs and says that channel is off.
 
 ## Documentation
 

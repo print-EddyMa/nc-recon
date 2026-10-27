@@ -5,36 +5,26 @@
 # Models, all built in so one `docker compose up -d --build` is a complete install:
 #  * Groma's wildfire model (pipeline/data/model/weights, in git) + its ResNet-18
 #    encoder (downloaded from download.pytorch.org, SHA-256 checked).
-#  * The general image model (xView2 CMU baseline, non-commercial terms): the
-#    `model` stage downloads its weights from the public xView2 baseline release,
-#    checks the SHA-256 and converts them to ONNX. Build with
+#  * The general image model (xView2 CMU baseline, BSD-3; trained on xBD,
+#    non-commercial data terms): the `model` stage downloads the ONNX file from
+#    Groma's `model-general-v1` release and checks its SHA-256. Build with
 #    `--build-arg GROMA_GENERAL_MODEL=0` to skip it (CI does); Groma then says
-#    that channel is off. A local pipeline/weights/xview2_cmu_classifier.onnx is
-#    used as is when present.
+#    that channel is off.
 
 # ---------------------------------------------------- general image model --
-# TF 2.15 is the only runtime that loads the 2019 Keras weights faithfully; it
-# lives only in this throwaway stage, never in the runtime image. The conversion
-# peaks near 5 GB, so the other stages wait for it (out/.done) instead of
-# running beside it on an 8 GB Docker host.
-FROM python:3.11-slim AS model
+# The xView2 baseline classifier, already converted to ONNX (BSD-3, licences/
+# xview2-baseline-BSD-3.txt), from Groma's release; the SHA-256 is checked.
+FROM python:3.13-slim AS model
 ARG GROMA_GENERAL_MODEL=1
 WORKDIR /m
-COPY pipeline/src/terratriage/_keras_infer.py pipeline/scripts/export_onnx.py ./
 RUN mkdir -p out && if [ "$GROMA_GENERAL_MODEL" = "1" ]; then \
-      pip install --no-cache-dir tensorflow==2.15.1 tf2onnx==1.16.1 onnx==1.16.2 \
-      && python -c "import urllib.request; urllib.request.urlretrieve('https://github.com/DIUx-xView/xView2_baseline/releases/download/v1.0/classification.hdf5', 'classification.hdf5')" \
-      && echo "a1f0dff601c8f3582b686ac7ce695f116d339e7913d1928d9ff62ab740e703cd  classification.hdf5" | sha256sum -c - \
-      && mkdir -p src/terratriage && mv _keras_infer.py src/terratriage/ && mkdir scripts && mv export_onnx.py scripts/ \
-      && python scripts/export_onnx.py classification.hdf5 out/xview2_cmu_classifier.onnx \
-      && rm classification.hdf5; \
-    fi \
-    && touch out/.done
+      python -c "import urllib.request; urllib.request.urlretrieve('https://github.com/print-EddyMa/nc-recon/releases/download/model-general-v1/xview2_cmu_classifier.onnx', 'out/xview2_cmu_classifier.onnx')" \
+      && echo "711fbdd47d99c4e1d5e7d6a84ec5c8d1c8a5eaeb84ea90d1969e10cd02fdb18f  out/xview2_cmu_classifier.onnx" | sha256sum -c - ; \
+    fi
 
 # ---------------------------------------------------------------- web build --
 FROM node:22-slim AS web
 WORKDIR /web
-COPY --from=model /m/out/.done /tmp/model.done
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --ignore-scripts --no-audit --no-fund
 COPY web/ ./
@@ -51,7 +41,6 @@ WORKDIR /app
 # the GDAL wheels still expect the system expat (XML) library
 RUN apt-get update && apt-get install -y --no-install-recommends libexpat1 \
     && rm -rf /var/lib/apt/lists/*
-COPY --from=model /m/out/.done /tmp/model.done
 COPY pipeline/requirements.txt ./requirements.txt
 # CPU builds of torch / torchvision first (the PyPI Linux wheels carry CUDA)
 RUN pip install --index-url https://download.pytorch.org/whl/cpu torch==2.13.0 torchvision==0.28.0 \
@@ -61,6 +50,7 @@ COPY pipeline/src ./src
 COPY pipeline/scripts ./scripts
 COPY pipeline/config ./config
 COPY pipeline/server.py ./server.py
+COPY LICENSE NOTICE licenses/ /app/licenses/
 COPY pipeline/weights/ ./weights/
 COPY --from=model /m/out/ ./weights/
 COPY pipeline/data/model/weights/ ./model/weights/

@@ -70,10 +70,10 @@ Both are built into the image by the Dockerfile:
   downloaded from download.pytorch.org and SHA-256-checked at build
   (`TORCH_HOME=/app/torch`). It runs on CPU PyTorch.
 * **The general image model** (flood and wind): the `model` build stage
-  downloads the xView2 baseline weights from the public release, checks the
-  SHA-256 and converts them to ONNX with TensorFlow 2.15, which never reaches
-  the runtime image. `--build-arg GROMA_GENERAL_MODEL=0` skips it (CI does).
-  Non-commercial terms: see `docs/model/MODEL_CARD.md`.
+  downloads the ONNX file from Groma's `model-general-v1` release (the xView2
+  baseline classifier, BSD-3, converted with `pipeline/scripts/export_onnx.py`)
+  and checks its SHA-256. `--build-arg GROMA_GENERAL_MODEL=0` skips it (CI
+  does). Its training data is non-commercial: see `docs/model/MODEL_CARD.md`.
 
 To use your own copy of the general model instead, mount it:
 

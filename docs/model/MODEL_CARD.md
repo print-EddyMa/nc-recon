@@ -283,10 +283,11 @@ Where M1 still misses, by DINS level (rows) and M1's call (columns):
   SHA-256-checked at install (`terratriage.ops.model.fetch_encoder`); the
   Docker image builds it in.
 * **The general image model** used for flood and wind (xView2 CMU baseline,
-  trained on xBD) is not redistributed: the Docker build downloads it from the
-  public xView2 baseline release, checks its SHA-256 and converts it to ONNX.
-  Its terms are non-commercial, which fits Groma while it is free. **Before any
-  paid plan**, flood and wind need a model trained only on commercially usable
+  BSD-3, Copyright 2019 Carnegie Mellon University) is published converted to
+  ONNX as Groma's `model-general-v1` release with its licence; the Docker build
+  downloads it and checks the SHA-256. It was trained on xBD, whose data terms
+  are non-commercial, which fits Groma while it is free. **Before any paid
+  plan**, flood and wind need a model trained only on commercially usable
   data, the way the wildfire model was.
 * **What is measured:** only the wildfire model, once, on Eaton (above). The
   full pipeline with it has not yet been scored on a new fire, and flood,
