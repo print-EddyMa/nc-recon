@@ -21,7 +21,9 @@ from .cases import CASES, WORK, besttrack
 # smaller than what we don't know anyway?" - not exact error bars.
 ANALYSIS_ERROR = {"temperature": 0.5, "u_component_of_wind": 1.0, "v_component_of_wind": 1.0,
                   "specific_humidity": 0.5e-3}
-NUDGES = [("baseline", 0.0), ("away_0.25", 0.25), ("away_0.5", 0.5), ("away_1", 1.0), ("toward_1", -1.0)]
+Q_RELATIVE = 0.10   # humidity cap is also <= 10 % of the local value (~ RH analysis uncertainty)
+NUDGES = [("baseline", 0.0), ("away_0.1", 0.1), ("away_0.25", 0.25), ("away_0.5", 0.5), ("away_1", 1.0),
+          ("toward_1", -1.0)]
 WEB = Path(__file__).resolve().parents[2] / "web" / "public" / "data" / "butterfly"
 
 
@@ -40,11 +42,23 @@ def cmd_adjoint(P):
         print(f"   max |dJ/d {k}| = {np.abs(v).max():.3e}", flush=True)
 
 
-def unit_nudge(P):
+def load_grad(P):
     G = np.load(out_dir(P.case) / f"grad_{P.name}.npz")
-    d = P.descent_direction({k: G[k] for k in ANALYSIS_ERROR})
-    peak = max(np.abs(d[k]).max() / ANALYSIS_ERROR[k] for k in ANALYSIS_ERROR)
-    return {k: (v / peak).astype(np.float32) for k, v in d.items()}      # peak = 1 x analysis error
+    return float(G["J0"]), {k: G[k] for k in ANALYSIS_ERROR}
+
+
+def unit_nudge(P):
+    """Steepest-descent nudge, each field scaled to its own cap: everywhere |dT| <= 0.5 K,
+    |du|,|dv| <= 1 m/s and |dq| <= min(0.5 g/kg, 10 % of local q), each reached at that field's
+    most sensitive point ('1x analysis error'). Scaling fields separately keeps every component
+    a descent direction (g . d_k < 0); one shared scale let the tight upper-level humidity cap
+    throttle temperature and wind to ~1e-4."""
+    _, g = load_grad(P)
+    d = P.descent_direction(g)
+    q = np.asarray(P.inputs["specific_humidity"])
+    cap = {k: np.full_like(d[k], v) for k, v in ANALYSIS_ERROR.items()}
+    cap["specific_humidity"] = np.maximum(np.minimum(ANALYSIS_ERROR["specific_humidity"], Q_RELATIVE * q), 1e-8)
+    return {k: (d[k] / float((np.abs(d[k]) / cap[k]).max())).astype(np.float32) for k in ANALYSIS_ERROR}
 
 
 def cmd_steer(P, only_baseline=False):
@@ -54,10 +68,17 @@ def cmd_steer(P, only_baseline=False):
     bt = besttrack(case)
     first = (case.storm0[0], case.storm0[1])
     unit = None if only_baseline else unit_nudge(P)
-    runs = {}
+    J0g, g = (None, None) if only_baseline else load_grad(P)
     path = out_dir(case) / f"runs_{P.name}.json"
+    prev = json.load(open(path)) if path.exists() else {}
+    runs = {}
     for label, s in (NUDGES[:1] if only_baseline else NUDGES):
         t = time.time()
+        # the un-nudged forecast doesn't depend on the nudge design: reuse it
+        if label == "baseline" and "baseline" in prev and (out_dir(case) / f"fields_{P.name}_baseline.npz").exists():
+            runs["baseline"] = prev["baseline"]
+            print("[steer] baseline   (reused)", flush=True)
+            continue
         delta = {k: jnp.asarray(s * v) for k, v in (unit or {}).items()} if unit else {}
         preds = P.forecast(delta)
         preds = {k: np.asarray(v) for k, v in preds.items()}
@@ -75,6 +96,9 @@ def cmd_steer(P, only_baseline=False):
                             u850=preds["u_component_of_wind"][:, k850].astype(np.float32),
                             v850=preds["v_component_of_wind"][:, k850].astype(np.float32))
         r = dict(s=s, J=J, track=tr)
+        if unit and s != 0:
+            # what the gradient alone predicts (first-order Taylor): the "lie detector" check
+            r["J_linear"] = J0g + float(sum(np.sum(g[k] * s * unit[k]) for k in unit))
         if unit:
             r["energy_J"] = P.energy(delta)
             r["peak"] = {k: float(np.abs(np.asarray(v)).max()) for k, v in delta.items()}
@@ -83,7 +107,8 @@ def cmd_steer(P, only_baseline=False):
         runs[label] = r
         json.dump(runs, open(path, "w"), indent=1)
         dist = gc_dist_km(tr[-2]["lat"], tr[-2]["lon"], *case.target)
-        print(f"[steer] {label:10s} J={J:9.4f}  storm->target @+{case.window[-2]}h: {dist:5.0f} km   ({time.time()-t:.0f}s)",
+        lin = f" (linear guess {r['J_linear']:9.4f})" if "J_linear" in r else ""
+        print(f"[steer] {label:10s} J={J:9.4f}{lin}  storm->target @+{case.window[-2]}h: {dist:5.0f} km   ({time.time()-t:.0f}s)",
               flush=True)
 
 

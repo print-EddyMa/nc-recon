@@ -340,7 +340,11 @@ export default function Butterfly({ onOpenAbout }: Props) {
   const ae = doc?.case.analysis_error;
   const away = runs.filter((r) => r.s > 0).sort((a, b) => a.s - b.s);
   const toward = runs.find((r) => r.s < 0);
-  const barMax = Math.max(1, ...runs.map((r) => Math.abs(r.change_pct)));
+  const barMax = Math.max(
+    1,
+    ...runs.map((r) => Math.max(Math.abs(r.change_pct), Math.abs(r.linear_change_pct ?? 0))),
+  );
+  const hasLinear = runs.some((r) => r.linear_change_pct != null);
 
   const resultPanels = doc && (
     <>
@@ -368,9 +372,13 @@ export default function Butterfly({ onOpenAbout }: Props) {
             sub="mean over 78 h vs NOAA best track"
           />
           <StatTile
-            label="Typical analysis error"
+            label="Nudge cap (1×)"
             value={ae ? `${ae.T_K} K` : "-"}
-            sub={ae ? `${ae.wind_ms} m/s · ${ae.q_gkg} g/kg (rough)` : undefined}
+            sub={
+              ae
+                ? `${ae.wind_ms} m/s · humidity ≤${ae.q_relative ? ` ${Math.round(ae.q_relative * 100)}% of local,` : ""} ${ae.q_gkg} g/kg · rough analysis error`
+                : undefined
+            }
           />
         </div>
       </section>
@@ -403,6 +411,13 @@ export default function Butterfly({ onOpenAbout }: Props) {
                       }}
                     />
                   )}
+                  {r.linear_change_pct != null && (
+                    <span
+                      title={`gradient predicted ${pct(r.linear_change_pct)}`}
+                      className="absolute top-[-3px] h-[12px] w-[2px] rounded-full bg-ink"
+                      style={{ left: `calc(${50 + (50 * r.linear_change_pct) / barMax}% - 1px)` }}
+                    />
+                  )}
                 </div>
               </button>
             </li>
@@ -410,8 +425,14 @@ export default function Butterfly({ onOpenAbout }: Props) {
         </ul>
         <p className="mt-2.5 text-2xs leading-relaxed text-ink-faint">
           Change in {doc.case.objective_label}, averaged over forecast hours{" "}
-          {doc.case.window_hours.join(", ")}. Every bar is a full nonlinear NeuralGCM forecast, not the gradient&rsquo;s
-          linear guess.
+          {doc.case.window_hours.join(", ")}. Every bar is a full nonlinear NeuralGCM forecast.
+          {hasLinear && (
+            <>
+              {" "}
+              <span className="inline-block h-2.5 w-[2px] translate-y-0.5 rounded-full bg-ink" /> marks what the
+              gradient alone predicted: where tick and bar disagree, the linear sensitivity stops being trustworthy.
+            </>
+          )}
         </p>
       </section>
 
@@ -441,9 +462,11 @@ export default function Butterfly({ onOpenAbout }: Props) {
               ECMWF&rsquo;s singular vectors).
             </p>
             <p>
-              <span className="text-ink">3 · Check the answer.</span> The steepest nudge, capped below typical
-              analysis error and kept {doc.case.keep_out_km} km from the storm, is put back in and the whole forecast
-              re-run. The bars are those re-runs.
+              <span className="text-ink">3 · Check the answer.</span> The steepest nudge, each field capped at a
+              rough analysis error, confined to the troposphere
+              {doc.case.nudge_levels_hpa ? ` (${doc.case.nudge_levels_hpa[1]}–${doc.case.nudge_levels_hpa[0]} hPa)` : ""}{" "}
+              and kept {doc.case.keep_out_km} km from the storm, is put back in and the whole forecast re-run. The bars
+              are those re-runs; the ticks are the gradient&rsquo;s own prediction.
             </p>
             <p className="border-t border-line pt-2">
               <span className="text-ink">Not a weather-control tool.</span> It shows how sensitive a forecast is,

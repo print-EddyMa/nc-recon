@@ -35,8 +35,10 @@ export interface ButterflyRun {
   s: number;
   /** objective (mean over the window) */
   J: number;
-  /** % change vs the un-nudged forecast */
+  /** % change vs the un-nudged forecast (full nonlinear re-forecast) */
   change_pct: number;
+  /** what the gradient alone predicted (first-order Taylor) - the lie detector */
+  linear_change_pct?: number | null;
   track: TrackPoint[];
   energy_J: number | null;
   peak: { T_K: number; wind_ms: number; q_gkg: number } | null;
@@ -68,7 +70,9 @@ export interface ButterflyCase {
     window_hours: number[];
     keep_out_km: number;
     model: string;
-    analysis_error: { T_K: number; wind_ms: number; q_gkg: number };
+    analysis_error: { T_K: number; wind_ms: number; q_gkg: number; q_relative?: number };
+    /** pressure range the nudge is allowed in, [top, bottom] hPa */
+    nudge_levels_hpa?: [number, number];
   };
   best_track: BestTrackPoint[];
   skill: { mean_track_err_km: number | null; window_track_err_km: (number | null)[] };

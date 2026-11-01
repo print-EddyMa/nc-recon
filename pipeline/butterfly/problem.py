@@ -15,6 +15,11 @@ from .storm import gc_dist_km, region_weight
 CP, TR, LV, G, A = 1004.0, 270.0, 2.5e6, 9.81, 6.371e6
 PERTURB = ["temperature", "u_component_of_wind", "v_component_of_wind", "specific_humidity"]
 CHECKPOINT_URL = "gs://neuralgcm/models/v1/{name}.pkl"
+# Nudges (and the sensitivity map) are restricted to the troposphere. Above it,
+# the energy norm's per-mass weighting piles a steepest-descent direction into
+# the near-massless top levels: a first version put 0.5 g/kg of water vapour at
+# 1 hPa (130x the local value), which broke the model rather than steering it.
+TROPOSPHERE_TOP_HPA = 200
 
 
 def load_model(name):
@@ -36,6 +41,7 @@ class Problem:
         self.lon, self.lat = np.rad2deg(np.asarray(g.longitudes)), np.rad2deg(np.asarray(g.latitudes))
         self.levels = np.asarray(m.data_coords.vertical.centers, dtype=float)
         self.k = {p: int(np.argmin(np.abs(self.levels - p))) for p in (300, 500, 850, 925)}
+        self.trop = (self.levels >= TROPOSPHERE_TOP_HPA).astype(np.float32)
         LON, LAT = np.meshgrid(self.lon, self.lat, indexing="ij")
         self.mask = (gc_dist_km(case.storm0[0], case.storm0[1], LAT, LON) > case.keep_out_km).astype(np.float32)
         self.W = jnp.asarray(region_weight(self.lon, self.lat, case.target, case.radius_km))
@@ -112,5 +118,7 @@ class Problem:
         return float(sum(0.5 * self.coef[k] * np.sum(self.wmass * np.asarray(d) ** 2) for k, d in delta.items()))
 
     def descent_direction(self, grad):
-        """Steepest-descent direction of the objective in the energy norm, masked away from the storm."""
-        return {k: -np.asarray(grad[k]) * self.mask[None] / (self.coef[k] * self.wmass) for k in PERTURB}
+        """Steepest-descent direction of the objective in the energy norm, tropospheric only,
+        masked away from the storm."""
+        m = self.mask[None] * self.trop[:, None, None]
+        return {k: -np.asarray(grad[k]) * m / (self.coef[k] * self.wmass) for k in PERTURB}

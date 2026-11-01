@@ -4,12 +4,13 @@
 import json, datetime
 import numpy as np
 from .cases import besttrack
-from .problem import PERTURB, CP, TR, LV
+from .problem import PERTURB, CP, TR, LV, TROPOSPHERE_TOP_HPA
 
 SENS_BBOX = (-135.0, -35.0, 0.0, 62.0)       # w, e, s, n: where the sensitivity map is drawn
 IMPACT_BBOX = (-100.0, -66.0, 14.0, 44.0)    # Gulf / SE US / western Atlantic
 RUN_LABELS = {
     "baseline": "No nudge (NeuralGCM from ERA5)",
+    "away_0.1": "Nudged away · 0.1× analysis error",
     "away_0.25": "Nudged away · 0.25× analysis error",
     "away_0.5": "Nudged away · 0.5× analysis error",
     "away_1": "Nudged away · 1× analysis error",
@@ -64,12 +65,13 @@ def export(case, name, work, web_dir):
     area = np.cos(np.deg2rad(LAT))                                    # relative area weight
     wmass = dp[:, None, None] * area[None]
 
-    # sensitivity density: energy-norm magnitude of the gradient per column, per unit area
-    S = sum((G[k] ** 2 / (coef[k] * wmass)).sum(0) for k in PERTURB)
+    # sensitivity density: energy-norm magnitude of the gradient per tropospheric column, per unit area
+    trop = levels >= TROPOSPHERE_TOP_HPA
+    S = sum((G[k][trop] ** 2 / (coef[k] * wmass[trop])).sum(0) for k in PERTURB)
     S = np.sqrt(S / area)
     S = S / S.max()
     profile = {k: (lambda p: (p / p.max()).round(4).tolist() if p.max() > 0 else p.tolist())(
-        np.sqrt((G[k] ** 2 / (coef[k] * wmass)).sum((1, 2)))) for k in PERTURB}
+        np.sqrt((G[k][trop] ** 2 / (coef[k] * wmass[trop])).sum((1, 2)))) for k in PERTURB}
 
     def nudge_level(hpa):
         k = int(np.argmin(np.abs(levels - hpa)))
@@ -94,6 +96,7 @@ def export(case, name, work, web_dir):
         out_runs.append(dict(
             id=rid, label=RUN_LABELS.get(rid, rid), s=r["s"], J=round(r["J"], 4),
             change_pct=round(100 * (r["J"] / J0 - 1), 2),
+            linear_change_pct=None if "J_linear" not in r else round(100 * (r["J_linear"] / J0 - 1), 2),
             track=[{k: p[k] for k in ("time", "lat", "lon", "err_km") if k in p} for p in r["track"]],
             energy_J=r.get("energy_J"),
             peak=None if "peak" not in r else dict(
@@ -114,7 +117,8 @@ def export(case, name, work, web_dir):
                   target=dict(lat=case.target[0], lon=case.target[1], label=case.target_label, radius_km=case.radius_km),
                   objective=case.objective, objective_label=case.objective_label, window_hours=list(case.window),
                   keep_out_km=case.keep_out_km, model=f"NeuralGCM {name.replace('_', ' ').replace(' deg', '°')}",
-                  analysis_error=dict(T_K=0.5, wind_ms=1.0, q_gkg=0.5)),
+                  analysis_error=dict(T_K=0.5, wind_ms=1.0, q_gkg=0.5, q_relative=0.10),
+                  nudge_levels_hpa=[int(levels[trop].min()), int(levels[trop].max())]),
         best_track=[dict(time=str(t)[:16], lat=float(a), lon=float(b), wind_kt=None if np.isnan(w) else float(w),
                          pres_mb=None if np.isnan(p) else float(p))
                     for t, a, b, w, p in zip(bt.ISO_TIME, bt.LAT, bt.LON, bt.USA_WIND, bt.USA_PRES)],
@@ -122,7 +126,7 @@ def export(case, name, work, web_dir):
                    window_track_err_km=win_errs),
         runs=out_runs,
         sensitivity=dict(cells=_cells(S, lon, lat, SENS_BBOX, keep=lambda x: x > 0.04),
-                         levels_hpa=levels.astype(int).tolist(), profile=profile),
+                         levels_hpa=levels[trop].astype(int).tolist(), profile=profile),
         nudge=dict(levels=[nudge_level(500), nudge_level(850)]),
     )
     web_dir.mkdir(parents=True, exist_ok=True)

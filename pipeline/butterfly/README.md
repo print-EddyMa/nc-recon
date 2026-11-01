@@ -27,10 +27,12 @@ ERA5 (real atmosphere, 37 levels, 0.25°)  ─ regrid ─►  NeuralGCM 2.8° en
         │                                                     │
         └──────────── ∂J / ∂(T, u, v, q at t0)  ◄── adjoint ──┘     (problem.py)
                               │
-          steepest-descent nudge in the moist total-energy norm,
-          zero within 600 km of the storm, peak ≤ s × analysis error
+          steepest-descent nudge in the moist total-energy norm, troposphere only
+          (1000-200 hPa), zero within 600 km of the storm, each field capped at
+          s × a rough analysis error (0.5 K, 1 m/s, min(0.5 g/kg, 10 % of local q))
                               │
-          full nonlinear re-forecasts for s = 0.25, 0.5, 1 and the reversed nudge   (run.py steer)
+          full nonlinear re-forecasts for s = 0.1, 0.25, 0.5, 1 and the reversed nudge,
+          each compared with the gradient's own linear prediction           (run.py steer)
                               │
           export ─► web/public/data/butterfly/helene.json                           (export_web.py)
 ```
@@ -46,7 +48,20 @@ ERA5 (real atmosphere, 37 levels, 0.25°)  ─ regrid ─►  NeuralGCM 2.8° en
   needs ~124 GB; stepping hour-by-hour under `jax.checkpoint` inside a
   `lax.scan` brings it under ~10 GB on CPU.
 - **Verified, not linearised.** Every number on the web screen comes from a full
-  nonlinear forecast with the nudge put back in.
+  nonlinear forecast with the nudge put back in, shown next to what the gradient
+  alone predicted, so you can see where the linear sensitivity stops being true.
+
+### A trap worth knowing (it bit the first version)
+
+Steepest descent in an energy norm divides the gradient by each layer's air
+mass, so it piles the nudge into the near-massless model top. The first run put
+0.5 g/kg of water vapour at 1 hPa, about 130× the humidity actually there, and
+the "nudged" forecasts swung by -90 % to +1,800 %: the model was being broken,
+not steered. Operational sensitivity work restricts to the troposphere for this
+reason; so does this code now (`TROPOSPHERE_TOP_HPA`), with humidity capped
+relative to its local value. A second, subtler trap: scaling all fields by one
+shared factor let the tight upper-level humidity cap throttle temperature and
+wind to ~10⁻⁴; each field is now scaled to its own cap.
 
 ## Run it
 
