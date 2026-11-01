@@ -362,7 +362,7 @@ export default function Butterfly({ onOpenAbout }: Props) {
             value={run?.peak ? `${run.peak.T_K.toFixed(2)} K` : "-"}
             sub={
               run?.peak
-                ? `${run.peak.wind_ms.toFixed(2)} m/s · ${run.peak.q_gkg.toFixed(2)} g/kg`
+                ? `${run.peak.wind_ms.toFixed(2)} m/s · humidity ${run.peak.q_gkg < 0.01 ? "negligible" : `${run.peak.q_gkg.toFixed(2)} g/kg`}`
                 : "no nudge"
             }
           />
@@ -474,7 +474,10 @@ export default function Butterfly({ onOpenAbout }: Props) {
             </p>
             <p>
               <span className="text-ink">Limits.</span> 2.8° model (~300 km): the storm&rsquo;s core and its
-              intensity aren&rsquo;t resolved, only its track and large-scale moisture. The nudge is judged by the same
+              intensity aren&rsquo;t resolved, only its track and large-scale moisture. Model storm positions carry
+              ~±150 km of grid noise, more after landfall, and the model&rsquo;s Helene runs slow: it is{" "}
+              {doc.skill.window_track_err_km.filter((x) => x != null).slice(-2).join("–")} km from the observed
+              storm by +72–78 h. The nudge is judged by the same
               model that designed it; an independent physics model (WRF) is the next check. One storm is a case
               study, not a statistic.
             </p>
@@ -719,7 +722,7 @@ const PROFILE_VARS: [string, string, string][] = [
 function Profile({ levels, profile }: { levels: number[]; profile: Record<string, number[]> }) {
   const W = 260;
   const H = 130;
-  const pTop = 100;
+  const pTop = Math.min(...levels.filter((p) => p >= 100), 1000);
   const pBot = 1000;
   const y = (p: number) => ((Math.log(p) - Math.log(pTop)) / (Math.log(pBot) - Math.log(pTop))) * (H - 12) + 4;
   const idx = levels.map((p, i) => [p, i] as const).filter(([p]) => p >= pTop);

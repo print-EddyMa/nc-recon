@@ -99,12 +99,12 @@ def export(case, name, work, web_dir):
             linear_change_pct=None if "J_linear" not in r else round(100 * (r["J_linear"] / J0 - 1), 2),
             track=[{k: p[k] for k in ("time", "lat", "lon", "err_km") if k in p} for p in r["track"]],
             energy_J=r.get("energy_J"),
-            peak=None if "peak" not in r else dict(
+            peak=None if ("peak" not in r or r["s"] == 0) else dict(
                 T_K=round(r["peak"]["temperature"], 3),
                 wind_ms=round(max(r["peak"]["u_component_of_wind"], r["peak"]["v_component_of_wind"]), 3),
                 q_gkg=round(1e3 * r["peak"]["specific_humidity"], 3)),
             impact=dict(hour=case.window[k_peak],
-                        cells=_cells(imp, lon, lat, IMPACT_BBOX, keep=lambda x: x > 0.15 * float(imp.max()), digits=1)),
+                        cells=_cells(imp, lon, lat, IMPACT_BBOX, keep=lambda x: x > 0.35 * float(imp.max()), digits=1)),
         ))
     bt = besttrack(case)
     base_track = runs["baseline"]["track"]

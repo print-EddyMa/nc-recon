@@ -63,6 +63,35 @@ relative to its local value. A second, subtler trap: scaling all fields by one
 shared factor let the tight upper-level humidity cap throttle temperature and
 wind to ~10⁻⁴; each field is now scaled to its own cap.
 
+## Results - Hurricane Helene, western NC
+
+ERA5 start 24 Sep 2024 12Z (Helene a 40-kt tropical storm in the NW Caribbean),
+NeuralGCM 2.8°, objective = mean IVT into western NC over +60…78 h
+(baseline 783 kg m⁻¹ s⁻¹). Every row is a full nonlinear re-forecast;
+"predicted" is what the gradient alone said.
+
+| nudge (each field ≤ s × analysis error) | real change | gradient predicted | delivered |
+|---|---|---|---|
+| away, 0.1× (≤0.05 K, ≤0.1 m/s) | **−4.9 %** | −5.5 % | 89 % |
+| away, 0.25× | **−9.4 %** | −13.8 % | 68 % |
+| away, 0.5× | **−15.6 %** | −27.6 % | 57 % |
+| away, 1× (≤0.5 K, ≤1 m/s) | **−25.5 %** | −55.2 % | 46 % |
+| reversed, 1× | **−1.4 %** | +55.2 % | wrong sign |
+
+- The response is monotonic in nudge size and the gradient is close to honest
+  for small nudges, then **over-promises more and more** as the nudge grows,
+  the same pattern the toy model showed.
+- The reversed nudge pulled the model storm much closer to NC (113 km at +72 h
+  vs 447 km) yet did **not** raise the moisture there: a strongly nonlinear,
+  asymmetric response.
+- The nudge's energy peaks upstream over the central US (~43°N, 98°W), where the
+  trough that pulled Helene north came from. Humidity contributes almost nothing
+  (its 10 %-of-local cap binds); temperature and wind carry the effect.
+- Hindcast skill: mean track error 183 km over 78 h vs NOAA's best track, but
+  the model's Helene runs slow, 362-486 km behind by +72-78 h.
+
+![Butterfly screen](../../docs/butterfly/shot-butterfly.png)
+
 ## Run it
 
 ```bash
