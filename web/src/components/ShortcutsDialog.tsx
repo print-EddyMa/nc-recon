@@ -7,6 +7,7 @@ const KEYS: [string, string][] = [
   ["G then H", "Go to the home dashboard"],
   ["G then L", "Go to the live NC map"],
   ["G then T", "Go to the disaster-history timeline"],
+  ["G then B", "Go to storm sensitivity (Butterfly)"],
   ["G then A", "Go to on-demand assessment"],
   ["G then M", "Go to the damage map (when an area is open)"],
   ["G then R", "Go to the review queue"],
@@ -14,7 +15,7 @@ const KEYS: [string, string][] = [
   ["Esc", "Close a menu or dialog"],
 ];
 
-type NavTarget = "home" | "nc" | "history" | "assess" | "map" | "review" | "stats" | "about";
+type NavTarget = "home" | "nc" | "history" | "butterfly" | "assess" | "map" | "review" | "stats" | "about";
 
 /** `?` opens a shortcut reference. `g` then a letter jumps between screens. */
 export default function ShortcutsDialog({
@@ -50,6 +51,7 @@ export default function ShortcutsDialog({
           h: "home",
           l: "nc",
           t: "history",
+          b: "butterfly",
           a: "assess",
           m: "map",
           r: "review",

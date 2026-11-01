@@ -1,6 +1,6 @@
 # NC Recon
 
-A **North Carolina disaster application** with two halves:
+A **North Carolina disaster application** with two halves, plus a research view:
 
 - **Risk monitor** - the "before / during": NOAA NWPS river-flood **forecasts**,
   USGS streamflow, NWS watches & warnings, NHC active-storm tracking, NASA FIRMS
@@ -14,6 +14,13 @@ A **North Carolina disaster application** with two halves:
   (**no damage → minor → major → destroyed**), fuses two independent models plus
   NC context priors into a per-building **confidence tier**, and puts the result
   on an interactive 3-D map with a **human review queue** for the uncertain calls.
+
+- **Storm sensitivity (Butterfly)** - the "why": for a past NC storm
+  (Hurricane Helene), which small differences in the weather three days
+  earlier would have changed how much moisture it drove into western NC?
+  Computed offline by backpropagating through Google's differentiable
+  **NeuralGCM** weather model from real **ERA5** initial conditions, with every
+  answer re-checked by full forecasts. See [`pipeline/butterfly/`](pipeline/butterfly/).
 
 Nothing is pre-baked. There is no bundled sample dataset - areas appear on the
 damage map only after the pipeline has assessed them (locally, or against a
@@ -41,6 +48,8 @@ pipeline/   Python. imagery + footprints + fusion model + NC priors -> GeoJSON
               context.py      NC flood-stage / FEMA / terrain priors
               server.py       the assessment service (POST /assess, NC-gated)
               scripts/calibrate.py   tune the tier thresholds for an area
+pipeline/butterfly/   Python (JAX). storm sensitivity: ERA5 -> NeuralGCM -> adjoint
+              -> verified nudges -> web/public/data/butterfly/<case>.json
 web/        React/TS. NC risk dashboard + on-demand Assess + damage map + review
               lib/nc.ts NC backbone (NWPS/USGS/NWS/NHC/FIRMS/DriveNC/FEMA/CLOUDS/aircraft)
               screens/NCDashboard.tsx   the risk dashboard (the front door)
@@ -167,8 +176,14 @@ one click with a service connected, or copyable commands without one. When it
 finishes, the **Damage map**, **Review** queue and **Summary** light up for
 that area (deep-linked `#/a/<area>/<screen>`).
 
+**Butterfly** (`#/butterfly`, or **g** then **b**): Hurricane Helene's
+sensitivity map (where a small change to the starting weather mattered most for
+western NC), the nudge itself at 500 / 850 hPa, and the moisture plume for each
+verified re-forecast, against NOAA's observed track. Precomputed; regenerate
+with `python -m butterfly.run all --case helene` (see `pipeline/butterfly/`).
+
 Keyboard: **⌘K** command menu, **?** shortcut list, **g** then
-`n`/`a`/`m`/`r`/`s`.
+`n`/`a`/`m`/`r`/`s`/`b`.
 
 ## Credits & data
 
@@ -183,5 +198,9 @@ baseline (CMU SEI, BSD-3) and 1st-place solution (V. Durnov). NC risk & context:
 [USGS EPQS](https://apps.nationalmap.gov/epqs/), the NC State Climate Office
 [CLOUDS API](https://api.climate.ncsu.edu/), live aircraft via
 [adsb.lol](https://adsb.lol/), and (with a free key) [TomTom](https://www.tomtom.com/)
-traffic flow. Multi-source-fusion + human-review pattern after HOT's
+traffic flow. Storm sensitivity: [ERA5](https://cds.climate.copernicus.eu/) (ECMWF /
+Copernicus) via Google [ARCO-ERA5](https://github.com/google-research/arco-era5),
+[NeuralGCM](https://github.com/neuralgcm/neuralgcm) (Kochkov et al., *Nature*
+2024), [NOAA IBTrACS](https://www.ncei.noaa.gov/products/international-best-track-archive).
+Multi-source-fusion + human-review pattern after HOT's
 [fAIr](https://www.hotosm.org/). Basemap: CARTO. Map: MapLibre GL + deck.gl.

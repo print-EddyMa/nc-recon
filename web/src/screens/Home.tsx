@@ -27,6 +27,7 @@ interface Props {
   onOpenMonitor: () => void;
   onOpenAssess: () => void;
   onOpenAbout: () => void;
+  onOpenButterfly: () => void;
 }
 
 const rgb = (s: number) => {
@@ -86,6 +87,7 @@ export default function Home({
   onOpenMonitor,
   onOpenAssess,
   onOpenAbout,
+  onOpenButterfly,
 }: Props) {
   const [flood, setFlood] = useState<NCResult<NCPointFC> | null>(null);
   const [alerts, setAlerts] = useState<NCResult<NCGeomFC> | null>(null);
@@ -402,6 +404,12 @@ export default function Home({
               className="pressable rounded-md border border-line bg-surface px-4 py-2 text-sm font-medium text-ink-dim hover:text-ink"
             >
               Assess an area
+            </button>
+            <button
+              onClick={onOpenButterfly}
+              className="pressable rounded-md border border-line bg-surface px-4 py-2 text-sm font-medium text-ink-dim hover:text-ink"
+            >
+              Storm sensitivity
             </button>
             <span className="ml-1 flex items-center gap-1.5 text-2xs text-ink-faint">
               <span

@@ -77,6 +77,23 @@ building: `-1` offline `#5A6673` · `0` normal `#5A7C86` · `1` watch `#F5D76E` 
 `2` elevated `#E8894A` · `3` severe `#D1495B`. Road closures and cameras sit
 **off** this ramp on fixed marks - they are ground-truth references, not risk.
 
+### Butterfly ramps - storm sensitivity
+
+From `web/src/lib/butterfly.ts`. A sensitivity map is neither damage nor live
+risk, so it gets its own ramps, off both of the above:
+
+- **Sensitivity** - one hue, violet, light → dark (`#EDE9FE` → `#3B0764`),
+  sqrt-scaled so the long tail stays visible.
+- **Moisture transport (IVT)** - one hue, teal, light → dark (`#CCECE6` →
+  `#08403C`); teal already means water on the History timeline.
+- **Temperature nudge** - diverging cool `#3B6FB6` ↔ warm `#C4473A` around a
+  neutral grey `#C8C8C4`. No hue at the midpoint.
+- **Runs** - the un-nudged forecast in the neutral meter grey, "away" nudges in
+  the sensitivity violet by strength, the reversed nudge on the severe red
+  `#D1495B`. The observed NOAA track is always `--ink`, the reference line.
+
+Blue stays interaction-only: no Butterfly data mark uses `--accent`.
+
 ---
 
 ## Type

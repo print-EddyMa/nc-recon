@@ -29,9 +29,18 @@ const NCDashboard = lazy(() => import("./screens/NCDashboard"));
 const ReviewQueue = lazy(() => import("./screens/ReviewQueue"));
 const Stats = lazy(() => import("./screens/Stats"));
 const History = lazy(() => import("./screens/History"));
+const Butterfly = lazy(() => import("./screens/Butterfly"));
 
 type Screen =
-  "home" | "nc" | "history" | "assess" | "map" | "review" | "stats" | "about";
+  | "home"
+  | "nc"
+  | "history"
+  | "butterfly"
+  | "assess"
+  | "map"
+  | "review"
+  | "stats"
+  | "about";
 const AREA_SCREENS: Screen[] = ["map", "review", "stats"];
 
 /** cap the in-memory GeoJSON cache so a long session over many assessed areas
@@ -183,7 +192,7 @@ export default function App() {
     const applyHash = () => {
       hydrated.current = true;
       const m = window.location.hash.match(
-        /^#\/(monitor|history|assess|about|a\/([^/]+)\/(map|review|stats))?$/,
+        /^#\/(monitor|history|butterfly|assess|about|a\/([^/]+)\/(map|review|stats))?$/,
       );
       if (!m || !m[1]) {
         setScreen("home");
@@ -191,6 +200,7 @@ export default function App() {
       }
       if (m[1] === "monitor") setScreen("nc");
       else if (m[1] === "history") setScreen("history");
+      else if (m[1] === "butterfly") setScreen("butterfly");
       else if (m[1] === "assess") setScreen("assess");
       else if (m[1] === "about") setScreen("about");
       else if (m[2]) {
@@ -213,6 +223,7 @@ export default function App() {
     let hash = "#/";
     if (screen === "nc") hash = "#/monitor";
     else if (screen === "history") hash = "#/history";
+    else if (screen === "butterfly") hash = "#/butterfly";
     else if (screen === "assess") hash = "#/assess";
     else if (screen === "about") hash = "#/about";
     else if (areaId && AREA_SCREENS.includes(screen))
@@ -328,6 +339,7 @@ export default function App() {
                   onOpenMonitor={() => go("nc")}
                   onOpenAssess={() => go("assess")}
                   onOpenAbout={() => go("about")}
+                  onOpenButterfly={() => go("butterfly")}
                 />
               </ErrorBoundary>
             )}
@@ -346,6 +358,11 @@ export default function App() {
                   onOpenAssess={() => go("assess")}
                   onOpenArea={pickArea}
                 />
+              </ErrorBoundary>
+            )}
+            {effScreen === "butterfly" && (
+              <ErrorBoundary label="Storm sensitivity">
+                <Butterfly onOpenAbout={() => go("about")} />
               </ErrorBoundary>
             )}
             {effScreen === "assess" && (
@@ -428,6 +445,7 @@ function NavTabs({
           { id: "home", label: "Home" },
           { id: "nc", label: "Live map" },
           { id: "history", label: "History" },
+          { id: "butterfly", label: "Butterfly" },
           { id: "assess", label: "Assess" },
           { id: "map", label: "Damage map" },
           { id: "review", label: "Review", badge: reviewOpen },
@@ -437,6 +455,7 @@ function NavTabs({
           { id: "home", label: "Home" },
           { id: "nc", label: "Live map" },
           { id: "history", label: "History" },
+          { id: "butterfly", label: "Butterfly" },
           { id: "assess", label: "Assess" },
         ]
   ) as { id: Screen; label: string; badge?: number }[];

@@ -83,6 +83,38 @@ const RISK_SOURCES: Source[] = [
   },
 ];
 
+const BUTTERFLY_PARTS: Source[] = [
+  {
+    field: "Starting weather",
+    source: "ERA5 (ECMWF)",
+    detail:
+      "The reanalysis state of the atmosphere at the forecast start, temperature, wind and humidity on 37 pressure levels, read from Google's ARCO-ERA5 copy.",
+  },
+  {
+    field: "Weather model",
+    source: "NeuralGCM",
+    detail:
+      "Google's differentiable atmospheric model (Kochkov et al., Nature 2024): a physics dynamical core with learned physics. Run at 2.8° on CPU, so it resolves a storm's track and moisture plume, not its core.",
+  },
+  {
+    field: "Sensitivity",
+    source: "Adjoint (backprop)",
+    detail:
+      "The gradient of the storm's impact on an NC region with respect to the starting weather, measured in the moist total-energy norm (the norm ECMWF uses for its singular vectors).",
+  },
+  {
+    field: "Check",
+    source: "Full re-forecasts",
+    detail:
+      "Every number shown is a full nonlinear forecast with the nudge put back in, not the gradient's linear guess. Nudges are capped below typical analysis error and kept away from the storm itself.",
+  },
+  {
+    field: "Observed track",
+    source: "NOAA IBTrACS",
+    detail: "The official best track, used to score the un-nudged hindcast.",
+  },
+];
+
 const DAMAGE_PARTS: Source[] = [
   {
     field: "Imagery",
@@ -158,6 +190,21 @@ export default function About({ onEnter }: Props) {
             imagery pair.
           </p>
           <SourceTable rows={DAMAGE_PARTS} />
+        </section>
+
+        {/* -------- why · storm sensitivity -------- */}
+        <section className="mt-14">
+          <h2 className="section-title mb-1 text-[0.95rem]">
+            Why · storm sensitivity (Butterfly)
+          </h2>
+          <p className="measure mb-5 text-xs text-ink-faint">
+            Computed offline for past NC storms. It asks which small
+            differences in the weather days earlier would have changed what a
+            storm did here, the question forecasters answer when they decide
+            where extra observations would help most. A sensitivity
+            diagnostic, not a weather-control tool.
+          </p>
+          <SourceTable rows={BUTTERFLY_PARTS} />
         </section>
 
         {/* -------- how the model decides -------- */}

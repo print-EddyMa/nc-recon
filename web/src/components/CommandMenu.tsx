@@ -1,12 +1,12 @@
 import { useEffect, useMemo } from "react";
 import { Command } from "cmdk";
-import { Map as MapIcon, ListChecks, BarChart3, Home, Search, MapPin, Crosshair, LayoutGrid, Clock } from "lucide-react";
+import { Map as MapIcon, ListChecks, BarChart3, Home, Search, MapPin, Crosshair, LayoutGrid, Clock, Wind } from "lucide-react";
 import HazardIcon from "./HazardIcon";
 import { intersectsNC, ncPointFor, type CatalogEvent } from "../lib/catalog";
 import type { IngestState, AssessTarget } from "../lib/useAssess";
 import type { EventConfig } from "../lib/types";
 
-export type CommandScreen = "home" | "nc" | "history" | "assess" | "map" | "review" | "stats" | "about";
+export type CommandScreen = "home" | "nc" | "history" | "butterfly" | "assess" | "map" | "review" | "stats" | "about";
 
 interface Props {
   open: boolean;
@@ -25,6 +25,7 @@ const SCREENS: { id: CommandScreen; label: string; icon: typeof MapIcon }[] = [
   { id: "home", label: "Home dashboard", icon: LayoutGrid },
   { id: "nc", label: "Live NC map", icon: MapPin },
   { id: "history", label: "Disaster history timeline", icon: Clock },
+  { id: "butterfly", label: "Storm sensitivity (Butterfly)", icon: Wind },
   { id: "assess", label: "Assess an area", icon: Crosshair },
   { id: "map", label: "Damage map", icon: MapIcon },
   { id: "review", label: "Review queue", icon: ListChecks },

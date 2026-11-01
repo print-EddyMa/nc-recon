@@ -1,0 +1,15 @@
+# Butterfly (storm sensitivity) - separate from the damage pipeline's requirements.
+# Versions pinned to what the code was run and verified with (CPU).
+jax[cpu]==0.6.2
+neuralgcm==1.2.2
+pint==0.24.4
+xarray>=2024.10
+zarr>=3
+gcsfs
+dask
+pandas
+numpy
+# toy experiments (pipeline/butterfly/toy) only
+torch
+matplotlib
+pillow
