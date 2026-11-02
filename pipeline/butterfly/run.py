@@ -121,11 +121,20 @@ def cmd_export(case, name):
 def main():
     ap = argparse.ArgumentParser(prog="python -m butterfly.run")
     ap.add_argument("cmd", choices=["forecast", "adjoint", "steer", "export", "all",
-                                    "taylor", "random", "steering", "cnop", "transfer", "suite"])
+                                    "taylor", "random", "steering", "cnop", "transfer", "suite",
+                                    "core", "osse"])
     ap.add_argument("--case", default="helene", choices=sorted(CASES))
-    ap.add_argument("--model", default="deterministic_2_8_deg")
+    ap.add_argument("--model", default=None, help="defaults to the case's model")
+    ap.add_argument("--nudges", default=None,
+                    help="comma-separated nudge sizes for steer, e.g. 0.1,0.5,1,-1 (default: the full Helene set)")
+    ap.add_argument("--random", type=int, default=5, help="random nudges in the null test")
     a = ap.parse_args()
     case = CASES[a.case]
+    a.model = a.model or case.model
+    if a.nudges:
+        global NUDGES
+        NUDGES = [("baseline", 0.0)] + [((f"away_{x:g}" if x > 0 else f"toward_{-x:g}"), x)
+                                        for x in map(float, a.nudges.split(","))]
     if a.cmd == "export":
         return cmd_export(case, a.model)
     from . import experiments as X
@@ -145,10 +154,15 @@ def main():
         X.cmd_taylor(P)
     if a.cmd in ("steering", "suite"):
         X.cmd_steering(P)
+    if a.cmd == "core":                    # the protocol run for every additional storm
+        cmd_adjoint(P); cmd_steer(P); X.cmd_random(P, n=a.random); cmd_export(case, a.model)
     if a.cmd in ("random", "suite"):
-        X.cmd_random(P)
+        X.cmd_random(P, n=a.random)
     if a.cmd == "cnop":
         X.cmd_cnop(P)
+    if a.cmd == "osse":
+        from .osse import cmd_osse
+        cmd_osse(P)
 
 
 if __name__ == "__main__":

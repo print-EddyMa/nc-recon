@@ -56,7 +56,7 @@ def _cells(field, lon, lat, bbox, keep=lambda v: True, digits=3):
 def model_label(name):
     """deterministic_2_8_deg -> 'NeuralGCM 2.8° (deterministic)'"""
     m = re.match(r"(\w+?)_(\d)_(\d)_deg$", name)
-    return f"NeuralGCM {m.group(2)}.{m.group(3)}° ({m.group(1)})" if m else f"NeuralGCM {name}"
+    return f"NeuralGCM {m.group(2)}.{m.group(3)}° ({m.group(1).replace('_', ' ')})" if m else f"NeuralGCM {name}"
 
 
 def _rigor(work, name, runs, case):
@@ -98,7 +98,30 @@ def _rigor(work, name, runs, case):
         out["cnop"] = dict(change_pct=round(100 * (best["J"] / J0 - 1), 2),
                            one_step_change_pct=round(100 * (runs["away_1"]["J"] / J0 - 1), 2),
                            iterations=max(h["iter"] for h in X["cnop"]["history"]))
+    po = work / f"osse_{name}.json"
+    if po.exists():
+        O = json.load(open(po)); L = O["linear"]
+        o = dict(radius_km=L["radius_km"], alpha=L["alpha"], n_samples=L["n_samples"],
+                 error_std_pct=round(100 * L["error_std"] / L["J0"], 2),
+                 storm=dict(center=L["storm"]["center"], reduction=round(L["storm"]["reduction"], 4)),
+                 adjoint=dict(center=L["adjoint"]["center"], reduction=round(L["adjoint"]["reduction"], 4)),
+                 random=dict(median=round(L["random"]["median"], 4), p90=round(L["random"]["p90"], 4)),
+                 second=dict(center=L["second"]["center"], storm_only=round(L["second"]["storm_only"], 4),
+                             with_adjoint_second=round(L["second"]["reduction_with_storm"], 4),
+                             random_second_median=round(L["second"]["random_median"], 4),
+                             random_second_p90=round(L["second"]["random_p90"], 4)))
+        if O.get("verify"):
+            keys = O["verify"][0].keys()
+            o["verify"] = {k: dict(impact_err_pct=round(float(np.mean([abs(v[k]["J_err"]) for v in O["verify"]])) / O["truth_J"] * 100, 2),
+                                   track_err_km=round(float(np.mean([v[k]["track_err_72h"] for v in O["verify"]])))) for k in keys}
+            o["n_verify"] = len(O["verify"])
+        out["osse"] = o
     return out or None
+
+
+def _reference(work):
+    p = work / "era5_rain.json"
+    return json.load(open(p)) if p.exists() else None
 
 
 def export(case, name, work, web_dir):
@@ -140,7 +163,10 @@ def export(case, name, work, web_dir):
     out_runs = []
     for rid, r in runs.items():
         F = np.load(work / f"fields_{name}_{rid}.npz")
-        imp = F["impact"][t_idx]
+        if case.objective == "rain":     # rain accumulated over the window (mm)
+            imp = F["impact"][case.window[-1] // case.every] - F["impact"][case.window[0] // case.every]
+        else:
+            imp = F["impact"][t_idx]
         out_runs.append(dict(
             id=rid, label=RUN_LABELS.get(rid, rid), s=r["s"], J=round(r["J"], 4),
             change_pct=round(100 * (r["J"] / J0 - 1), 2),
@@ -151,7 +177,8 @@ def export(case, name, work, web_dir):
                 T_K=round(r["peak"]["temperature"], 3),
                 wind_ms=round(max(r["peak"]["u_component_of_wind"], r["peak"]["v_component_of_wind"]), 3),
                 q_gkg=round(1e3 * r["peak"]["specific_humidity"], 3)),
-            impact=dict(hour=case.window[k_peak],
+            impact=dict(hour=case.window[-1] if case.objective == "rain" else case.window[k_peak],
+                        from_hour=case.window[0] if case.objective == "rain" else None,
                         cells=_cells(imp, lon, lat, IMPACT_BBOX, keep=lambda x: x > 0.35 * float(imp.max()), digits=1)),
         ))
     bt = besttrack(case)
@@ -164,6 +191,7 @@ def export(case, name, work, web_dir):
         case=dict(id=case.id, name=case.name, init=case.init, storm0=case.storm0, notes=case.notes,
                   target=dict(lat=case.target[0], lon=case.target[1], label=case.target_label, radius_km=case.radius_km),
                   objective=case.objective, objective_label=case.objective_label, window_hours=list(case.window),
+                  objective_short=case.objective_short, impact_unit=case.impact_unit,
                   keep_out_km=case.keep_out_km, model=model_label(name),
                   analysis_error=dict(T_K=0.5, wind_ms=1.0, q_gkg=0.5, q_relative=0.10),
                   nudge_levels_hpa=[int(levels[trop].min()), int(levels[trop].max())]),
@@ -177,6 +205,7 @@ def export(case, name, work, web_dir):
                          levels_hpa=levels[trop].astype(int).tolist(), profile=profile),
         nudge=dict(levels=[nudge_level(500), nudge_level(850)]),
         rigor=_rigor(work, name, runs, case),
+        reference=_reference(work),
     )
     web_dir.mkdir(parents=True, exist_ok=True)
     p = web_dir / f"{case.id}.json"

@@ -42,8 +42,8 @@ export interface ButterflyRun {
   track: TrackPoint[];
   energy_J: number | null;
   peak: { T_K: number; wind_ms: number; q_gkg: number } | null;
-  /** the objective's field (e.g. IVT, kg m⁻¹ s⁻¹) at one forecast hour */
-  impact: { hour: number; cells: Cell[] };
+  /** the objective's field (IVT at one hour, or rain accumulated from `from_hour`) */
+  impact: { hour: number; from_hour?: number | null; cells: Cell[] };
 }
 
 export interface NudgeLevel {
@@ -65,8 +65,11 @@ export interface ButterflyCase {
     storm0: [number, number];
     notes: string;
     target: { lat: number; lon: number; label: string; radius_km: number };
-    objective: "ivt" | "wind";
+    objective: "ivt" | "wind" | "rain";
     objective_label: string;
+    /** short stat label, e.g. "Rain over WNC" */
+    objective_short?: string;
+    impact_unit?: string;
     window_hours: number[];
     keep_out_km: number;
     model: string;
@@ -86,6 +89,8 @@ export interface ButterflyCase {
   nudge: { levels: NudgeLevel[] };
   /** pipeline/butterfly/experiments.py - each part optional */
   rigor?: Rigor | null;
+  /** an independent reference for the un-nudged forecast (rain cases: ERA5 rainfall) */
+  reference?: { era5_rain_mm: number; era5_rain_max_cell_mm: number } | null;
 }
 
 export interface Rigor {
@@ -110,6 +115,30 @@ export interface Rigor {
   };
   /** nonlinear optimal perturbation vs the one-step nudge */
   cnop?: { change_pct: number; one_step_change_pct: number; iterations: number };
+  /** simulated targeted observations (osse.py) */
+  osse?: Osse;
+}
+
+export interface Osse {
+  radius_km: number;
+  alpha: number;
+  n_samples: number;
+  /** forecast-error std of the impact from analysis error, % of the impact */
+  error_std_pct: number;
+  /** error-variance reduction (0..1), held-out samples, linear */
+  storm: { center: [number, number]; reduction: number };
+  adjoint: { center: [number, number]; reduction: number };
+  random: { median: number; p90: number };
+  second: {
+    center: [number, number];
+    storm_only: number;
+    with_adjoint_second: number;
+    random_second_median: number;
+    random_second_p90: number;
+  };
+  /** full nonlinear forecasts: mean |impact error| (%) and 72-h track error (km) */
+  verify?: Record<string, { impact_err_pct: number; track_err_km: number }>;
+  n_verify?: number;
 }
 
 export interface ButterflyIndexEntry {

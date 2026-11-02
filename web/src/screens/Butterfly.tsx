@@ -41,9 +41,8 @@ const VIEW_META: Record<View, { label: string; blurb: string }> = {
       "The smallest change to the starting weather (temperature shaded, wind arrows) that most reduces the impact, kept outside the storm's own no-touch zone.",
   },
   moisture: {
-    label: "Moisture",
-    blurb:
-      "The forecast moisture transport for the selected run, the fuel for Helene's flood-producing rain, at the hour the core reached the southern Appalachians.",
+    label: "Impact",
+    blurb: "",
   },
 };
 
@@ -68,6 +67,9 @@ export default function Butterfly({ onOpenAbout }: Props) {
     zoom: 3.7,
   });
   const overlayRef = useRef<MapboxOverlay | null>(null);
+  // the tooltip is created once with the overlay; route it through a ref so it always
+  // uses the current case's labels and units
+  const describeRef = useRef<(info: PickingInfo) => Hover | null>(() => null);
 
   const [index, setIndex] = useState<ButterflyIndexEntry[] | null>(null);
   const [caseId, setCaseId] = useState<string | null>(null);
@@ -115,6 +117,15 @@ export default function Butterfly({ onOpenAbout }: Props) {
     [runs],
   );
   const nudgeLevel = doc?.nudge.levels[level] ?? null;
+  const isRain = doc?.case.objective === "rain";
+  const stormName = (doc?.case.name ?? "").replace(/^(Hurricane|Tropical Storm)\s+/, "").replace(/\s*\(.*$/, "");
+  const targetShort = (doc?.case.target.label ?? "").replace(/\s*\(.*\)$/, "");
+  const objShort = doc?.case.objective_short || "Impact on target";
+  const unit = doc?.case.impact_unit || "kg m⁻¹ s⁻¹";
+  const impactLabel = isRain ? "Rain" : "Moisture";
+  const impactBlurb = isRain
+    ? `Rain the selected run puts down between +${run?.impact.from_hour ?? "?"} and +${run?.impact.hour ?? "?"} h.`
+    : `Forecast moisture transport (the fuel for flood rain) for the selected run at +${run?.impact.hour ?? "?"} h.`;
 
   // frame the Gulf -> southern Appalachians between the two docked panels
   useEffect(() => {
@@ -191,6 +202,28 @@ export default function Butterfly({ onOpenAbout }: Props) {
           getPolygon: cellPoly,
           getFillColor: (c) => [...ivtRGB(c[4] / ivtMax), 175],
           pickable: true,
+        }),
+      );
+    }
+
+    // simulated observation spots (sensitivity view): routine recon on the storm, adjoint-chosen 2nd spot
+    const osse = doc.rigor?.osse;
+    if (osse && view === "sensitivity") {
+      out.push(
+        new ScatterplotLayer<{ c: [number, number]; adj: boolean }>({
+          id: "osse-spots",
+          data: [
+            { c: osse.storm.center, adj: false },
+            { c: osse.second.center, adj: true },
+          ],
+          getPosition: (d) => [d.c[1], d.c[0]],
+          getRadius: osse.radius_km * 1000,
+          radiusUnits: "meters",
+          stroked: true,
+          filled: false,
+          getLineColor: (d) => (d.adj ? [91, 33, 182, 255] : [...ink, 150]),
+          getLineWidth: (d) => (d.adj ? 2.5 : 1.5),
+          lineWidthUnits: "pixels",
         }),
       );
     }
@@ -283,7 +316,7 @@ export default function Butterfly({ onOpenAbout }: Props) {
         layers: [],
         getCursor: ({ isHovering }) => (isHovering ? "pointer" : "grab"),
         getTooltip: (info: PickingInfo) => {
-          const h = describe(info);
+          const h = describeRef.current(info);
           if (!h) return null;
           const cs = getComputedStyle(document.documentElement);
           return {
@@ -353,7 +386,7 @@ export default function Butterfly({ onOpenAbout }: Props) {
         <h2 className="section-title mb-2.5">Result</h2>
         <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
           <StatTile
-            label="Moisture into WNC"
+            label={objShort}
             value={run ? pct(run.change_pct) : "-"}
             tone={run && run.change_pct > 0 ? "severe" : "neutral"}
             sub={run?.s ? `selected run vs no nudge` : "pick a nudged run"}
@@ -372,6 +405,13 @@ export default function Butterfly({ onOpenAbout }: Props) {
             value={doc.skill.mean_track_err_km != null ? `${doc.skill.mean_track_err_km} km` : "-"}
             sub="mean over 78 h vs NOAA best track"
           />
+          {doc.reference && baseline && (
+            <StatTile
+              label="No-nudge rain vs ERA5"
+              value={`${baseline.J.toFixed(0)} mm`}
+              sub={`ERA5 ${doc.reference.era5_rain_mm.toFixed(0)} mm (wettest cell ${doc.reference.era5_rain_max_cell_mm} mm); rain gauges recorded more`}
+            />
+          )}
           <StatTile
             label="Nudge cap (1×)"
             value={ae ? `${ae.T_K} K` : "-"}
@@ -440,7 +480,12 @@ export default function Butterfly({ onOpenAbout }: Props) {
       {doc.rigor && (
         <section className="panel px-4 py-3.5">
           <h2 className="section-title mb-2.5">How sure are we?</h2>
-          <RigorPanel rigor={doc.rigor} adjointPct={runs.find((r) => r.id === "away_1")?.change_pct ?? null} />
+          <RigorPanel
+            rigor={doc.rigor}
+            adjointPct={runs.find((r) => r.id === "away_1")?.change_pct ?? null}
+            objective={objShort}
+            stormName={stormName}
+          />
         </section>
       )}
 
@@ -483,11 +528,10 @@ export default function Butterfly({ onOpenAbout }: Props) {
             <p>
               <span className="text-ink">Limits.</span> 2.8° model (~300 km): the storm&rsquo;s core and its
               intensity aren&rsquo;t resolved, only its track and large-scale moisture. Model storm positions carry
-              ~±150 km of grid noise, more after landfall, and the model&rsquo;s Helene runs slow: it is{" "}
+              ~±150 km of grid noise, more after landfall; by the end of the window the model&rsquo;s {stormName} is{" "}
               {doc.skill.window_track_err_km.filter((x) => x != null).slice(-2).join("–")} km from the observed
-              storm by +72–78 h. The nudge is judged by the same
-              model that designed it; an independent physics model (WRF) is the next check. One storm is a case
-              study, not a statistic.
+              storm. The nudge is judged by the same model that designed it; an independent physics model (WRF) is
+              the next check. Each storm is a case study; the statistic is across storms.
             </p>
             <p className="text-ink-faint">
               Data: ERA5 (ECMWF / Copernicus) via Google ARCO-ERA5 · NOAA IBTrACS · NeuralGCM (Kochkov et al.,
@@ -501,6 +545,8 @@ export default function Butterfly({ onOpenAbout }: Props) {
       </section>
     </>
   );
+
+  describeRef.current = describe;
 
   return (
     <div className="relative h-full">
@@ -533,7 +579,7 @@ export default function Butterfly({ onOpenAbout }: Props) {
           </div>
           <p className="mt-1.5 hidden text-xs leading-relaxed text-ink-dim sm:block">
             {doc
-              ? `Which small differences in the weather ${Math.round(doc.case.window_hours[0] / 24)} days earlier would have changed how much moisture Helene drove into ${doc.case.target.label.replace(/\s*\(.*\)$/, "")}?`
+              ? `Which small differences in the weather ${Math.round(doc.case.window_hours[doc.case.window_hours.length - 1] / 24)} days earlier would have changed ${isRain ? `how much rain ${stormName} dropped on` : `how much moisture ${stormName} drove into`} ${targetShort}?`
               : "Loading the run…"}
           </p>
           {doc && (
@@ -564,7 +610,7 @@ export default function Butterfly({ onOpenAbout }: Props) {
                   onClick={() => setView(v)}
                   className={`pressable rounded-sm px-1.5 py-1 text-2xs ${view === v ? "bg-surface text-ink shadow-sm" : "text-ink-dim hover:text-ink"}`}
                 >
-                  {VIEW_META[v].label}
+                  {v === "moisture" ? impactLabel : VIEW_META[v].label}
                 </button>
               ))}
             </div>
@@ -584,7 +630,9 @@ export default function Butterfly({ onOpenAbout }: Props) {
                 ))}
               </div>
             )}
-            <p className="mt-2 text-2xs leading-relaxed text-ink-faint">{VIEW_META[view].blurb}</p>
+            <p className="mt-2 text-2xs leading-relaxed text-ink-faint">
+              {view === "moisture" ? impactBlurb : VIEW_META[view].blurb}
+            </p>
             <Legend view={view} doc={doc} level={level} ivtMax={ivtMax} />
           </section>
         )}
@@ -667,7 +715,7 @@ export default function Butterfly({ onOpenAbout }: Props) {
     if (id === "nudge-T")
       return { kind: "cell", text: `Temperature nudge ${(o as Cell)[4] > 0 ? "+" : ""}${(o as Cell)[4].toFixed(3)} K` };
     if (id.startsWith("ivt-"))
-      return { kind: "cell", text: `Moisture transport ${(o as Cell)[4].toFixed(0)} kg m⁻¹ s⁻¹` };
+      return { kind: "cell", text: `${impactLabel} ${(o as Cell)[4].toFixed(0)} ${unit}` };
     if (id === "runs") return { kind: "track", text: (o as ButterflyRun).label };
     if (id === "run-pts") {
       const p = o as { time: string; err_km?: number; run: string };
@@ -687,7 +735,17 @@ export default function Butterfly({ onOpenAbout }: Props) {
 const sgn = (x: number) => `${x > 0 ? "+" : x < 0 ? "−" : "±"}${Math.abs(x).toFixed(1)}`;
 
 /** the five rigor checks, each shown only if the pipeline produced it */
-function RigorPanel({ rigor, adjointPct }: { rigor: Rigor; adjointPct: number | null }) {
+function RigorPanel({
+  rigor,
+  adjointPct,
+  objective,
+  stormName,
+}: {
+  rigor: Rigor;
+  adjointPct: number | null;
+  objective: string;
+  stormName: string;
+}) {
   const rand = rigor.random?.change_pct ?? [];
   const lo = Math.min(-30, ...rand, adjointPct ?? 0);
   const hi = Math.max(5, ...rand);
@@ -736,7 +794,8 @@ function RigorPanel({ rigor, adjointPct }: { rigor: Rigor; adjointPct: number | 
             <span className="tnum">{sgn(hi)}%</span>
           </div>
           <p className="mt-1 text-ink-faint">
-            {rand.length} random nudges under the same caps (grey) moved WNC moisture by {sgn(Math.min(...rand))}% to{" "}
+            {rand.length} random nudges under the same caps (grey) moved {objective.toLowerCase()} by{" "}
+            {sgn(Math.min(...rand))}% to{" "}
             {sgn(Math.max(...rand))}%; the adjoint nudge (violet) by {sgn(adjointPct)}%.
           </p>
         </div>
@@ -766,17 +825,59 @@ function RigorPanel({ rigor, adjointPct }: { rigor: Rigor; adjointPct: number | 
           <p>
             The same nudge in {rigor.transfer.model}:{" "}
             <span className="tnum text-ink">{sgn(rigor.transfer.change_pct)}%</span> (vs{" "}
-            <span className="tnum">{sgn(rigor.transfer.source_change_pct)}%</span> in the model that designed it): same
-            direction, about a quarter of the size, so part of the sensitivity is specific to the 2.8° model.
+            <span className="tnum">{sgn(rigor.transfer.source_change_pct)}%</span> in the model that designed it)
+            {rigor.transfer.change_pct * rigor.transfer.source_change_pct > 0
+              ? `: same direction, ${Math.round((100 * rigor.transfer.change_pct) / rigor.transfer.source_change_pct)}% of the size, so part of the sensitivity is specific to the model that computed it.`
+              : ": it does not carry over, so this sensitivity is specific to the model that computed it."}
             {rigor.transfer.baseline_track_err_km && (
               <>
                 {" "}
-                The finer model also tracks the real Helene far better (mean{" "}
+                The finer model also tracks the real {stormName} far better (mean{" "}
                 <span className="tnum text-ink">{rigor.transfer.baseline_track_err_km.mean} km</span>,{" "}
                 <span className="tnum text-ink">{rigor.transfer.baseline_track_err_km.at_72h} km</span> at +72 h), so an
                 adjoint computed at 1.4° is the next step. Same model family: a partial check, not a physics-model one.
               </>
             )}
+          </p>
+        </div>
+      )}
+
+      {rigor.osse && (
+        <div className="border-t border-line pt-2.5">
+          <div className="mb-1 font-medium text-ink">Where should extra observations go? (simulated)</div>
+          <p>
+            Analysis errors like ERA5&rsquo;s spread the {objective.toLowerCase()} forecast by ±
+            {rigor.osse.error_std_pct.toFixed(1)}%. One {rigor.osse.radius_km} km-radius observation patch that removes{" "}
+            {Math.round(rigor.osse.alpha * 100)}% of the error there cuts that error variance by:
+          </p>
+          <div className="mt-1.5 grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5">
+            {[
+              ["on the storm (routine recon)", rigor.osse.storm.reduction],
+              ["best single spot (adjoint)", rigor.osse.adjoint.reduction],
+              ["random spot, median", rigor.osse.random.median],
+              ["storm + adjoint-chosen 2nd", rigor.osse.second.with_adjoint_second],
+              ["storm + random 2nd, median", rigor.osse.second.random_second_median],
+            ].map(([label, v]) => (
+              <div key={label as string} className="contents">
+                <span>{label}</span>
+                <span className="tnum text-right text-ink">{Math.round((v as number) * 100)}%</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-1.5 text-ink-faint">
+            The adjoint&rsquo;s second spot ({rigor.osse.second.center[0].toFixed(0)}°N,{" "}
+            {Math.abs(rigor.osse.second.center[1]).toFixed(0)}°W) is the violet ring on the &ldquo;Where to push&rdquo; map. Linear estimate
+            over {rigor.osse.n_samples} error samples, scored on samples not used to choose the spot.
+            {rigor.osse.verify && rigor.osse.n_verify ? (
+              <>
+                {" "}
+                Checked with {rigor.osse.n_verify} sets of full forecasts: mean impact error{" "}
+                {Object.entries(rigor.osse.verify)
+                  .map(([k, v]) => `${k.replace("+", " + ").replace("adjoint2", "adjoint 2nd").replace("random2", "random 2nd")} ${v.impact_err_pct.toFixed(1)}%`)
+                  .join(" · ")}
+                .
+              </>
+            ) : null}
           </p>
         </div>
       )}
@@ -813,7 +914,7 @@ function Legend({ view, doc, level, ivtMax }: { view: View; doc: ButterflyCase; 
   } else if (view === "moisture") {
     grad = IVT_STOPS.map((c) => css(c)).join(",");
     lo = "0";
-    hi = `${Math.round(ivtMax)} kg m⁻¹ s⁻¹`;
+    hi = `${Math.round(ivtMax)} ${doc.case.impact_unit || "kg m⁻¹ s⁻¹"}`;
   } else {
     const m = doc.nudge.levels[level]?.max_abs_T ?? 0;
     grad = [-1, -0.5, 0, 0.5, 1].map((t) => css(tempRGB(t))).join(",");

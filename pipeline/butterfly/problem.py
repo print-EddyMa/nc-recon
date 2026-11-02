@@ -60,6 +60,9 @@ class Problem:
     # ---- impact field: what the objective measures at one time --------------------------
     def impact_field(self, out):
         """out: decoded outputs at one time ([level, lon, lat] arrays) -> [lon, lat] field."""
+        if self.case.objective == "rain":
+            # accumulated precipitation since the forecast start, m -> mm
+            return 1000.0 * out["precipitation_cumulative_mean"][0]
         u, v = out["u_component_of_wind"], out["v_component_of_wind"]
         if self.case.objective == "wind":
             k9, k8 = self.k[925], self.k[850]
@@ -91,6 +94,8 @@ class Problem:
 
     def objective_from(self, preds):
         fields = [self.impact_field({k: v[i] for k, v in preds.items()}) for i in self.window_idx]
+        if self.case.objective == "rain":     # rain that fell between the window's first and last hour
+            return float(self.score(fields[-1]) - self.score(fields[0]))
         return float(np.mean([self.score(f) for f in fields]))
 
     def _objective_ckpt(self, delta):
@@ -106,6 +111,8 @@ class Problem:
             return st, self.score(self.impact_field({k: v[0] for k, v in out.items()}))
 
         _, s = jax.lax.scan(hour, state, None, length=self.case.hours)    # s[h-1] = impact at hour h
+        if self.case.objective == "rain":
+            return s[self.case.window[-1] - 1] - s[self.case.window[0] - 1]
         return jnp.mean(s[np.array(self.case.window) - 1])
 
     def gradient(self, delta=None):
