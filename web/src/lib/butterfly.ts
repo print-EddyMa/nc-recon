@@ -145,6 +145,19 @@ export interface ButterflyIndexEntry {
   id: string;
   name: string;
   target: string;
+  /** headline numbers for the cross-storm table */
+  summary?: {
+    objective_short: string;
+    model: string;
+    change_1x: number | null;
+    toward_1x: number | null;
+    /** real / gradient-predicted change at 0.1x and 1x */
+    ratio_01: number | null;
+    ratio_1: number | null;
+    random_max_abs: number | null;
+    n_random: number;
+    track_err_km: number | null;
+  };
 }
 
 const BASE = `${import.meta.env.BASE_URL}data/butterfly/`;

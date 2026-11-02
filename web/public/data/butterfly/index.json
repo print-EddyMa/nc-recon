@@ -2,6 +2,17 @@
  {
   "id": "helene",
   "name": "Hurricane Helene (2024)",
-  "target": "Western NC (Asheville / Old Fort)"
+  "target": "Western NC (Asheville / Old Fort)",
+  "summary": {
+   "objective_short": "Moisture into WNC",
+   "model": "NeuralGCM 2.8\u00b0 (deterministic)",
+   "change_1x": -25.49,
+   "toward_1x": -1.36,
+   "ratio_01": 0.886,
+   "ratio_1": 0.462,
+   "random_max_abs": 1.92,
+   "n_random": 5,
+   "track_err_km": 183
+  }
  }
 ]

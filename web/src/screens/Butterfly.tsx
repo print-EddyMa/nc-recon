@@ -489,6 +489,64 @@ export default function Butterfly({ onOpenAbout }: Props) {
         </section>
       )}
 
+      {index && index.filter((c) => c.summary).length > 1 && (
+        <section className="panel px-4 py-3.5">
+          <div className="mb-2 flex items-baseline justify-between">
+            <h2 className="section-title">Across NC storms</h2>
+            <span className="cap">1× nudge, full forecasts</span>
+          </div>
+          <table className="w-full text-2xs">
+            <thead className="text-left text-ink-faint">
+              <tr>
+                <th className="pb-1 font-medium">storm · target</th>
+                <th className="pb-1 text-right font-medium">1×</th>
+                <th className="pb-1 text-right font-medium" title="real ÷ gradient-predicted change at 0.1×">
+                  grad. ok
+                </th>
+                <th className="pb-1 text-right font-medium" title="largest effect of a random nudge under the same caps">
+                  random
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {index
+                .filter((c) => c.summary)
+                .map((c) => (
+                  <tr
+                    key={c.id}
+                    onClick={() => {
+                      if (c.id !== caseId) {
+                        setDoc(null);
+                        setCaseId(c.id);
+                      }
+                    }}
+                    className={`cursor-pointer border-t border-line ${c.id === caseId ? "text-ink" : "text-ink-dim hover:text-ink"}`}
+                  >
+                    <td className="py-1 pr-2">
+                      {c.name.replace(/^Hurricane\s+/, "").replace(/\s*\((\d{4})\)/, " $1")}
+                      <span className="block text-ink-faint">{c.summary!.objective_short}</span>
+                    </td>
+                    <td className="tnum py-1 text-right">
+                      {c.summary!.change_1x != null ? `${c.summary!.change_1x > 0 ? "+" : "−"}${Math.abs(c.summary!.change_1x).toFixed(0)}%` : "-"}
+                    </td>
+                    <td className="tnum py-1 text-right">
+                      {c.summary!.ratio_01 != null ? `${Math.round(c.summary!.ratio_01 * 100)}%` : "-"}
+                    </td>
+                    <td className="tnum py-1 text-right">
+                      {c.summary!.random_max_abs != null ? `±${c.summary!.random_max_abs.toFixed(1)}%` : "-"}
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+          <p className="mt-2 text-2xs leading-relaxed text-ink-faint">
+            &ldquo;grad. ok&rdquo;: how much of the gradient&rsquo;s predicted change a tiny (0.1×) nudge really
+            delivers. &ldquo;random&rdquo;: the largest effect of a random nudge under the same caps. Click a row to open
+            that storm.
+          </p>
+        </section>
+      )}
+
       <section className="panel px-4 py-3.5">
         <h2 className="section-title mb-2">Which altitude matters</h2>
         <Profile levels={doc.sensitivity.levels_hpa} profile={doc.sensitivity.profile} />

@@ -212,6 +212,19 @@ def export(case, name, work, web_dir):
     p.write_text(json.dumps(doc, separators=(",", ":")))
     idx = web_dir / "index.json"
     cases = json.loads(idx.read_text()) if idx.exists() else []
-    cases = [c for c in cases if c["id"] != case.id] + [dict(id=case.id, name=case.name, target=case.target_label)]
+    R = {r["id"]: r for r in doc["runs"]}
+    rnd = (doc.get("rigor") or {}).get("random", {}).get("change_pct", [])
+    def ratio(rid):
+        r = R.get(rid)
+        if not r or r.get("linear_change_pct") in (None, 0):
+            return None
+        return round(r["change_pct"] / r["linear_change_pct"], 3)
+    summary = dict(objective_short=case.objective_short, model=doc["case"]["model"],
+                   change_1x=R.get("away_1", {}).get("change_pct"), toward_1x=R.get("toward_1", {}).get("change_pct"),
+                   ratio_01=ratio("away_0.1"), ratio_1=ratio("away_1"),
+                   random_max_abs=round(max(abs(x) for x in rnd), 2) if rnd else None, n_random=len(rnd),
+                   track_err_km=doc["skill"]["mean_track_err_km"])
+    cases = [c for c in cases if c["id"] != case.id] + [dict(id=case.id, name=case.name, target=case.target_label,
+                                                            summary=summary)]
     idx.write_text(json.dumps(cases, indent=1))
     return p
