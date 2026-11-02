@@ -764,10 +764,19 @@ function RigorPanel({ rigor, adjointPct }: { rigor: Rigor; adjointPct: number | 
         <div className="border-t border-line pt-2.5">
           <div className="mb-1 font-medium text-ink">Does it work in another model?</div>
           <p>
-            The same nudge in {rigor.transfer.model.replace(/_/g, " ").replace(" deg", "°")}:{" "}
+            The same nudge in {rigor.transfer.model}:{" "}
             <span className="tnum text-ink">{sgn(rigor.transfer.change_pct)}%</span> (vs{" "}
-            <span className="tnum">{sgn(rigor.transfer.source_change_pct)}%</span> in the model that designed it). Same
-            model family, so a partial check, not a physics-model one.
+            <span className="tnum">{sgn(rigor.transfer.source_change_pct)}%</span> in the model that designed it): same
+            direction, about a quarter of the size, so part of the sensitivity is specific to the 2.8° model.
+            {rigor.transfer.baseline_track_err_km && (
+              <>
+                {" "}
+                The finer model also tracks the real Helene far better (mean{" "}
+                <span className="tnum text-ink">{rigor.transfer.baseline_track_err_km.mean} km</span>,{" "}
+                <span className="tnum text-ink">{rigor.transfer.baseline_track_err_km.at_72h} km</span> at +72 h), so an
+                adjoint computed at 1.4° is the next step. Same model family: a partial check, not a physics-model one.
+              </>
+            )}
           </p>
         </div>
       )}

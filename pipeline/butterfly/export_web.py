@@ -1,7 +1,7 @@
 """Export a case's results to one compact JSON the NC Recon web app reads
 (`web/public/data/butterfly/<case>.json`). Schema: `ncrecon.butterfly/1`
 (mirrored in `web/src/lib/butterfly.ts`)."""
-import json, datetime
+import json, datetime, re
 import numpy as np
 from .cases import besttrack
 from .problem import PERTURB, CP, TR, LV, TROPOSPHERE_TOP_HPA
@@ -53,6 +53,12 @@ def _cells(field, lon, lat, bbox, keep=lambda v: True, digits=3):
     return out
 
 
+def model_label(name):
+    """deterministic_2_8_deg -> 'NeuralGCM 2.8° (deterministic)'"""
+    m = re.match(r"(\w+?)_(\d)_(\d)_deg$", name)
+    return f"NeuralGCM {m.group(2)}.{m.group(3)}° ({m.group(1)})" if m else f"NeuralGCM {name}"
+
+
 def _rigor(work, name, runs, case):
     """Summaries of experiments.py results (each part optional)."""
     p = work / f"experiments_{name}.json"
@@ -84,8 +90,9 @@ def _rigor(work, name, runs, case):
         out["steering"]["baseline_J_repro"] = round(S["baseline"]["J"], 3)
     if "transfer" in X and "change_pct" in X["transfer"]:
         T = X["transfer"]
-        out["transfer"] = dict(model=T["model"], change_pct=round(T["change_pct"], 2),
-                               source_change_pct=round(100 * (runs["away_1"]["J"] / J0 - 1), 2))
+        out["transfer"] = dict(model=model_label(T["model"]), change_pct=round(T["change_pct"], 2),
+                               source_change_pct=round(100 * (runs["away_1"]["J"] / J0 - 1), 2),
+                               baseline_track_err_km=T.get("baseline_track_err_km"))
     if "cnop" in X:
         best = min(X["cnop"]["history"], key=lambda h: h["J"])
         out["cnop"] = dict(change_pct=round(100 * (best["J"] / J0 - 1), 2),
@@ -157,7 +164,7 @@ def export(case, name, work, web_dir):
         case=dict(id=case.id, name=case.name, init=case.init, storm0=case.storm0, notes=case.notes,
                   target=dict(lat=case.target[0], lon=case.target[1], label=case.target_label, radius_km=case.radius_km),
                   objective=case.objective, objective_label=case.objective_label, window_hours=list(case.window),
-                  keep_out_km=case.keep_out_km, model=f"NeuralGCM {name.replace('_', ' ').replace(' deg', '°')}",
+                  keep_out_km=case.keep_out_km, model=model_label(name),
                   analysis_error=dict(T_K=0.5, wind_ms=1.0, q_gkg=0.5, q_relative=0.10),
                   nudge_levels_hpa=[int(levels[trop].min()), int(levels[trop].max())]),
         best_track=[dict(time=str(t)[:16], lat=float(a), lon=float(b), wind_kt=None if np.isnan(w) else float(w),

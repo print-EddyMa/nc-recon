@@ -99,7 +99,8 @@ NeuralGCM 2.8°, objective = mean IVT into western NC over +60…78 h
 | Why did the track move? | deep-layer-mean (850-200 hPa) steering flow in a 200-800 km ring around the model storm, +36-66 h | un-nudged (2.8 E, 9.2 N) m/s; away nudge (−0.9, −0.4) m/s ≈ 130 km slower/westward; reversed nudge +0.9 m/s eastward, toward NC |
 | Can a better nudge be found? | CNOP (Mu et al. 2003): re-linearise at the nudged state, projected step back onto the caps | one extra adjoint: **−33.2 %** vs −25.5 % for the one-step nudge |
 | Is it reproducible? | re-run the same forecasts | identical J to 3 decimals (deterministic model, fixed key) |
-| Does it transfer to another model? | interpolate the nudge into NeuralGCM 1.4° | *running* |
+| Does it transfer to another model? | interpolate the nudge into NeuralGCM 1.4° (finer, separately trained; same family) | **−7.0 %** (910 → 846) vs −25.5 % at 2.8°: same direction, ~¼ the size. Part of the sensitivity is model-specific |
+| Which model should the adjoint use? | un-nudged track error vs NOAA best track | 2.8°: mean 183 km, 362 km at +72 h. **1.4°: mean 77 km, 22 km at +72 h**. The 1.4° adjoint (~4-5× the compute; a GPU job) is the clear next step |
 
 ![Butterfly screen](../../docs/butterfly/shot-butterfly.png)
 

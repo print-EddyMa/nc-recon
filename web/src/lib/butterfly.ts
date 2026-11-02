@@ -101,7 +101,13 @@ export interface Rigor {
     runs: Record<string, { delta_ms: [number, number]; implied_km: number; J_repro: number }>;
   };
   /** same nudge put into a different model */
-  transfer?: { model: string; change_pct: number; source_change_pct: number };
+  transfer?: {
+    model: string;
+    change_pct: number;
+    source_change_pct: number;
+    /** how well that model's un-nudged forecast tracks the real storm */
+    baseline_track_err_km?: { mean: number; at_72h: number; at_78h: number } | null;
+  };
   /** nonlinear optimal perturbation vs the one-step nudge */
   cnop?: { change_pct: number; one_step_change_pct: number; iterations: number };
 }
