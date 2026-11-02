@@ -90,6 +90,17 @@ NeuralGCM 2.8°, objective = mean IVT into western NC over +60…78 h
 - Hindcast skill: mean track error 183 km over 78 h vs NOAA's best track, but
   the model's Helene runs slow, 362-486 km behind by +72-78 h.
 
+### How sure are we? (`python -m butterfly.run suite|cnop|transfer`)
+
+| check | method | result |
+|---|---|---|
+| Is the gradient right? | Taylor test: real ÷ predicted change as the nudge shrinks | 0.988 (0.02×) · 0.949 (0.05×) · 0.886 (0.1×) · 0.685 · 0.566 · 0.462 (1×): converges to 1, so the adjoint is correct and the fall-off is real nonlinearity |
+| Is the direction special? | Monte-Carlo null: 5 smooth random nudges under the same per-field caps (~100× the adjoint nudge's energy) | random: −1.9 % … +0.8 %; adjoint: **−25.5 %** |
+| Why did the track move? | deep-layer-mean (850-200 hPa) steering flow in a 200-800 km ring around the model storm, +36-66 h | un-nudged (2.8 E, 9.2 N) m/s; away nudge (−0.9, −0.4) m/s ≈ 130 km slower/westward; reversed nudge +0.9 m/s eastward, toward NC |
+| Can a better nudge be found? | CNOP (Mu et al. 2003): re-linearise at the nudged state, projected step back onto the caps | one extra adjoint: **−33.2 %** vs −25.5 % for the one-step nudge |
+| Is it reproducible? | re-run the same forecasts | identical J to 3 decimals (deterministic model, fixed key) |
+| Does it transfer to another model? | interpolate the nudge into NeuralGCM 1.4° | *running* |
+
 ![Butterfly screen](../../docs/butterfly/shot-butterfly.png)
 
 ## Run it
