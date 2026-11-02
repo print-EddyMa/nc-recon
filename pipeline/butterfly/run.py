@@ -120,13 +120,17 @@ def cmd_export(case, name):
 
 def main():
     ap = argparse.ArgumentParser(prog="python -m butterfly.run")
-    ap.add_argument("cmd", choices=["forecast", "adjoint", "steer", "export", "all"])
+    ap.add_argument("cmd", choices=["forecast", "adjoint", "steer", "export", "all",
+                                    "taylor", "random", "steering", "cnop", "transfer", "suite"])
     ap.add_argument("--case", default="helene", choices=sorted(CASES))
     ap.add_argument("--model", default="deterministic_2_8_deg")
     a = ap.parse_args()
     case = CASES[a.case]
     if a.cmd == "export":
         return cmd_export(case, a.model)
+    from . import experiments as X
+    if a.cmd == "transfer":
+        return X.cmd_transfer(case)
     from .problem import Problem
     P = Problem(case, a.model)
     if a.cmd == "forecast":
@@ -137,6 +141,14 @@ def main():
         cmd_steer(P)
     if a.cmd == "all":
         cmd_export(case, a.model)
+    if a.cmd in ("taylor", "suite"):
+        X.cmd_taylor(P)
+    if a.cmd in ("steering", "suite"):
+        X.cmd_steering(P)
+    if a.cmd in ("random", "suite"):
+        X.cmd_random(P)
+    if a.cmd == "cnop":
+        X.cmd_cnop(P)
 
 
 if __name__ == "__main__":

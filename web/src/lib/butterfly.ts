@@ -84,6 +84,26 @@ export interface ButterflyCase {
     profile: Record<string, number[]>;
   };
   nudge: { levels: NudgeLevel[] };
+  /** pipeline/butterfly/experiments.py - each part optional */
+  rigor?: Rigor | null;
+}
+
+export interface Rigor {
+  /** real change / gradient-predicted change, by nudge size (Taylor test) */
+  taylor?: { s: number; ratio: number }[];
+  /** random nudges under the same caps: % change each */
+  random?: { change_pct: number[]; constraint: string };
+  /** deep-layer-mean steering flow around the storm, mean over `hours` */
+  steering?: {
+    hours: number[];
+    baseline_ms: [number, number];
+    baseline_J_repro: number;
+    runs: Record<string, { delta_ms: [number, number]; implied_km: number; J_repro: number }>;
+  };
+  /** same nudge put into a different model */
+  transfer?: { model: string; change_pct: number; source_change_pct: number };
+  /** nonlinear optimal perturbation vs the one-step nudge */
+  cnop?: { change_pct: number; one_step_change_pct: number; iterations: number };
 }
 
 export interface ButterflyIndexEntry {

@@ -20,6 +20,7 @@ import {
   type ButterflyIndexEntry,
   type ButterflyRun,
   type Cell,
+  type Rigor,
 } from "../lib/butterfly";
 
 interface Props {
@@ -436,6 +437,13 @@ export default function Butterfly({ onOpenAbout }: Props) {
         </p>
       </section>
 
+      {doc.rigor && (
+        <section className="panel px-4 py-3.5">
+          <h2 className="section-title mb-2.5">How sure are we?</h2>
+          <RigorPanel rigor={doc.rigor} adjointPct={runs.find((r) => r.id === "away_1")?.change_pct ?? null} />
+        </section>
+      )}
+
       <section className="panel px-4 py-3.5">
         <h2 className="section-title mb-2">Which altitude matters</h2>
         <Profile levels={doc.sensitivity.levels_hpa} profile={doc.sensitivity.profile} />
@@ -674,6 +682,109 @@ export default function Butterfly({ onOpenAbout }: Props) {
     }
     return null;
   }
+}
+
+const sgn = (x: number) => `${x > 0 ? "+" : x < 0 ? "−" : "±"}${Math.abs(x).toFixed(1)}`;
+
+/** the five rigor checks, each shown only if the pipeline produced it */
+function RigorPanel({ rigor, adjointPct }: { rigor: Rigor; adjointPct: number | null }) {
+  const rand = rigor.random?.change_pct ?? [];
+  const lo = Math.min(-30, ...rand, adjointPct ?? 0);
+  const hi = Math.max(5, ...rand);
+  const x = (v: number) => ((v - lo) / (hi - lo)) * 100;
+  return (
+    <div className="space-y-3 text-2xs leading-relaxed text-ink-dim">
+      {rigor.taylor && rigor.taylor.length > 0 && (
+        <div>
+          <div className="mb-1 font-medium text-ink">Is the gradient right? (Taylor test)</div>
+          <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
+            {rigor.taylor.map((r) => (
+              <div key={r.s} className="contents">
+                <span className="tnum text-ink-faint">{r.s}×</span>
+                <span className="flex items-center gap-2">
+                  <span className="relative h-1.5 flex-1 rounded-sm bg-surface-2">
+                    <span
+                      className="absolute left-0 top-0 h-1.5 rounded-sm bg-meter"
+                      style={{ width: `${Math.max(0, Math.min(1, r.ratio)) * 100}%` }}
+                    />
+                  </span>
+                  <span className="tnum w-10 text-right text-ink">{Math.round(r.ratio * 100)}%</span>
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-1 text-ink-faint">
+            Share of the gradient&rsquo;s predicted change that really happened. A correct adjoint tends to 100% as the
+            nudge shrinks; the fall-off with size is where linear thinking stops working.
+          </p>
+        </div>
+      )}
+
+      {rand.length > 0 && adjointPct != null && (
+        <div className="border-t border-line pt-2.5">
+          <div className="mb-1.5 font-medium text-ink">Is the direction special? (random nudges)</div>
+          <svg viewBox="0 0 100 18" className="w-full" role="img" aria-label="Random nudges versus the adjoint nudge">
+            <line x1={0} x2={100} y1={9} y2={9} stroke="rgb(var(--line))" strokeWidth={0.6} />
+            <line x1={x(0)} x2={x(0)} y1={4} y2={14} stroke="rgb(var(--line-strong))" strokeWidth={0.6} />
+            {rand.map((v, i) => (
+              <circle key={i} cx={x(v)} cy={9} r={1.8} fill="rgb(var(--meter))" opacity={0.85} />
+            ))}
+            <circle cx={x(adjointPct)} cy={9} r={2.4} fill="rgb(91,33,182)" stroke="rgb(var(--surface))" strokeWidth={0.6} />
+          </svg>
+          <div className="flex justify-between text-ink-faint">
+            <span className="tnum">{sgn(lo)}%</span>
+            <span className="tnum">{sgn(hi)}%</span>
+          </div>
+          <p className="mt-1 text-ink-faint">
+            {rand.length} random nudges under the same caps (grey) moved WNC moisture by {sgn(Math.min(...rand))}% to{" "}
+            {sgn(Math.max(...rand))}%; the adjoint nudge (violet) by {sgn(adjointPct)}%.
+          </p>
+        </div>
+      )}
+
+      {rigor.steering && rigor.steering.runs.away_1 && (
+        <div className="border-t border-line pt-2.5">
+          <div className="mb-1 font-medium text-ink">Why did the track move? (steering flow)</div>
+          <p>
+            Deep-layer-mean wind (850–200 hPa) around the storm, +{rigor.steering.hours[0]}–
+            {rigor.steering.hours[rigor.steering.hours.length - 1]} h: un-nudged{" "}
+            <span className="tnum text-ink">
+              {rigor.steering.baseline_ms[0].toFixed(1)}, {rigor.steering.baseline_ms[1].toFixed(1)}
+            </span>{" "}
+            m/s (east, north). The away nudge changed it by{" "}
+            <span className="tnum text-ink">
+              {sgn(rigor.steering.runs.away_1.delta_ms[0])}, {sgn(rigor.steering.runs.away_1.delta_ms[1])}
+            </span>{" "}
+            m/s, enough to shift the storm ~{rigor.steering.runs.away_1.implied_km} km over that time.
+          </p>
+        </div>
+      )}
+
+      {rigor.transfer && (
+        <div className="border-t border-line pt-2.5">
+          <div className="mb-1 font-medium text-ink">Does it work in another model?</div>
+          <p>
+            The same nudge in {rigor.transfer.model.replace(/_/g, " ").replace(" deg", "°")}:{" "}
+            <span className="tnum text-ink">{sgn(rigor.transfer.change_pct)}%</span> (vs{" "}
+            <span className="tnum">{sgn(rigor.transfer.source_change_pct)}%</span> in the model that designed it). Same
+            model family, so a partial check, not a physics-model one.
+          </p>
+        </div>
+      )}
+
+      {rigor.cnop && (
+        <div className="border-t border-line pt-2.5">
+          <div className="mb-1 font-medium text-ink">Can a better nudge be found? (nonlinear optimisation)</div>
+          <p>
+            Re-linearising at the nudged state ({rigor.cnop.iterations} step{rigor.cnop.iterations > 1 ? "s" : ""}) and
+            staying inside the same caps:{" "}
+            <span className="tnum text-ink">{sgn(rigor.cnop.change_pct)}%</span> vs{" "}
+            <span className="tnum">{sgn(rigor.cnop.one_step_change_pct)}%</span> for the one-step nudge.
+          </p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function shortLabel(r: ButterflyRun) {

@@ -108,9 +108,11 @@ class Problem:
         _, s = jax.lax.scan(hour, state, None, length=self.case.hours)    # s[h-1] = impact at hour h
         return jnp.mean(s[np.array(self.case.window) - 1])
 
-    def gradient(self):
-        zero = {k: jnp.zeros_like(self.inputs[k]) for k in PERTURB}
-        J0, g = self._grad(zero)
+    def gradient(self, delta=None):
+        """(J, dJ/d initial state) at the initial state + delta (zero by default)."""
+        d = {k: jnp.asarray(delta[k]) if delta is not None and k in delta else jnp.zeros_like(self.inputs[k])
+             for k in PERTURB}
+        J0, g = self._grad(d)
         return float(J0), {k: np.asarray(v) for k, v in g.items()}
 
     # ---- norms / nudges ---------------------------------------------------------------
