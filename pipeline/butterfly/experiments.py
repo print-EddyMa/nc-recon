@@ -106,10 +106,16 @@ def cmd_taylor(P, eps_list=(0.02, 0.05)):
 
 
 def cmd_random(P, n=5):
-    rows = []
+    path = _results_path(P)
+    done = json.load(open(path)).get("random", {}).get("rows", []) if path.exists() else []
+    rows = [r for r in done if r["seed"] < n]
     for seed in range(n):
+        if any(r["seed"] == seed for r in rows):           # resumable
+            print(f"[random #{seed}] (reused)", flush=True)
+            continue
         r = run_one(P, smooth_random(P, seed), f"random #{seed}")
         rows.append(dict(seed=seed, J=r["J"], dist_target_72h=r["dist_target_72h"]))
+        rows.sort(key=lambda r: r["seed"])
         _save(P, "random", dict(n=len(rows), rows=rows, constraint="same per-field caps as 1x adjoint nudge"))
 
 

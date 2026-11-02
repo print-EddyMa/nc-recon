@@ -141,8 +141,12 @@ def cmd_osse(P, n_samples=2000, n_verify=3, seed=0):
         return lin
     # ---- nonlinear verification on held-out samples ---------------------------------
     rng_v = np.random.default_rng(seed + 1000)
-    base = run_one(P, {}, "osse truth")
+    # truth = the un-nudged forecast already on disk (identical to re-running it)
+    runs = json.load(open(out_dir(P.case) / f"runs_{P.name}.json"))
+    base = dict(J=runs["baseline"]["J"], track=runs["baseline"]["track"])
     tr0 = base["track"]
+    cache_path = out_dir(P.case) / f"osse_cache_{P.name}.json"
+    cache = json.load(open(cache_path)) if cache_path.exists() else {}
     verify = []
     for j in range(n_verify):
         e = error_sample(P, rng_v, filt, q)
@@ -153,7 +157,15 @@ def cmd_osse(P, n_samples=2000, n_verify=3, seed=0):
         for name, cs in flights:
             w = sum(disk_weight(P, *c) for c in cs)[None] if cs else 0
             d = {k: e[k] * (1 - ALPHA * w) for k in PERTURB}
-            r = run_one(P, d, f"osse #{j} {name}")
+            key = f"{j}:{name}"
+            if key in cache:                                   # resumable, one forecast at a time
+                r = cache[key]
+                print(f"[osse #{j} {name}] (reused)", flush=True)
+            else:
+                r = run_one(P, d, f"osse #{j} {name}")
+                r = dict(J=r["J"], track=r["track"])
+                cache[key] = r
+                json.dump(cache, open(cache_path, "w"))
             i72 = 72 // P.case.every
             row[name] = dict(J_err=r["J"] - base["J"],
                              track_err_72h=float(gc_dist_km(r["track"][i72]["lat"], r["track"][i72]["lon"],

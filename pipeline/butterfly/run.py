@@ -34,6 +34,9 @@ def out_dir(case):
 
 
 def cmd_adjoint(P):
+    if (out_dir(P.case) / f"grad_{P.name}.npz").exists():      # resumable: a gradient is never recomputed
+        print("[adjoint] reused existing gradient", flush=True)
+        return
     t = time.time()
     J0, g = P.gradient()
     np.savez(out_dir(P.case) / f"grad_{P.name}.npz", J0=J0, **g)
@@ -74,10 +77,10 @@ def cmd_steer(P, only_baseline=False):
     runs = {}
     for label, s in (NUDGES[:1] if only_baseline else NUDGES):
         t = time.time()
-        # the un-nudged forecast doesn't depend on the nudge design: reuse it
-        if label == "baseline" and "baseline" in prev and (out_dir(case) / f"fields_{P.name}_baseline.npz").exists():
-            runs["baseline"] = prev["baseline"]
-            print("[steer] baseline   (reused)", flush=True)
+        # resumable: a finished forecast (result + fields on disk) is reused, not re-run
+        if label in prev and (out_dir(case) / f"fields_{P.name}_{label}.npz").exists():
+            runs[label] = prev[label]
+            print(f"[steer] {label:10s} (reused)", flush=True)
             continue
         delta = {k: jnp.asarray(s * v) for k, v in (unit or {}).items()} if unit else {}
         preds = P.forecast(delta)
