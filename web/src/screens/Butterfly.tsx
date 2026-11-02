@@ -465,8 +465,11 @@ export default function Butterfly({ onOpenAbout }: Props) {
           ))}
         </ul>
         <p className="mt-2.5 text-2xs leading-relaxed text-ink-faint">
-          Change in {doc.case.objective_label}, averaged over forecast hours{" "}
-          {doc.case.window_hours.join(", ")}. Every bar is a full nonlinear NeuralGCM forecast.
+          Change in {doc.case.objective_label}
+          {isRain
+            ? `, accumulated between +${doc.case.window_hours[0]} and +${doc.case.window_hours[doc.case.window_hours.length - 1]} h`
+            : `, averaged over forecast hours ${doc.case.window_hours.join(", ")}`}
+          . Every bar is a full nonlinear NeuralGCM forecast.
           {hasLinear && (
             <>
               {" "}
@@ -613,10 +616,10 @@ export default function Butterfly({ onOpenAbout }: Props) {
       <aside className="absolute left-3 top-3 z-20 flex max-h-[calc(100%-1.5rem)] w-[19rem] max-w-[calc(100vw-1.5rem)] flex-col gap-3 overflow-y-auto sm:left-4 sm:top-4">
         <section className="panel px-4 py-3.5">
           <div className="eyebrow">Butterfly · storm sensitivity</div>
-          <div className="mt-1 flex items-baseline justify-between gap-2">
-            <h1 className="font-display text-lg font-semibold leading-tight text-ink">
-              {doc?.case.name ?? "Loading…"}
-            </h1>
+          <h1 className="mt-1 font-display text-lg font-semibold leading-tight text-ink">
+            {doc?.case.name ?? "Loading…"}
+          </h1>
+          <div>
             {index && index.length > 1 && (
               <select
                 value={caseId ?? ""}
@@ -624,7 +627,7 @@ export default function Butterfly({ onOpenAbout }: Props) {
                   setDoc(null);
                   setCaseId(e.target.value);
                 }}
-                className="rounded-sm border border-line bg-surface-2 px-1.5 py-0.5 text-2xs text-ink"
+                className="mt-2 w-full rounded-sm border border-line bg-surface-2 px-1.5 py-1 text-xs text-ink"
                 aria-label="Storm"
               >
                 {index.map((c) => (

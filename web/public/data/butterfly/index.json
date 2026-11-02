@@ -14,5 +14,21 @@
    "n_random": 5,
    "track_err_km": 183
   }
+ },
+ {
+  "id": "helene-rain",
+  "name": "Hurricane Helene (2024) \u00b7 rainfall",
+  "target": "Western NC (Asheville / Old Fort)",
+  "summary": {
+   "objective_short": "Rain over WNC",
+   "model": "NeuralGCM 2.8\u00b0 (stochastic precip)",
+   "change_1x": -34.8,
+   "toward_1x": 39.02,
+   "ratio_01": 0.643,
+   "ratio_1": 0.392,
+   "random_max_abs": 3.29,
+   "n_random": 3,
+   "track_err_km": 210
+  }
  }
 ]

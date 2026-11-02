@@ -67,11 +67,11 @@ def _rigor(work, name, runs, case):
     X = json.load(open(p))
     J0 = runs["baseline"]["J"]
     out = {}
-    if "taylor" in X:
-        rows = [dict(s=r["eps"], ratio=round(r["ratio"], 4)) for r in X["taylor"]["rows"]]
-        for rid, r in runs.items():                       # the steer runs extend the curve
-            if r.get("J_linear") is not None and r["s"] > 0:
-                rows.append(dict(s=r["s"], ratio=round((r["J"] - J0) / (r["J_linear"] - J0), 4)))
+    rows = [dict(s=r["eps"], ratio=round(r["ratio"], 4)) for r in X.get("taylor", {}).get("rows", [])]
+    for rid, r in runs.items():                           # every verifying run is a point on the curve
+        if r.get("J_linear") is not None and r["s"] > 0:
+            rows.append(dict(s=r["s"], ratio=round((r["J"] - J0) / (r["J_linear"] - J0), 4)))
+    if rows:
         out["taylor"] = sorted(rows, key=lambda r: r["s"])
     if "random" in X:
         out["random"] = dict(change_pct=[round(100 * (r["J"] / J0 - 1), 2) for r in X["random"]["rows"]],
