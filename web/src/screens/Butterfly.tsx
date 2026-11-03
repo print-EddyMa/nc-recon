@@ -127,26 +127,39 @@ export default function Butterfly({ onOpenAbout }: Props) {
     ? `Rain the selected run puts down between +${run?.impact.from_hour ?? "?"} and +${run?.impact.hour ?? "?"} h.`
     : `Forecast moisture transport (the fuel for flood rain) for the selected run at +${run?.impact.hour ?? "?"} h.`;
 
-  // frame the Gulf -> southern Appalachians between the two docked panels
+  // frame each storm: its observed track over the forecast period plus the NC target,
+  // fitted between the two docked panels
   useEffect(() => {
     const map = mapRef.current;
-    if (!ready || !map) return;
+    if (!ready || !map || !doc) return;
+    const t0 = Date.parse(`${doc.case.init}:00Z`);
+    const t1 = t0 + 84 * 3_600_000;
+    const pts = doc.best_track
+      .filter((p) => {
+        const t = Date.parse(`${p.time}:00Z`);
+        return t >= t0 && t <= t1;
+      })
+      .map((p) => [p.lon, p.lat] as [number, number]);
+    pts.push([doc.case.target.lon, doc.case.target.lat], [doc.case.storm0[1], doc.case.storm0[0]]);
+    const lons = pts.map((p) => p[0]);
+    const lats = pts.map((p) => p[1]);
     const wide = map.getContainer().clientWidth >= 768;
     try {
       map.fitBounds(
         [
-          [-99, 14],
-          [-66, 40],
+          [Math.min(...lons) - 4, Math.min(...lats) - 4],
+          [Math.max(...lons) + 4, Math.max(...lats) + 4],
         ],
         {
           padding: wide ? { left: 340, right: 350, top: 30, bottom: 30 } : { left: 20, right: 20, top: 220, bottom: 80 },
           duration: 0,
+          maxZoom: 5.5,
         },
       );
     } catch {
       /* container not measured yet */
     }
-  }, [ready, mapRef]);
+  }, [ready, mapRef, doc]);
 
   // ---- deck layers ------------------------------------------------------------ //
   const layers = useMemo(() => {

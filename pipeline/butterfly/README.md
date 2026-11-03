@@ -104,6 +104,28 @@ NeuralGCM 2.8°, objective = mean IVT into western NC over +60…78 h
 
 ![Butterfly screen](../../docs/butterfly/shot-butterfly.png)
 
+### Across NC storms (`python -m butterfly.run core --case <storm>`)
+
+Same protocol for every storm: ERA5 start 72 h before the NC impact, NeuralGCM
+2.8°, moisture transport into an NC target over +60-78 h, adjoint nudges at
+0.1/0.5/1× analysis error plus the reversed nudge, 3-5 random nudges.
+
+| storm (ERA5 start) | NC target | 1× away | reversed 1× | 0.1× real ÷ predicted | largest random | track error |
+|---|---|---|---|---|---|---|
+| Helene 2024 (24 Sep 12Z) | western NC | −25.5 % | −1.4 % | 0.89 | ±1.9 % | 183 km |
+| Florence 2018 (11 Sep 12Z) | southeastern NC | −46.2 % | +16.5 % | 0.92 | ±6.8 % | 95 km |
+| Matthew 2016 (6 Oct 00Z) | eastern NC | −41.2 % | +3.0 % | 1.00 | ±0.9 % | 128 km |
+| Michael 2018 (8 Oct 12Z) | NC Piedmont | −32.0 % | +2.8 % | 0.99 | ±1.4 % | 80 km |
+| **mean** | | **−36 %** | **+5 %** | **0.95** | | 122 km |
+| Helene rain (precip model) | western NC rain | −34.8 % | +39.0 % | 0.64 | ±3.3 % | 210 km |
+
+What holds across storms:
+
+- **The gradient is right**: a tiny nudge delivers 89-100 % of the predicted change in every moisture case.
+- **The direction is special**: in every storm the adjoint nudge beat every random nudge under the same caps, by 7× (Florence) to 44× (Matthew); 14 random runs, none close.
+- **Asymmetry**: pushing moisture away from NC works (−36 % mean), but the reversed nudge adds little (+5 % mean, vs ~+60 % predicted). Rain (Helene) is the exception: it responds both ways.
+- Still a small sample (4 storms, one model family, 2.8°); see Limits.
+
 ### Rainfall itself (`--case helene-rain`)
 
 NeuralGCM's precipitation-trained model (`stochastic_precip_2_8_deg`, fixed
@@ -203,6 +225,6 @@ python data.py && python emulator.py && python experiments.py && python hero.py 
   the storm's core and intensity are not resolved.
 - **Same-model check.** Nudges are verified by the model that designed them.
   The independent check is a physics model (WRF), not yet run.
-- **One NC storm** is a case study, not a statistic.
+- **Four NC storms** show consistent patterns, but four is still a small sample.
 - Nudges are idealised changes to the initial state; nothing here says any
   real-world intervention could produce them.

@@ -62,5 +62,21 @@
    "n_random": 3,
    "track_err_km": 128
   }
+ },
+ {
+  "id": "michael",
+  "name": "Hurricane Michael (2018)",
+  "target": "NC Piedmont",
+  "summary": {
+   "objective_short": "Moisture into NC Piedmont",
+   "model": "NeuralGCM 2.8\u00b0 (deterministic)",
+   "change_1x": -32.01,
+   "toward_1x": 2.76,
+   "ratio_01": 0.993,
+   "ratio_1": 0.785,
+   "random_max_abs": 1.41,
+   "n_random": 3,
+   "track_err_km": 80
+  }
  }
 ]
