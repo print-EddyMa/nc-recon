@@ -104,6 +104,47 @@ NeuralGCM 2.8°, objective = mean IVT into western NC over +60…78 h
 
 ![Butterfly screen](../../docs/butterfly/shot-butterfly.png)
 
+### Rainfall itself (`--case helene-rain`)
+
+NeuralGCM's precipitation-trained model (`stochastic_precip_2_8_deg`, fixed
+random key) gives rain directly, so the objective becomes the rain that fell
+over western NC between +24 and +78 h (25 Sep 12Z - 27 Sep 18Z). Accumulated
+precipitation lives in the model state, so hourly (checkpointed) and 6-hourly
+stepping agree to 1 part in 10⁶.
+
+| | rain over WNC | vs no nudge | gradient predicted |
+|---|---|---|---|
+| no nudge | 70.4 mm (ERA5: 138 mm; wettest ERA5 cell 394 mm; gauges recorded more) | | |
+| away 0.1× / 0.5× / 1× | | −5.7 / −15.7 / **−34.8 %** | −9.1 / −44.4 / −88.8 % |
+| reversed 1× | | **+39.0 %** | +88.8 % |
+| 3 random nudges | | +0.8 … +3.3 % | |
+
+Rain responds more, and in both directions, than moisture transport, but it is
+also more nonlinear (0.1× delivers 64 % of the prediction vs 89 %). The model
+under-rains (half of ERA5) and its storm stays far from WNC: a 2.8° limitation.
+
+### Where should extra observations go? (`python -m butterfly.run osse`)
+
+A simulated targeted-observation experiment. Truth = ERA5; analysis = truth +
+smooth tropospheric errors (RMS 0.5 K, 1 m/s, 10 % of humidity); "observing" a
+700 km disk removes 70 % of the error there. Analysis error spreads the WNC
+moisture forecast by ±9.9 %.
+
+| strategy | error-variance reduction (linear, 2,000 samples, held-out) |
+|---|---|
+| observe the storm (routine reconnaissance) | 26 % |
+| best single spot (adjoint) | 26 % (it is the storm) |
+| random spot | 0.4 % median |
+| storm + adjoint-chosen 2nd spot (40.5°N 95.6°W) | **48 %** |
+| storm + random 2nd spot | 26 % median; none of 400 better than the adjoint's |
+
+Checked with 3 sets of full forecasts (RMS error of the impact): no extra obs
+9.6 %, storm 8.5 % (confirms the linear estimate), storm + adjoint 2nd 9.7 %
+(**not confirmed**), storm + random 2nd 7.9 %. The model storm switches between
+two track branches ~200 km apart; a tipped branch dominates the error, and a
+linear estimate cannot see that. Three samples cannot settle the second-spot
+question; the storm-centred result holds.
+
 ## Run it
 
 ```bash
