@@ -46,5 +46,21 @@
    "n_random": 3,
    "track_err_km": 95
   }
+ },
+ {
+  "id": "matthew",
+  "name": "Hurricane Matthew (2016)",
+  "target": "Eastern NC (Lumberton / Goldsboro)",
+  "summary": {
+   "objective_short": "Moisture into E NC",
+   "model": "NeuralGCM 2.8\u00b0 (deterministic)",
+   "change_1x": -41.22,
+   "toward_1x": 2.99,
+   "ratio_01": 1.003,
+   "ratio_1": 1.124,
+   "random_max_abs": 0.93,
+   "n_random": 3,
+   "track_err_km": 128
+  }
  }
 ]
