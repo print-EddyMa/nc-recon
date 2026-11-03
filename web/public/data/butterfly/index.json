@@ -30,5 +30,21 @@
    "n_random": 3,
    "track_err_km": 210
   }
+ },
+ {
+  "id": "florence",
+  "name": "Hurricane Florence (2018)",
+  "target": "Southeastern NC (Wilmington / Lumberton)",
+  "summary": {
+   "objective_short": "Moisture into SE NC",
+   "model": "NeuralGCM 2.8\u00b0 (deterministic)",
+   "change_1x": -46.23,
+   "toward_1x": 16.46,
+   "ratio_01": 0.919,
+   "ratio_1": 0.409,
+   "random_max_abs": 6.76,
+   "n_random": 3,
+   "track_err_km": 95
+  }
  }
 ]
