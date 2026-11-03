@@ -793,6 +793,7 @@ export default function Butterfly({ onOpenAbout }: Props) {
   }
 }
 
+const lowerFirst = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
 const sgn = (x: number) => `${x > 0 ? "+" : x < 0 ? "−" : "±"}${Math.abs(x).toFixed(1)}`;
 
 /** the five rigor checks, each shown only if the pipeline produced it */
@@ -855,7 +856,7 @@ function RigorPanel({
             <span className="tnum">{sgn(hi)}%</span>
           </div>
           <p className="mt-1 text-ink-faint">
-            {rand.length} random nudges under the same caps (grey) moved {objective.toLowerCase()} by{" "}
+            {rand.length} random nudges under the same caps (grey) moved {lowerFirst(objective)} by{" "}
             {sgn(Math.min(...rand))}% to{" "}
             {sgn(Math.max(...rand))}%; the adjoint nudge (violet) by {sgn(adjointPct)}%.
           </p>
@@ -907,7 +908,7 @@ function RigorPanel({
         <div className="border-t border-line pt-2.5">
           <div className="mb-1 font-medium text-ink">Where should extra observations go? (simulated)</div>
           <p>
-            Analysis errors like ERA5&rsquo;s spread the {objective.toLowerCase()} forecast by ±
+            Analysis errors like ERA5&rsquo;s spread the {lowerFirst(objective)} forecast by ±
             {rigor.osse.error_std_pct.toFixed(1)}%. One {rigor.osse.radius_km} km-radius observation patch that removes{" "}
             {Math.round(rigor.osse.alpha * 100)}% of the error there cuts that error variance by:
           </p>
@@ -929,17 +930,48 @@ function RigorPanel({
             The adjoint&rsquo;s second spot ({rigor.osse.second.center[0].toFixed(0)}°N,{" "}
             {Math.abs(rigor.osse.second.center[1]).toFixed(0)}°W) is the violet ring on the &ldquo;Where to push&rdquo; map. Linear estimate
             over {rigor.osse.n_samples} error samples, scored on samples not used to choose the spot.
-            {rigor.osse.verify && rigor.osse.n_verify ? (
-              <>
-                {" "}
-                Checked with {rigor.osse.n_verify} sets of full forecasts: mean impact error{" "}
-                {Object.entries(rigor.osse.verify)
-                  .map(([k, v]) => `${k.replace("+", " + ").replace("adjoint2", "adjoint 2nd").replace("random2", "random 2nd")} ${v.impact_err_pct.toFixed(1)}%`)
-                  .join(" · ")}
-                .
-              </>
-            ) : null}
           </p>
+          {rigor.osse.verify && rigor.osse.n_verify ? (
+            <div className="mt-2">
+              <div className="mb-1 text-ink">
+                Checked with {rigor.osse.n_verify} sets of full forecasts (RMS error of the impact):
+              </div>
+              <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-0.5">
+                <span className="text-ink-faint">strategy</span>
+                <span className="text-right text-ink-faint">RMS</span>
+                <span className="text-right text-ink-faint" title="forecasts whose storm ended on the other track branch">
+                  off-track
+                </span>
+                {(
+                  [
+                    ["analysis", "no extra obs"],
+                    ["storm", "storm"],
+                    ["storm+adjoint2", "storm + adjoint 2nd"],
+                    ["storm+random2", "storm + random 2nd"],
+                  ] as const
+                )
+                  .filter(([k]) => rigor.osse!.verify![k])
+                  .map(([k, label]) => (
+                    <div key={k} className="contents">
+                      <span>{label}</span>
+                      <span className="tnum text-right text-ink">{rigor.osse!.verify![k].rms_err_pct.toFixed(1)}%</span>
+                      <span className="tnum text-right">
+                        {rigor.osse!.verify![k].off_branch}/{rigor.osse!.n_verify}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+              {rigor.osse.verify["storm+adjoint2"] &&
+                rigor.osse.verify["storm"] &&
+                rigor.osse.verify["storm+adjoint2"].rms_err_pct >= rigor.osse.verify["storm"].rms_err_pct && (
+                  <p className="mt-1.5 rounded-sm bg-dmg1/15 px-1.5 py-1 text-ink">
+                    The second spot&rsquo;s linear promise did not hold in full forecasts. Small changes tip the model
+                    storm between two track branches about 200 km apart, a bifurcation a linear gradient cannot see.
+                    More samples are needed to settle it.
+                  </p>
+                )}
+            </div>
+          ) : null}
         </div>
       )}
 

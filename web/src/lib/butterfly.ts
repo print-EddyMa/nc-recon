@@ -137,7 +137,7 @@ export interface Osse {
     random_second_p90: number;
   };
   /** full nonlinear forecasts: mean |impact error| (%) and 72-h track error (km) */
-  verify?: Record<string, { impact_err_pct: number; track_err_km: number }>;
+  verify?: Record<string, { impact_err_pct: number; rms_err_pct: number; track_err_km: number; off_branch: number }>;
   n_verify?: number;
 }
 

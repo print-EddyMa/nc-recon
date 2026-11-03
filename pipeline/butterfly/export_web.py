@@ -113,7 +113,11 @@ def _rigor(work, name, runs, case):
         if O.get("verify"):
             keys = O["verify"][0].keys()
             o["verify"] = {k: dict(impact_err_pct=round(float(np.mean([abs(v[k]["J_err"]) for v in O["verify"]])) / O["truth_J"] * 100, 2),
-                                   track_err_km=round(float(np.mean([v[k]["track_err_72h"] for v in O["verify"]])))) for k in keys}
+                                   rms_err_pct=round(float(np.sqrt(np.mean([v[k]["J_err"] ** 2 for v in O["verify"]]))) / O["truth_J"] * 100, 2),
+                                   track_err_km=round(float(np.mean([v[k]["track_err_72h"] for v in O["verify"]]))),
+                                   # forecasts whose storm ended up on the other track branch (>150 km at +72 h)
+                                   off_branch=int(sum(v[k]["track_err_72h"] > 150 for v in O["verify"])))
+                           for k in keys}
             o["n_verify"] = len(O["verify"])
         out["osse"] = o
     return out or None
@@ -226,5 +230,8 @@ def export(case, name, work, web_dir):
                    track_err_km=doc["skill"]["mean_track_err_km"])
     cases = [c for c in cases if c["id"] != case.id] + [dict(id=case.id, name=case.name, target=case.target_label,
                                                             summary=summary)]
+    from .cases import CASES
+    order = list(CASES)                                   # stable order: the case list, Helene first
+    cases.sort(key=lambda c: order.index(c["id"]) if c["id"] in order else len(order))
     idx.write_text(json.dumps(cases, indent=1))
     return p
