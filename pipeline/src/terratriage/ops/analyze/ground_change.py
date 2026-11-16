@@ -188,7 +188,7 @@ def main(argv: list[str] | None = None) -> None:
     r = compare_area(a.area, allow_test=a.allow_test, write=not a.no_write)
     print(f"{r['area']} ({r['role']}, {r['county']} County): measured {r['measured']} of {r['structures']}, "
           f"typical change {r['typical_change_m']} m; flagged {r['flag_counts']}; "
-          f"Groma level of flagged: {r['flagged_by_ncr_level']}")
+          f"NC Recon level of flagged: {r['flagged_by_ncr_level']}")
     for c in r["caveats"]:
         print("  -", c)
 

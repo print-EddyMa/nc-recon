@@ -1,7 +1,7 @@
 """Prepare composition inputs from the real assets: `python video/launch/prep.py`.
 
   assets/cap_3200/<key>.jpg      CAP originals reduced to 3200 px (push-ins stay sharp at 1080p)
-  assets/overlays/<plate>.json   Groma footprints projected onto a plate, with the
+  assets/overlays/<plate>.json   NC Recon footprints projected onto a plate, with the
                                  model's most likely level (from the real assessment)
   assets/export_rows.json        FEMA damage survey columns and a few real rows
                                  (no addresses: those are responder-only)

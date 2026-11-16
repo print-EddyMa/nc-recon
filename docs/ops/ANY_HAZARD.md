@@ -1,6 +1,6 @@
 # Assessing any disaster
 
-Groma started on Hurricane Helene in western North Carolina. The engine is
+NC Recon started on Hurricane Helene in western North Carolina. The engine is
 not specific to either: an event is a FEMA declaration (or a manual incident
 date), a hazard profile says which evidence applies, and the imagery and
 structure sources cover the whole country.
@@ -46,7 +46,7 @@ chosen per point:
 | E5 | flood depth against the first floor (gauge crests) | river and flash flood |
 | E6 | lidar ground change around the building (deposit or scour) | flood, landslide (NC 2025 lidar counties) |
 | H | where the hazard reached: inside or outside a fire perimeter, ShakeMap shaking at the building, inside a mapped landslide | wildfire, earthquake, landslide |
-| M1 | Groma's own damage model (`ops/model`), before and after chips | wildfire, in place of E1 wherever it has a usable chip (`channels.M1.mode: replace`) |
+| M1 | NC Recon's own damage model (`ops/model`), before and after chips | wildfire, in place of E1 wherever it has a usable chip (`channels.M1.mode: replace`) |
 
 For wildfire, M1 replaces E1 under the rule fixed before its evaluation
 (`docs/model/MODEL_CARD.md`). That evaluation scored M1 on its own; the fused

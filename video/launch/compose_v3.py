@@ -28,18 +28,16 @@ def rel(p: str) -> str:
     return os.path.relpath(p, BUILD)
 
 
+NC_PATH = "M 92.04,0.0 L 294.65,1.34 L 298.66,15.28 L 288.92,13.94 L 274.03,19.67 L 266.2,20.24 L 266.58,22.72 L 287.97,20.81 L 291.41,24.06 L 297.71,22.72 L 300.0,31.13 L 297.9,35.14 L 293.7,35.52 L 284.91,44.11 L 273.27,44.49 L 271.36,50.41 L 276.32,56.33 L 280.33,57.48 L 272.88,67.22 L 266.58,66.07 L 247.87,69.13 L 235.84,75.81 L 226.29,84.6 L 221.32,95.67 L 214.07,93.19 L 201.46,95.48 L 161.94,62.25 L 122.79,61.68 L 123.36,57.67 L 118.01,51.75 L 114.39,53.85 L 114.19,50.22 L 71.23,48.5 L 42.2,55.38 L 0.0,55.76 L 0.95,47.55 L 7.83,46.79 L 10.5,41.06 L 19.1,35.9 L 28.64,35.71 L 37.24,30.36 L 46.21,28.45 L 53.85,20.62 L 58.63,18.33 L 59.58,21.77 L 73.33,15.09 L 79.63,16.42 L 84.02,9.93 L 90.52,8.21 L 92.04,0.0 Z"
+# the North Carolina outline with the scan ring; the ring pulses once as the film ends
 MARK = (
-    '<g fill="none" stroke="currentColor" stroke-linecap="round">'
-    '<line x1="32" y1="9" x2="32" y2="55" stroke-width="2.2"/>'
-    '<line x1="9" y1="15" x2="55" y2="15" stroke-width="2.2"/>'
-    '<line x1="6" y1="56" x2="58" y2="56" stroke-width="2.2"/></g>'
-    '<g id="plumbL"><line x1="12" y1="15" x2="12" y2="39" stroke="currentColor" stroke-width="1"/>'
-    '<path d="M12 38.5 l-3.2 3 3.2 5.4 3.2-5.4z" fill="currentColor"/></g>'
-    '<g id="plumbR"><line x1="52" y1="15" x2="52" y2="39" stroke="currentColor" stroke-width="1"/>'
-    '<path d="M52 38.5 l-3.2 3 3.2 5.4 3.2-5.4z" fill="currentColor"/></g>'
+    f'<clipPath id="ncclip"><path d="{NC_PATH}"/></clipPath><path d="{NC_PATH}" fill="currentColor"/>'
+    '<g clip-path="url(#ncclip)" fill="none" stroke="#2563EB" stroke-width="3">'
+    '<circle id="ring" cx="198.09" cy="28.24" r="20"/><circle id="ring2" cx="198.09" cy="28.24" r="38"/></g>'
+    '<circle cx="198.09" cy="28.24" r="6" fill="#2563EB"/>'
 )
 
-HTML = r"""<!doctype html><html><head><meta charset="utf-8"><title>Groma, the story cut</title>
+HTML = r"""<!doctype html><html><head><meta charset="utf-8"><title>NC Recon, the story cut</title>
 <style>
 @font-face { font-family:"Serif"; font-weight:200 900; font-optical-sizing:auto; src:url(%%FONT%%); }
 :root { --ink:#F2F0EA; --dim:#B8B5AD; --bg:#0B0C0C; }
@@ -62,7 +60,7 @@ svg.fp { position:absolute; inset:0; width:1920px; height:1080px; }
 .app { position:absolute; left:0; top:0; width:1920px; height:1080px; transform-origin:0 0; }
 .crop { position:absolute; overflow:hidden; }
 #gl { position:absolute; inset:0; width:1920px; height:1080px; }
-.mark { position:absolute; left:50%; top:330px; width:180px; height:180px; transform:translateX(-50%); color:var(--ink); opacity:0; }
+.mark { position:absolute; left:50%; top:372px; width:480px; height:154px; transform:translateX(-50%); color:var(--ink); opacity:0; }
 #black { position:absolute; inset:0; background:#000; z-index:99; }
 </style></head><body>
 
@@ -97,8 +95,8 @@ svg.fp { position:absolute; inset:0; width:1920px; height:1080px; }
 
 <!-- 12: end -->
 <div class="L" id="end" style="background:var(--bg)">
-  <svg class="mark" id="mark" viewBox="0 0 64 64">%%MARK%%</svg>
-  <div id="ew" style="position:absolute;left:0;right:0;top:560px;text-align:center;font-size:96px;font-weight:500;letter-spacing:.02em;opacity:0">Groma</div>
+  <svg class="mark" id="mark" viewBox="0 0 300 96">%%MARK%%</svg>
+  <div id="ew" style="position:absolute;left:0;right:0;top:560px;text-align:center;font-size:96px;font-weight:500;letter-spacing:.02em;opacity:0">NC Recon</div>
   <div id="e2" style="position:absolute;left:0;right:0;top:700px;text-align:center;font-size:32px;opacity:0">github.com/print-EddyMa/nc-recon</div>
   <div id="e3" style="position:absolute;left:0;right:0;top:760px;text-align:center;font-size:28px;color:var(--dim);opacity:0">Decision support. Verify on the ground.</div>
   <div id="e4" style="position:absolute;left:0;right:0;bottom:44px;text-align:center;font-size:18px;color:#7d7a73;opacity:0">Photos: Civil Air Patrol / FEMA. Imagery: NC OneMap. Elevation: USGS 3DEP. Map: OpenStreetMap contributors, CARTO. Not an official FEMA assessment.</div></div>
@@ -115,13 +113,13 @@ svg.fp { position:absolute; inset:0; width:1920px; height:1080px; }
 <div class="src" id="s6a">NC OneMap · February 2023</div>
 <div class="src" id="s6b">NC OneMap · spring 2025</div>
 <div class="card" id="c6">Every building still needed a damage call,<br>one at a time.</div>
-<div class="card" id="c7">We built Groma after the storm,<br>from that same public imagery.</div>
+<div class="card" id="c7">We built NC Recon after the storm,<br>from that same public imagery.</div>
 <div class="card" id="c8" style="bottom:120px">It reads every building it can see:<br>a damage level, and how sure it is.</div>
 <div class="card" id="c9" style="bottom:110px;background:rgba(8,9,9,.86);padding:26px 34px;left:90px">893 buildings in 88 seconds, on a laptop.</div>
 <div class="card mid" id="c10" style="max-width:640px;font-size:54px">The calls it is least sure of go to people first, who judge them blind.</div>
-<div class="card mid" id="c11" style="max-width:1460px">After the Eaton fire, CAL FIRE inspectors checked 2,246 buildings Groma had assessed. When Groma called one destroyed or badly damaged, they agreed <b>96% of the time.</b></div>
-<div class="src mid2" id="s11" style="top:calc(50% + 190px)">Eaton fire, Los Angeles County, 2025: one pre-registered held-out test of Groma's wildfire model (95.7%). Flood accuracy is still being validated.</div>
-<div class="card" id="c12">Groma is free and open source,<br>for emergency managers, insurers and lenders,<br>and the National Guard.</div>
+<div class="card mid" id="c11" style="max-width:1460px">After the Eaton fire, CAL FIRE inspectors checked 2,246 buildings NC Recon had assessed. When NC Recon called one destroyed or badly damaged, they agreed <b>96% of the time.</b></div>
+<div class="src mid2" id="s11" style="top:calc(50% + 190px)">Eaton fire, Los Angeles County, 2025: one pre-registered held-out test of NC Recon's wildfire model (95.7%). Flood accuracy is still being validated.</div>
+<div class="card" id="c12">NC Recon is free and open source,<br>for emergency managers, insurers and lenders,<br>and the National Guard.</div>
 <div id="black"></div>
 
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
@@ -194,8 +192,9 @@ window.render = function (t) {
   // 12 the mark
   if (op("end", t, 94.4, DUR + 1, .8) > 0) {
     $("mark").style.opacity = ss(lin(t, 94.6, 95.6));
-    const u = Math.max(0, t - 94.8), a = 7*Math.exp(-u*1.1)*Math.cos(u*4.0);
-    $("plumbL").setAttribute("transform", `rotate(${a} 12 15)`); $("plumbR").setAttribute("transform", `rotate(${a} 52 15)`);
+    const u = Math.max(0, t - 94.8), k = u % 100, pulse = Math.exp(-u * 1.2);
+    $("ring").setAttribute("r", 20 + 16 * (1 - Math.exp(-k * 2.2)) * pulse);
+    $("ring2").setAttribute("r", 38 + 22 * (1 - Math.exp(-k * 2.2)) * pulse);
     $("ew").style.opacity = ss(lin(t, 95.6, 96.6)); $("e2").style.opacity = ss(lin(t, 96.6, 97.4));
     $("e3").style.opacity = ss(lin(t, 97.2, 98.0)); $("e4").style.opacity = ss(lin(t, 97.6, 98.4)); }
 };

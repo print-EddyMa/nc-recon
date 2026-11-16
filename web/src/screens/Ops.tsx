@@ -73,6 +73,8 @@ import { AccuracyNote } from "../components/ops/SystemPanels";
 import SwipeCompare from "../components/map/SwipeCompare";
 import { heightOf, useBuildings3D } from "../components/map/useBuildings3D";
 import References from "../components/ops/References";
+import SitBrief from "../components/ops/SitBrief";
+import { ChecksPanel, VerdictChip } from "../components/ops/Checks";
 import Respond from "../components/ops/Respond";
 import {
   Button,
@@ -105,7 +107,7 @@ const NC_CENTER: [number, number] = [-81.2, 35.5];
 
 /** Which of the assessment's own images sits under the structures. */
 type ImageryMode = "post" | "pre" | "swipe" | "off";
-type Tab = "overview" | "review" | "respond" | "people" | "checks";
+type Tab = "overview" | "brief" | "review" | "respond" | "people" | "checks";
 type LevelKey = FemaClass | "none";
 
 /** The square a new assessment would cover: centre + half-width in metres. */
@@ -1158,6 +1160,7 @@ function AreaInspector({
               {hazardsOf(p).map((h) => (
                 <Tag key={h}>{HAZARD_LABEL[h] ?? h}</Tag>
               ))}
+              <VerdictChip key={`v-${reload}`} area={areaId} onOpen={() => onTab("checks")} />
             </div>
           </div>
           <Popover
@@ -1253,10 +1256,11 @@ function AreaInspector({
           onChange={onTab}
           items={[
             { id: "overview", label: "Overview" },
+            { id: "brief", label: "Brief" },
             { id: "review", label: "Review", count: queue.length },
             { id: "respond", label: "Respond" },
             { id: "people", label: "People" },
-            { id: "checks", label: "Checks", hidden: hasChecks === false },
+            { id: "checks", label: "Checks" },
           ]}
         />
       </header>
@@ -1281,11 +1285,13 @@ function AreaInspector({
           ) : (
             <ReviewList queue={queue} labeledCount={Object.keys(labels).length} onPick={onSelect} />
           ))}
+        {tab === "brief" && <SitBrief key={`brief-${reload}`} area={areaId} />}
         {tab === "respond" && <Respond key={`respond-${reload}`} areaId={areaId} onFocus={onFocus} />}
         {tab === "people" && <ImpactPanel key={`people-${reload}`} areaId={areaId} />}
         {tab === "checks" && (
           <>
-            <References key={`refs-${reload}`} areaId={areaId} />
+            <ChecksPanel key={`checks-${reload}`} area={areaId} />
+            {hasChecks && <div className="mt-6"><References key={`refs-${reload}`} areaId={areaId} /></div>}
             <div className="mt-2">
               <FemaPanel key={`fema-${reload}`} areaId={areaId} />
             </div>

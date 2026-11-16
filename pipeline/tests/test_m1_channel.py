@@ -1,4 +1,4 @@
-"""M1 (Groma damage model) wiring in the pipeline: hazard gating, modes,
+"""M1 (NC Recon damage model) wiring in the pipeline: hazard gating, modes,
 missing weights, unusable chips, replace mode (synthetic rasters, offline)."""
 from __future__ import annotations
 
@@ -54,7 +54,7 @@ def test_weights_missing_is_never_fatal(monkeypatch, rasters):
     _mode(monkeypatch, "alongside")
 
     def missing(tag="x"):
-        raise FileNotFoundError("data/model/weights/groma-dmg-v0.npz")
+        raise FileNotFoundError("data/model/weights/ncrecon-dmg-v0.npz")
 
     monkeypatch.setattr(m1ch, "load", missing)
     w: list[str] = []

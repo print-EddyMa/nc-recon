@@ -32,7 +32,7 @@ def load(tag: str):
     return model, card, device
 
 
-def evaluate(pre: str, post: str, bbox, incident: str, name: str, tag: str = "groma-dmg-v0") -> dict:
+def evaluate(pre: str, post: str, bbox, incident: str, name: str, tag: str = "ncrecon-dmg-v0") -> dict:
     path = os.path.join(MODEL_DIR, "weights", f"{tag}.eval.{name}.json")
     if os.path.exists(path):
         raise SystemExit(f"{path} exists: a held-out set is scored once. Delete it only if the model changed "
@@ -70,7 +70,7 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--bbox", nargs=4, type=float, required=True)
     ap.add_argument("--incident", required=True)
     ap.add_argument("--name", required=True)
-    ap.add_argument("--tag", default="groma-dmg-v0")
+    ap.add_argument("--tag", default="ncrecon-dmg-v0")
     a = ap.parse_args(argv)
     r = evaluate(a.pre, a.post, a.bbox, a.incident, a.name, a.tag)
     print(json.dumps({k: r[k] for k in ("held_out", "points", "scored", "all_structures", "homes_only")}, indent=1))

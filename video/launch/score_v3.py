@@ -4,7 +4,7 @@ No voice. Rain and river under the opening photographs, single low piano
 notes under the dated facts, a piano and low-string theme from the park on,
 near silence under the proof, D major on the valley and a bell on the mark.
 All synthesised here; no samples, no third-party licence. Mastered to -16 LUFS.
-Writes build/mix_v3.wav and, with build/picture_v3.mp4, build/groma_launch_v3.mp4.
+Writes build/mix_v3.wav and, with build/picture_v3.mp4, build/ncrecon_launch_v3.mp4.
 """
 from __future__ import annotations
 
@@ -83,7 +83,7 @@ def main() -> None:
     pic = os.path.join(BUILD, "picture_v3.mp4")
     if os.path.exists(pic):
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", pic, "-i", mix, "-c:v", "copy", "-c:a", "aac", "-b:a", "256k",
-                        "-shortest", "-movflags", "+faststart", os.path.join(BUILD, "groma_launch_v3.mp4")], check=True)
+                        "-shortest", "-movflags", "+faststart", os.path.join(BUILD, "ncrecon_launch_v3.mp4")], check=True)
     print("mix", mix, "film", os.path.exists(pic))
 
 

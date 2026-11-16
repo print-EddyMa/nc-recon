@@ -1,6 +1,6 @@
 // Operator side of the owner evidence record: issue a private, expiring link
 // for one building to an owner or renter whom a partner has verified (legal
-// aid intake, a county call centre). Groma does not verify identity itself.
+// aid intake, a county call centre). NC Recon does not verify identity itself.
 import { useState } from "react";
 import { toast } from "sonner";
 import { authHeaders } from "../../lib/ops";

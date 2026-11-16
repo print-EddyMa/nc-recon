@@ -1,7 +1,7 @@
-"""Capture the Groma app for launch film v2:
+"""Capture the NC Recon app for launch film v2:
 `python3 video/launch/capture_v2.py [--base http://localhost:8003] [--only orbit,respond,...]`.
 
-Runs against a scratch server only (`groma-film-api` in .claude/launch.json:
+Runs against a scratch server only (`ncrecon-film-api` in .claude/launch.json:
 scratch registry, jobs, truth, labels, audit, cache) and, for the offline
 shot, a scratch offline install served with outbound network denied. Never
 the user's :8000/:5173. Building-level views use the TUNE area Swannanoa

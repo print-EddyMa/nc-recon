@@ -1,13 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Groma">
-  <title>Groma</title>
-  <!-- the Roman surveyor's groma: staff, cross-arm, two plumb lines, the ground -->
-  <g fill="none" stroke="#1B2124" stroke-linecap="round">
-    <line x1="32" y1="9" x2="32" y2="55" stroke-width="3.2"/>
-    <line x1="9" y1="15" x2="55" y2="15" stroke-width="3.2"/>
-    <line x1="12" y1="15" x2="12" y2="39" stroke-width="1.4"/>
-    <line x1="52" y1="15" x2="52" y2="39" stroke-width="1.4"/>
-    <line x1="6" y1="56" x2="58" y2="56" stroke-width="3.2"/>
-  </g>
-  <path d="M12 38.5 l-3.6 3.4 3.6 6 3.6-6z M52 38.5 l-3.6 3.4 3.6 6 3.6-6z" fill="#B9853F"/>
-  <circle cx="32" cy="9" r="2.6" fill="#B9853F"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-16 -16 132 132" role="img" aria-label="NC Recon"><title>NC Recon</title><rect x="-16" y="-16" width="132" height="132" rx="28" fill="#0B0B0B"/><rect x="7" y="7" width="24" height="24" fill="#F5F3EE"/><rect x="36" y="7" width="24" height="24" fill="#F5F3EE"/><rect x="65" y="7" width="24" height="24" fill="#F5F3EE"/><rect x="7" y="36" width="24" height="24" fill="#F5F3EE"/><rect x="36" y="36" width="24" height="24" fill="#F5F3EE"/><rect x="65" y="36" width="24" height="24" fill="#F5F3EE"/><rect x="7" y="65" width="24" height="24" fill="#F5F3EE"/><rect x="36" y="65" width="24" height="24" fill="#F5F3EE"/><rect x="69.2" y="68.4" width="24" height="24" fill="#FF5A1F" transform="rotate(19 81.2 80.4)"/></svg>

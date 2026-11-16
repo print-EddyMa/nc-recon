@@ -1,7 +1,7 @@
 # Open data and models for any hazard (research record, 2026-10-22)
 
 Two research passes, every endpoint called live without a key on 2026-10-22
-unless marked UNVERIFIED. Purpose: let NC Recon (Groma) assess any US disaster,
+unless marked UNVERIFIED. Purpose: let NC Recon (NC Recon) assess any US disaster,
 not only Helene, and validate itself on more than one hazard.
 
 ## Building-level ground truth (validation and calibration)

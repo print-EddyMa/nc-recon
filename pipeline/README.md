@@ -1,4 +1,4 @@
-# Groma pipeline and service
+# NC Recon pipeline and service
 
 Python 3.13. Two things live here:
 

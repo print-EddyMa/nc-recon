@@ -378,7 +378,7 @@ export async function openBrief(area: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Groma Verify (docs/truth/README.md): blind verification tasks.
+// NC Recon Verify (docs/truth/README.md): blind verification tasks.
 // A task carries no model output, by design.
 // ---------------------------------------------------------------------------
 export interface VerifyTask {
@@ -488,13 +488,13 @@ export async function postLabel(body: {
 }
 
 export function downloadExport(area: string): Promise<void> {
-  return downloadZip(area, "export.zip", `groma-${area}-responder.zip`);
+  return downloadZip(area, "export.zip", `ncrecon-${area}-responder.zip`);
 }
 
 /** Initial damage assessment packet in FEMA's PDA formats: Excel, GeoPackage
  * and the PDA narrative, pre-filled from the run (responder only). */
 export function downloadIda(area: string): Promise<void> {
-  return downloadZip(area, "ida.zip", `groma-${area}-ida.zip`);
+  return downloadZip(area, "ida.zip", `ncrecon-${area}-ida.zip`);
 }
 
 async function downloadZip(area: string, file: string, name: string): Promise<void> {
@@ -817,7 +817,7 @@ export interface UsdRange {
   high: number;
 }
 export interface ResponseProducts {
-  schema: "groma.response/1";
+  schema: "ncrecon.response/1";
   area: string;
   run_id: string;
   generated_utc: string;

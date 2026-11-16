@@ -1,4 +1,4 @@
-# Groma response products
+# NC Recon response products
 
 What responders do with a damage assessment. Built for any assessed area, any
 hazard, from open data; every number is a planning estimate with its source

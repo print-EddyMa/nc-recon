@@ -1,4 +1,4 @@
-"""Real material for the Groma launch film: `python video/launch/fetch_assets.py`.
+"""Real material for the NC Recon launch film: `python video/launch/fetch_assets.py`.
 
 Everything here is public, keyless, and read from the same sources the
 product uses. Nothing is generated or stock.
@@ -23,7 +23,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 OUT = os.path.join(HERE, "assets")
 NC = "https://services.nconemap.gov/secure/rest/services/Imagery"
-UA = "Groma/2.0 (launch film asset fetch; +https://github.com/print-EddyMa/nc-recon)"
+UA = "NCRecon/2.0 (launch film asset fetch; +https://github.com/print-EddyMa/nc-recon)"
 
 # name: (lon, lat, width in metres)
 PLATES = {

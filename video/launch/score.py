@@ -3,13 +3,13 @@
 
 Everything is synthesised here, so the music has no third-party licence:
 felt-piano arpeggios (inharmonic additive partials), a filtered pad, soft sub
-impacts on the big cuts, a bell for the groma's plumb lines, room tone and
+impacts on the big cuts, a bell for the closing mark, room tone and
 river noise under the opening, UI ticks on the fast cuts. D minor turning to
 D major at the close, 84 bpm. The voiceover (Kokoro, assets/vo) is placed on
 cue, the music ducks under it, and the mix is loudness-normalised to -16 LUFS.
 
 Writes build/music.wav, build/vo.wav, build/mix.wav and, when build/picture.mp4
-exists, build/groma_launch.mp4.
+exists, build/ncrecon_launch.mp4.
 """
 from __future__ import annotations
 
@@ -231,7 +231,7 @@ def main() -> None:
     if os.path.exists(pic):
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", pic, "-i", mix, "-c:v", "copy", "-c:a", "aac",
                         "-b:a", "256k", "-shortest", "-movflags", "+faststart",
-                        os.path.join(BUILD, "groma_launch.mp4")], check=True)
+                        os.path.join(BUILD, "ncrecon_launch.mp4")], check=True)
     print(json.dumps({"music": "build/music.wav", "mix": mix, "film": os.path.exists(pic)}))
 
 

@@ -1,4 +1,4 @@
-// The Groma Index: a public, preliminary damage summary for every assessed
+// The NC Recon Index: a public, preliminary damage summary for every assessed
 // area. Counts with an 80% range, roads cut, people cut off. Nothing about
 // any one building. The same records are JSON at /ops/index for other apps.
 import { useEffect, useState } from "react";
@@ -99,9 +99,9 @@ export default function IndexPage() {
       hero={
         <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
           <div>
-            <HeroTitle>The Groma Index</HeroTitle>
+            <HeroTitle>The NC Recon Index</HeroTitle>
             <p className="mt-5 max-w-[50ch] text-lg leading-relaxed text-ink-dim">
-              Preliminary damage counts for every area Groma has assessed from public imagery, each with an 80% range.
+              Preliminary damage counts for every area NC Recon has assessed from public imagery, each with an 80% range.
               Nothing here describes any one building. Newsrooms, aid groups and other apps can read the same
               records as JSON.
             </p>

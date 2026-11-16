@@ -1,6 +1,6 @@
 # General image model (flood and wind)
 
-Groma's general image channel (E1) is the xView2 CMU baseline damage
+NC Recon's general image channel (E1) is the xView2 CMU baseline damage
 classifier (BSD-3, `licenses/xview2-baseline-BSD-3.txt`), run as ONNX on
 onnxruntime. It is not in git (474 MB). Get `xview2_cmu_classifier.onnx` here:
 
@@ -20,6 +20,6 @@ a1f0dff601c8f3582b686ac7ce695f116d339e7913d1928d9ff62ab740e703cd) and run
 `python ../scripts/export_onnx.py classification.hdf5 xview2_cmu_classifier.onnx`.
 The result is byte-identical to the release file.
 
-Or point `NCR_MODEL_PATH` at an existing copy. Without it Groma still runs:
+Or point `NCR_MODEL_PATH` at an existing copy. Without it NC Recon still runs:
 the E1 channel is reported off, and the wildfire model and the other evidence
 channels carry the calls.

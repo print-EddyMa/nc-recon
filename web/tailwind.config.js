@@ -45,8 +45,8 @@ export default {
         dmg3: "#a81b38",
       },
       fontFamily: {
-        // One family with the site: titles are Public Sans, larger and tighter.
-        display: ['"Public Sans Variable"', '"Public Sans"', "ui-sans-serif", "system-ui", "sans-serif"],
+        // Titles: Archivo, expanded, the display face of the site and the launch film.
+        display: ['"Archivo"', '"Public Sans Variable"', "ui-sans-serif", "system-ui", "sans-serif"],
         // Public Sans: the US Web Design System typeface, the register the
         // government users of this tool already read every day.
         sans: ['"Public Sans Variable"', '"Public Sans"', "ui-sans-serif", "system-ui", "sans-serif"],

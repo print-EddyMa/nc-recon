@@ -1,4 +1,4 @@
-"""Groma damage model plumbing (ops/model/), offline and fast."""
+"""NC Recon damage model plumbing (ops/model/), offline and fast."""
 from __future__ import annotations
 
 import numpy as np
@@ -79,7 +79,7 @@ def test_m1_channel_interface(tmp_path, monkeypatch):
     with pytest.raises(FileNotFoundError):
         monkeypatch.setattr(mdl, "MODEL_DIR", str(tmp_path / "none"))
         channel.load()
-    h = {"tag": "groma-dmg-v0", "params": fake[0], "card": fake[1]}
+    h = {"tag": "ncrecon-dmg-v0", "params": fake[0], "card": fake[1]}
     out = channel.predict(h, str(tmp_path / "pre.tif"), str(tmp_path / "post.tif"), fps)
     assert out[1] is None
     assert out[0]["probs"] == [0.1, 0.1, 0.1, 0.2, 0.5] and out[0]["detail"]["argmax"] == "destroyed"
@@ -110,8 +110,8 @@ def test_channel_load_refuses_without_encoder(tmp_path, monkeypatch):
 
     w = tmp_path / "weights"
     w.mkdir()
-    (w / "groma-dmg-v0.npz").write_bytes(b"x")
-    (w / "groma-dmg-v0.json").write_text("{}")
+    (w / "ncrecon-dmg-v0.npz").write_bytes(b"x")
+    (w / "ncrecon-dmg-v0.json").write_text("{}")
     monkeypatch.setattr(mdl, "MODEL_DIR", str(tmp_path))
     monkeypatch.setenv("TORCH_HOME", str(tmp_path / "torch"))
     with pytest.raises(FileNotFoundError, match="encoder"):

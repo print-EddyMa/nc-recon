@@ -21,7 +21,7 @@ import {
 import { Kbd, Segmented, Spinner, Swatch } from "../components/ui/kit";
 import { useOffline } from "../lib/offline";
 
-// Groma Verify (docs/truth/README.md). One building at a time, before and
+// NC Recon Verify (docs/truth/README.md). One building at a time, before and
 // after imagery only. Deliberately blind: this screen never shows the model's
 // level, probabilities or review flag, so verifiers are not anchored by it.
 

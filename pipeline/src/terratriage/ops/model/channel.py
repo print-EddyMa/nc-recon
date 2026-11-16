@@ -1,4 +1,4 @@
-"""Evidence channel M1: Groma damage model v0 on the pipeline's own imagery.
+"""Evidence channel M1: NC Recon damage model v0 on the pipeline's own imagery.
 
     probs = m1_probs(pre_path, post_path, footprints_ll)          # (N, 5), NaN rows = unavailable
     ch    = m1_channel(probs[i])                                  # fusion Channel "M1"
@@ -27,7 +27,7 @@ import numpy as np
 
 from . import LEVELS
 
-TAG = "groma-dmg-v0"
+TAG = "ncrecon-dmg-v0"
 _cache: dict[str, Any] = {}
 
 
@@ -68,7 +68,7 @@ def m1_channel(probs: np.ndarray, weight: float = 1.0):
     p = np.clip(np.asarray(probs, float), 1e-6, 1.0)
     lab = int(np.argmax(p))
     return Channel("M1", True, p / p.sum(), weight, "held_out_evaluated",
-                   [f"M1_GROMA_V0_{LEVELS[lab].upper()}"],
+                   [f"M1_NCRECON_V0_{LEVELS[lab].upper()}"],
                    detail={"model": TAG, "probs": [round(float(v), 4) for v in p]})
 
 

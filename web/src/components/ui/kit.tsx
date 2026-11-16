@@ -1,4 +1,4 @@
-/* Hallmark · component kit: Groma operations console
+/* Hallmark · component kit: NC Recon operations console
  * states: default · hover · focus · active · disabled · loading
  * Every control shares one height scale (28 / 32 px), one radius (6 px) and
  * one focus ring (2 px accent, instant). Colours come only from tokens. */
@@ -131,7 +131,7 @@ export function Tabs<T extends string>({
   const shown = items.filter((i) => !i.hidden);
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   return (
-    <div role="tablist" aria-label={label} className={cx("flex gap-0.5 overflow-x-auto border-b border-line [scrollbar-width:none]", className)}>
+    <div role="tablist" aria-label={label} className={cx("flex gap-0 overflow-x-auto border-b border-line [scrollbar-width:none]", className)}>
       {shown.map((it, i) => {
         const on = it.id === value;
         return (
@@ -152,7 +152,7 @@ export function Tabs<T extends string>({
               refs.current[n]?.focus();
             }}
             className={cx(
-              "relative -mb-px inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-2 text-[13px]",
+              "relative -mb-px inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap border-b-2 px-1.5 text-[13px]",
               on ? "border-accent font-semibold text-ink" : "border-transparent text-ink-dim hover:text-ink",
             )}
           >

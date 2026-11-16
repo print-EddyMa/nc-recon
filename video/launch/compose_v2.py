@@ -46,7 +46,7 @@ MARK = (
     '<circle cx="32" cy="9" r="2.4" fill="var(--contour)"/>'
 )
 
-HTML = r"""<!doctype html><html><head><meta charset="utf-8"><title>Groma launch film v2</title>
+HTML = r"""<!doctype html><html><head><meta charset="utf-8"><title>NC Recon launch film v2</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Overpass:wght@400;600;700&family=Overpass+Mono:wght@400;600&display=block">
 <style>
 :root { --paper:#0E1412; --sheet:#131A17; --paper2:#18211D; --rule:#26302C; --rule2:#3A4540;
@@ -120,7 +120,7 @@ canvas.seq { position:absolute; left:0; top:0; transform-origin:0 0; }
   <div class="hud" id="hud"><span id="usng">17S LV 0000 0000</span><small id="hudsub">elevation</small><div class="bar" id="scalebar" style="width:120px"></div><small id="scalelab">1 km</small></div>
   <div class="t" id="whats" style="left:0;top:0;width:1500px;height:1080px;background:linear-gradient(to right, rgba(8,11,10,.8), rgba(8,11,10,0))"></div>
   <div class="t" id="what" style="left:72px;top:330px;max-width:1300px">
-    <div class="disp" style="font-size:210px">Groma</div>
+    <div class="disp" style="font-size:210px">NC Recon</div>
     <div class="disp" style="font-size:78px;margin-top:10px;font-weight:600">Building-by-building disaster damage assessment</div>
     <div class="mono" style="font-size:26px;margin-top:26px;color:var(--ink2)">Public imagery · lidar · field records · free and open source</div></div>
   <div class="t disp" id="glk1" style="right:72px;top:64px;font-size:64px;text-align:right">Damage density<br><span class="mono" style="font-size:22px;color:var(--ink2);font-weight:400">expected Major or Destroyed, smoothed 70 m</span></div>
@@ -141,14 +141,14 @@ canvas.seq { position:absolute; left:0; top:0; transform-origin:0 0; }
 <div class="L" id="an" style="background:var(--paper);perspective:2400px">
   <div class="t" id="anh" style="left:72px;top:96px"><div class="label">Anatomy of a call</div><div class="disp" style="font-size:84px;margin-top:8px">One building, every piece<br>of evidence.</div>
     <div class="mono" style="font-size:22px;color:var(--ink2);margin-top:16px">17S LV 7253 4080 · Swannanoa · manufactured home</div></div>
-  <div class="leg" id="leg"><div id="l7"><b>07</b>County search team <span>· Destroyed</span></div><div id="l6"><b>06</b>Groma's call <span>· Destroyed 76%</span></div><div id="l5"><b>05</b>Evidence <span>· four channels</span></div><div id="l4"><b>04</b>Lidar ground <span>· ring max 0.31 m</span></div><div id="l3"><b>03</b>Pixel change <span>· z +2.8</span></div><div id="l2"><b>02</b>After <span>· spring 2025</span></div><div id="l1"><b>01</b>Before <span>· Feb 2023</span></div></div>
+  <div class="leg" id="leg"><div id="l7"><b>07</b>County search team <span>· Destroyed</span></div><div id="l6"><b>06</b>NC Recon's call <span>· Destroyed 76%</span></div><div id="l5"><b>05</b>Evidence <span>· four channels</span></div><div id="l4"><b>04</b>Lidar ground <span>· ring max 0.31 m</span></div><div id="l3"><b>03</b>Pixel change <span>· z +2.8</span></div><div id="l2"><b>02</b>After <span>· spring 2025</span></div><div id="l1"><b>01</b>Before <span>· Feb 2023</span></div></div>
   <div class="stack" id="stack">
     <div class="layer" id="a1"><img src="%%PRE%%"><div class="lab"><b>01</b>Before · Feb 2023</div></div>
     <div class="layer" id="a2"><img src="%%POST%%"><div class="lab"><b>02</b>After · spring 2025</div></div>
     <div class="layer" id="a3"><img src="%%CHG%%"><div class="lab"><b>03</b>Change · z +2.8</div></div>
     <div class="layer" id="a4" style="background:#0b100e"><img src="%%GRD%%" style="image-rendering:pixelated"><div class="lab"><b>04</b>Lidar ground · ring max 0.31 m</div></div>
     <div class="layer" id="a5"><div class="evid"><div>Imagery model <span>· Destroyed</span></div><div>Pixel change <span>· z +2.8</span></div><div>Blue tarp <span>· none</span></div><div>Flood depth <span>· no gauge on this reach</span></div></div><div class="lab"><b>05</b>Evidence</div></div>
-    <div class="layer" id="a6"><div class="call"><div class="label">Groma's call</div><div class="disp">Destroyed 76%</div>
+    <div class="layer" id="a6"><div class="call"><div class="label">NC Recon's call</div><div class="disp">Destroyed 76%</div>
       <div class="probbar"><i style="flex:.0003;background:var(--d0)"></i><i style="flex:.0002;background:var(--d1)"></i><i style="flex:.0256;background:var(--d2)"></i><i style="flex:.2152;background:var(--d3)"></i><i style="flex:.7588;background:var(--d4)"></i></div>
       <div class="mono" style="font-size:22px;color:var(--ink2);margin-top:14px">Major 22% · Minor 3% · sent to people first</div></div><div class="lab"><b>06</b>Fused call</div></div>
     <div class="layer" id="a7"><div class="call"><div class="label">County search team</div><div class="disp" style="color:var(--contour)">Destroyed</div>
@@ -199,7 +199,7 @@ canvas.seq { position:absolute; left:0; top:0; transform-origin:0 0; }
 <!-- END -->
 <div class="L" id="end" style="background:var(--paper)">
   <svg class="mark t" id="mark" viewBox="0 0 64 64" style="left:840px;top:200px">%%MARK%%</svg>
-  <div class="t disp" id="ew" style="left:0;right:0;top:470px;text-align:center;font-size:150px;letter-spacing:.06em">Groma</div>
+  <div class="t disp" id="ew" style="left:0;right:0;top:470px;text-align:center;font-size:150px;letter-spacing:.06em">NC Recon</div>
   <div class="t mono" id="e1" style="left:0;right:0;top:640px;text-align:center;font-size:30px;color:var(--contour);letter-spacing:.12em;text-transform:uppercase">Free and open source</div>
   <div class="t mono" id="e2" style="left:0;right:0;top:700px;text-align:center;font-size:34px">github.com/print-EddyMa/nc-recon</div>
   <div class="t" id="e3" style="left:0;right:0;top:790px;text-align:center;font:600 30px var(--body);color:var(--ink2)">Decision support. Verify on the ground.</div>

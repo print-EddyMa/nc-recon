@@ -152,7 +152,7 @@ def test_index_is_public_and_building_free(ops, client, monkeypatch):
     lst = client.get("/ops/index").json()
     assert [a["area"] for a in lst["areas"]] == ["town"]          # the TEST area is left out
     r = client.get("/ops/index/town").json()
-    assert r["schema"] == "groma.index/1" and r["status"] == "preliminary"
+    assert r["schema"] == "ncrecon.index/1" and r["status"] == "preliminary"
     assert r["damage"]["destroyed"]["expected"] == 5.0
     lo, hi = r["major_or_destroyed"]["range_80"]
     assert lo <= r["major_or_destroyed"]["expected"] <= hi

@@ -158,7 +158,7 @@ def style(tile_url: str, cov: dict[str, Any]) -> dict[str, Any]:
                            "attribution": ATTRIBUTION}
     if cov.get("available"):
         src.update(minzoom=cov["minzoom"], maxzoom=cov["maxzoom"], bounds=cov["bounds"])
-    return {"version": 8, "name": "Groma offline (USGS The National Map)",
+    return {"version": 8, "name": "NC Recon offline (USGS The National Map)",
             "sources": {"usgs-topo": src},
             "layers": [{"id": "background", "type": "background", "paint": {"background-color": "#e9e8e3"}},
                        {"id": "usgs-topo", "type": "raster", "source": "usgs-topo"}]}

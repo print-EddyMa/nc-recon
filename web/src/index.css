@@ -1,9 +1,11 @@
-/* Hallmark · system: Groma (amends DESIGN.md, 2026-10-26: one sans family with the site)
- * genre: utilitarian instrument · theme: custom (obsidian / limestone, cast bronze for interaction)
- * one family: Public Sans (USWDS) for titles and text · figures: IBM Plex Mono
+/* Hallmark · system: NC Recon (amends DESIGN.md, 2026-10-26: one sans family with the site)
+ * genre: utilitarian instrument · theme: custom (near-black / paper, ink for interaction, one orange tile for the brand) (2026-11-15)
+ * display: Archivo, expanded, as on the site and in the film · text: Public Sans (USWDS) · figures: IBM Plex Mono
  * Self-hosted (bundled by Vite): the UI renders the same with no internet, which
  * an EOC on a satellite link or a field laptop cannot take for granted. */
 @import "@fontsource-variable/public-sans/wght.css";
+/* Archivo (SIL OFL 1.1): the display face of the site and the launch film */
+@font-face { font-family: "Archivo"; font-style: normal; font-weight: 100 900; font-stretch: 62% 125%; font-display: swap; src: url("./assets/fonts/archivo-latin-standard-normal.woff2") format("woff2"); }
 @import "@fontsource/ibm-plex-mono/400.css";
 @import "@fontsource/ibm-plex-mono/500.css";
 @import "@fontsource/ibm-plex-mono/600.css";
@@ -17,25 +19,26 @@
   :root {
     color-scheme: light;
 
-    --canvas: 238 234 226;
-    --surface: 250 248 243;
-    --surface-2: 232 226 215;
-    --line: 221 213 199;
-    --line-strong: 191 181 164;
-    --ink: 24 21 18;
-    --ink-dim: 75 68 59;
-    --ink-faint: 111 102 90;
-    /* cast bronze: interaction, "this is live" and the brand. Never severity:
+    --canvas: 244 242 237;
+    --surface: 251 250 247;
+    --surface-2: 233 230 223;
+    --line: 222 218 210;
+    --line-strong: 190 185 175;
+    --ink: 15 15 14;
+    --ink-dim: 74 71 66;
+    --ink-faint: 106 102 95;
+    /* cast bronze: interaction and "this is live". Never severity:
        it sits darker and browner than every step of the damage ramp. */
-    --accent: 142 91 39;
-    --accent-soft: 241 230 214;
-    --accent-ink: 255 255 255;
-    --brand: 142 91 39;
+    --accent: 15 15 14;
+    --accent-soft: 233 230 223;
+    --accent-ink: 251 250 247;
+    /* the rings and dot of the NC Recon mark */
+    --brand: 222 72 18;
     /* needs-review outline: a blue that stays legible over aerial imagery
        and is off the damage ramp */
     --review: 37 99 235;
-    --meter: 75 68 59;
-    --shadow: 24 21 18;
+    --meter: 74 71 66;
+    --shadow: 15 15 14;
 
     /* FEMA Community Lifelines status (stabilized / stabilizing / not / unknown) */
     --st-ok: 46 125 78;
@@ -64,20 +67,20 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --canvas: 14 13 11;
-      --surface: 23 21 18;
-      --surface-2: 32 29 25;
-      --line: 44 40 35;
-      --line-strong: 67 61 53;
-      --ink: 237 230 218;
-      --ink-dim: 181 171 156;
-      --ink-faint: 138 128 114;
-      --accent: 210 160 106;
-      --accent-soft: 46 36 24;
-      --accent-ink: 18 14 10;
-      --brand: 210 160 106;
+      --canvas: 10 10 10;
+      --surface: 19 19 18;
+      --surface-2: 28 28 26;
+      --line: 40 40 37;
+      --line-strong: 64 63 59;
+      --ink: 245 243 238;
+      --ink-dim: 182 179 172;
+      --ink-faint: 138 135 128;
+      --accent: 245 243 238;
+      --accent-soft: 40 40 37;
+      --accent-ink: 10 10 10;
+      --brand: 255 90 31;
       --review: 96 165 250;
-      --meter: 181 171 156;
+      --meter: 182 179 172;
       --shadow: 0 0 0;
       --st-ok: 87 171 115;
       --st-warn: 226 177 60;
@@ -87,20 +90,20 @@
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --canvas: 14 13 11;
-    --surface: 23 21 18;
-    --surface-2: 32 29 25;
-    --line: 44 40 35;
-    --line-strong: 67 61 53;
-    --ink: 237 230 218;
-    --ink-dim: 181 171 156;
-    --ink-faint: 138 128 114;
-    --accent: 210 160 106;
-    --accent-soft: 46 36 24;
-    --accent-ink: 18 14 10;
-    --brand: 210 160 106;
+    --canvas: 10 10 10;
+    --surface: 19 19 18;
+    --surface-2: 28 28 26;
+    --line: 40 40 37;
+    --line-strong: 64 63 59;
+    --ink: 245 243 238;
+    --ink-dim: 182 179 172;
+    --ink-faint: 138 135 128;
+    --accent: 245 243 238;
+    --accent-soft: 40 40 37;
+    --accent-ink: 10 10 10;
+    --brand: 255 90 31;
     --review: 96 165 250;
-    --meter: 181 171 156;
+    --meter: 182 179 172;
     --shadow: 0 0 0;
     --st-ok: 87 171 115;
     --st-warn: 226 177 60;
@@ -225,9 +228,10 @@
     border-color: rgb(var(--st-bad));
   }
 
-  /* the wordmark, screen and document titles: the body face, larger and tighter */
+  /* the wordmark, screen and document titles: Archivo, expanded, as on the site */
   .title-display {
     font-family: theme("fontFamily.display");
+    font-stretch: 112%;
     font-weight: 600;
     font-style: normal;
     letter-spacing: -0.025em;
@@ -505,4 +509,9 @@
 :root[data-theme="dark"] {
   --warn-bg: 58 42 0;
   --warn-ink: 255 233 173;
+}
+
+@layer utilities {
+  /* titles: Archivo, a little expanded, as on the site */
+  .font-display { font-stretch: 112%; letter-spacing: -0.012em; }
 }

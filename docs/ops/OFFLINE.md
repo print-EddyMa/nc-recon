@@ -6,7 +6,7 @@ down. Status: beta (see "How this was proven" below).*
 
 ## What works offline
 
-On a laptop that already has Groma installed (repository, Python
+On a laptop that already has NC Recon installed (repository, Python
 environment, built web app) and has imported a pack, with the network off:
 
 * open the app and the area;
@@ -38,7 +38,7 @@ PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline pack --area swannanoa
 * About 30 to 60 MB for a 1.6 km area (Swannanoa: 455 files, 33.5 MB, 443
   basemap tiles); refused over 150 MB unless `--force`.
 * `--with-web web/dist` also carries the built web app, for a laptop that has
-  Groma's code but no built app.
+  NC Recon's code but no built app.
 * TEST (hold-out) areas are refused unless `--allow-test`.
 * Building only reads the stored assessment and rasters; it writes nothing
   but the pack. Basemap tiles are downloaded at four requests a second and
@@ -47,8 +47,8 @@ PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline pack --area swannanoa
 ## Import it (on the laptop)
 
 ```
-PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline verify /path/to/groma-pack-swannanoa-20261022.tar
-PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline import /path/to/groma-pack-swannanoa-20261022.tar
+PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline verify /path/to/ncrecon-pack-swannanoa-20261022.tar
+PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline import /path/to/ncrecon-pack-swannanoa-20261022.tar
 ```
 
 Import checks every file against its sha256 first, refuses anything not in
@@ -71,7 +71,7 @@ this server and nothing else.
 
 | In the pack | Notes |
 |---|---|
-| `manifest.json` | format `groma-pack/1`, area, event and area specs, every file with sha256 and size, licences, what was left out |
+| `manifest.json` | format `ncrecon-pack/1`, area, event and area specs, every file with sha256 and size, licences, what was left out |
 | `outputs/<area>.*` | the assessment and its sidecars (impact, references, ground change, response products) |
 | `raw/<area>/` | the before and after rasters as **display copies** (JPEG q85): for viewing and review only, never for re-assessment; the imagery sidecar |
 | `cache/openfema/` | the event's FEMA declaration, so the event loads with no network |

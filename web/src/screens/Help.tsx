@@ -41,14 +41,14 @@ export default function Help() {
         </nav>
 
         <article className="max-w-[68ch] text-[15px] leading-relaxed text-ink">
-          <h1 className="title-display text-[34px]">Using Groma</h1>
+          <h1 className="title-display text-[34px]">Using NC Recon</h1>
           <p className="mt-3 flex gap-2 rounded border border-st-warn/40 bg-st-warn/10 px-3 py-2 text-sm font-medium">
             {DISCLAIMER}
           </p>
 
           <Section id="what" title="What it does">
             <p>
-              For any place in the United States and a declared (or provisional) event, Groma pulls before- and
+              For any place in the United States and a declared (or provisional) event, NC Recon pulls before- and
               after-event imagery, finds every structure in the area, and estimates each one's FEMA damage level
               with a probability. Uncertain and severe calls go to people. It also estimates who is displaced and
               cut off, which lifelines are strained, where a helicopter could land, what it will cost, and what
@@ -60,7 +60,7 @@ export default function Help() {
             <ol className="list-decimal space-y-1.5 pl-5">
               <li>
                 <b>Assess → New assessment</b> (or <Kbd>N</Kbd>). Pick the event. Not listed? Type its FEMA
-                disaster number: Groma reads the declaration, picks the hazards and finds matching imagery, and
+                disaster number: NC Recon reads the declaration, picks the hazards and finds matching imagery, and
                 shows the draft before anything is registered. No declaration yet? Enter it by hand as a
                 provisional event.
               </li>
@@ -191,6 +191,28 @@ export default function Help() {
             </ul>
           </Section>
 
+          <Section id="brief" title="Brief: the situation in six lines">
+            <p>
+              The <b>Brief</b> tab of an area writes the situation in six short items: the headline, damage, access,
+              where to search first, what is not known yet and what to verify. Every figure is tied to a numbered
+              piece of evidence from the assessment (click a chip to see it), and the brief says who wrote it. By
+              default it is written by fixed rules. If the server has a Claude API key and is online, you can ask
+              Claude to write it instead: Claude sees only area totals, never addresses or single buildings, and the
+              code drops any item whose numbers do not trace to the evidence, then says how many traced.
+            </p>
+          </Section>
+
+          <Section id="self-checks" title="Self-checks: does this assessment hold up?">
+            <p>
+              Every assessment checks itself, the way an engineer checks a design: every building accounted for, the
+              totals recounted a second way, the after imagery taken after the event, the two images lined up, the
+              image model weights the released ones, and every landing zone measured against the aircraft it is
+              listed for. Each check passes, warns, fails or is skipped with the reason, and shows how much room is
+              left before its limit. The verdict sits under the area name. A failed check labels the exports; it
+              never blocks them.
+            </p>
+          </Section>
+
           <Section id="checks" title="Checks against field records">
             <p>
               Where inspectors, search teams or a lidar survey covered the same ground, <b>Checks</b> sets the calls
@@ -267,7 +289,9 @@ export default function Help() {
             <p className="mt-2">
               Everything works with no keys. Optional free keys add layers on the Conditions map: NASA FIRMS (active
               fire) and NC State Climate Office CLOUDS (current conditions). A free Census API key on the server
-              (NCR_CENSUS_API_KEY) adjusts displacement for seasonal homes. No paid service is used.
+              (NCR_CENSUS_API_KEY) adjusts displacement for seasonal homes. An Anthropic API key on the server
+              (ANTHROPIC_API_KEY) lets Claude write the Brief; it is the only paid service, and it is off unless you
+              set it.
             </p>
           </Section>
 
@@ -276,19 +300,20 @@ export default function Help() {
               USGS Water Data, NOAA NWPS, NWS and NHC, OpenFEMA, FEMA USA Structures, USACE National Structure
               Inventory, OpenStreetMap (ODbL), state orthoimagery (NC OneMap), USDA NAIP, NOAA NGS Emergency Response
               Imagery, Maxar Open Data (CC BY-NC 4.0), NIFC fire perimeters, USGS ShakeMap, NC Geological Survey
-              landslides, CDC/ATSDR SVI. The status dot in the top bar shows each source's state and when it was last
+              landslides, CDC/ATSDR SVI, and NASA GIBS imagery on the Conditions map (GOES-East every 10 minutes,
+              VIIRS true colour, IMERG rain, SMAP soil moisture, OPERA surface water and Sentinel-1 radar). The status dot in the top bar shows each source's state and when it was last
               checked. Details: docs/ops/DATA_SOURCES.md.
             </p>
           </Section>
 
           <Section id="contact" title="Contact and licence">
             <p>
-              Groma is free during launch and open source under the Apache License 2.0. For a pilot, a question or a
+              NC Recon is free during launch and open source under the Apache License 2.0. For a pilot, a question or a
               problem, write to{" "}
               <a className="underline" href="mailto:ma.eddy.work@gmail.com">
                 ma.eddy.work@gmail.com
               </a>
-              . Report a security problem privately to the same address with "Groma security" in the subject.
+              . Report a security problem privately to the same address with "NC Recon security" in the subject.
             </p>
           </Section>
         </article>

@@ -6,6 +6,20 @@ import { useMapLibre, type IControl } from "../lib/useMapLibre";
 import { prefersReducedMotion } from "../lib/motion";
 import { useSettings } from "../lib/settings";
 import { liveRadarFrames, RADAR_ATTRIBUTION } from "../lib/radar";
+import { useOffline, isOffline, offlineReason } from "../lib/offline";
+import {
+  GIBS_LAYERS,
+  gibsLayer,
+  gibsTiles,
+  goesFrames,
+  latestTime,
+  shiftTime,
+  timeLabel,
+  type GibsKey,
+  type GibsLayer,
+  type GoesFrame,
+} from "../lib/gibs";
+import type { Map as MLMap, RasterTileSource } from "maplibre-gl";
 import LayerToggles, { type LayerRow } from "../components/map/LayerToggles";
 import RadarControl from "../components/map/RadarControl";
 import RankedList, { type RankedItem } from "../components/map/RankedList";
@@ -111,6 +125,45 @@ const SHELTER_RGB: [number, number, number] = [62, 168, 140];
 const sevRGB = (s: number): [number, number, number] =>
   NC_SEV_COLOR[Math.max(-1, Math.min(3, s))];
 const sevCSS = (s: number) => `rgb(${sevRGB(s).join(",")})`;
+
+// --- NASA GIBS imagery ----------------------------------------------------- //
+// bottom to top: imagery that covers the basemap first, data overlays above,
+// all under the radar loop and the basemap labels
+const GIBS_STACK: GibsKey[] = ["viirs", "rtc_s1", "goes", "smap", "imerg", "dswx_hls", "dswx_s1"];
+const GIBS_OFF: Record<GibsKey, boolean> = {
+  goes: false,
+  viirs: false,
+  imerg: false,
+  smap: false,
+  dswx_hls: false,
+  dswx_s1: false,
+  rtc_s1: false,
+};
+const gibsSourceId = (k: GibsKey) => `nc-gibs-${k}`;
+const goesId = (i: number) => `nc-gibs-goes-${i}`;
+// a hidden loop frame keeps a sliver of opacity: a fully transparent raster
+// layer lets MapLibre drop its tiles, and the loop would refetch every pass
+const GOES_HIDDEN = 0.003;
+
+/** where a GIBS layer goes in the layer stack: under the next GIBS layer up,
+ * else under the radar loop, else under the first basemap label */
+function gibsBeforeId(map: MLMap, key: GibsKey): string | undefined {
+  const layers = map.getStyle()?.layers ?? [];
+  for (const k of GIBS_STACK.slice(GIBS_STACK.indexOf(key) + 1)) {
+    const hit = layers.find((l) => l.id === gibsSourceId(k) || l.id.startsWith(`${gibsSourceId(k)}-`));
+    if (hit) return hit.id;
+  }
+  if (map.getLayer("nc-radar-0")) return "nc-radar-0";
+  return layers.find((l) => l.type === "symbol")?.id;
+}
+
+const utcHHMM = (ms: number) => new Date(ms).toISOString().slice(11, 16);
+const agoLabel = (ms: number) => {
+  const m = Math.max(0, Math.round((Date.now() - ms) / 60_000));
+  if (m < 60) return `${m} min ago`;
+  const h = Math.floor(m / 60);
+  return `${h} h ${m % 60} min ago`;
+};
 
 export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
   // start already framed on NC (shifted east to clear the left panel); the
@@ -273,6 +326,220 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
       /* style mid-swap */
     }
   }, [radarIdx, radarOn, ready, mapRef, radarFrames]);
+
+  // --- NASA GIBS imagery ------------------------------------------------- //
+  // remote tiles only once the server says it is online (undefined = not
+  // known yet, so nothing is requested until then)
+  const off = useOffline();
+  const gibsOnline = off !== undefined && !isOffline(off);
+  const [gibsOn, setGibsOn] = useState<Record<GibsKey, boolean>>(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem("terratriage:nc-gibs") || "");
+      return { ...GIBS_OFF, ...s };
+    } catch {
+      return GIBS_OFF;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("terratriage:nc-gibs", JSON.stringify(gibsOn));
+    } catch {
+      /* private window */
+    }
+  }, [gibsOn]);
+  // newest time per layer from GIBS (null = could not ask; tiles then use
+  // GIBS's own default), and the time the user stepped to, if any
+  const [gibsLatest, setGibsLatest] = useState<Partial<Record<GibsKey, string | null>>>({});
+  const [gibsPick, setGibsPick] = useState<Partial<Record<GibsKey, string>>>({});
+  const gibsWhen = (k: GibsKey) => gibsPick[k] ?? gibsLatest[k] ?? null;
+  useEffect(() => {
+    if (!gibsOnline) return;
+    let live = true;
+    for (const l of GIBS_LAYERS) {
+      if (l.key === "goes" || !gibsOn[l.key] || l.key in gibsLatest) continue;
+      void latestTime(l).then((t) => live && setGibsLatest((s) => ({ ...s, [l.key]: t })));
+    }
+    return () => {
+      live = false;
+    };
+  }, [gibsOn, gibsOnline, gibsLatest]);
+
+  // the still layers: one raster source each, retargeted when the date changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map) return;
+    try {
+      if (!map.getStyle()) return;
+      for (const l of GIBS_LAYERS) {
+        if (l.key === "goes") continue;
+        const id = gibsSourceId(l.key);
+        const want = gibsOnline && gibsOn[l.key] && l.key in gibsLatest;
+        if (!want) {
+          if (map.getLayer(id)) map.removeLayer(id);
+          if (map.getSource(id)) map.removeSource(id);
+          continue;
+        }
+        const tiles = gibsTiles(l, gibsPick[l.key] ?? gibsLatest[l.key] ?? null);
+        const src = map.getSource(id) as RasterTileSource | undefined;
+        if (src) {
+          if (src.tiles?.[0] !== tiles) src.setTiles([tiles]);
+          continue;
+        }
+        map.addSource(id, {
+          type: "raster",
+          tiles: [tiles],
+          tileSize: 256,
+          maxzoom: l.maxzoom,
+          attribution: l.credit,
+        });
+        map.addLayer(
+          {
+            id,
+            type: "raster",
+            source: id,
+            ...(l.minzoom ? { minzoom: l.minzoom } : {}),
+            paint: { "raster-opacity": l.opacity, "raster-fade-duration": 150 },
+          },
+          gibsBeforeId(map, l.key),
+        );
+      }
+    } catch {
+      /* style mid-swap / torn down */
+    }
+  }, [ready, mapRef, styleEpoch, gibsOn, gibsOnline, gibsLatest, gibsPick]);
+
+  // GOES-East GeoColor loop: frames from GIBS's own time list, newest last
+  const goesOn = gibsOn.goes && gibsOnline;
+  const [goes, setGoes] = useState<{ frames: GoesFrame[]; error?: string } | null>(null);
+  const [goesIdx, setGoesIdx] = useState(0);
+  const [goesReady, setGoesReady] = useState<number[]>([]); // frame indexes with tiles in
+  const [goesShown, setGoesShown] = useState(-1);
+  const [goesPlaying, setGoesPlaying] = useState(!reduced);
+  useEffect(() => {
+    if (!goesOn) {
+      setGoes(null);
+      return;
+    }
+    const ctl = new AbortController();
+    goesFrames(Date.now(), ctl.signal)
+      .then((frames) => {
+        setGoes(frames.length ? { frames } : { frames, error: "GIBS lists no recent GOES-East images." });
+        setGoesIdx(Math.max(0, frames.length - 1));
+      })
+      .catch((e: unknown) => {
+        if (!ctl.signal.aborted)
+          setGoes({ frames: [], error: `GOES-East images are unavailable: ${e instanceof Error ? e.message : e}` });
+      });
+    return () => ctl.abort();
+  }, [goesOn]);
+  // add one layer per frame, then load them newest first so the loop is usable
+  // while it fills (the Canary approach)
+  useEffect(() => {
+    const map = mapRef.current;
+    const frames = goes?.frames ?? [];
+    if (!ready || !map || !goesOn || !frames.length) return;
+    let live = true;
+    const ids = frames.map((_, i) => goesId(i));
+    const safe = (fn: () => void) => {
+      try {
+        if (mapRef.current && map.getStyle()) fn();
+      } catch {
+        /* style mid-swap / torn down */
+      }
+    };
+    const l = gibsLayer("goes");
+    safe(() => {
+      const before = gibsBeforeId(map, "goes");
+      frames.forEach((f, i) => {
+        if (map.getSource(ids[i])) return;
+        map.addSource(ids[i], {
+          type: "raster",
+          tiles: [gibsTiles(l, f.time)],
+          tileSize: 256,
+          maxzoom: l.maxzoom,
+          // identical on every frame so MapLibre shows the credit once
+          attribution: l.credit,
+        });
+        map.addLayer(
+          {
+            id: ids[i],
+            type: "raster",
+            source: ids[i],
+            layout: { visibility: "none" },
+            paint: {
+              "raster-opacity": GOES_HIDDEN,
+              "raster-opacity-transition": { duration: 0 },
+              "raster-fade-duration": 0,
+            },
+          },
+          before,
+        );
+      });
+    });
+    setGoesReady([]);
+    setGoesShown(-1);
+    void (async () => {
+      for (let i = frames.length - 1; i >= 0; i--) {
+        if (!live) return;
+        safe(() => map.setLayoutProperty(ids[i], "visibility", "visible"));
+        const started = performance.now();
+        const loaded = () => {
+          try {
+            return !map.getSource(ids[i]) || map.isSourceLoaded(ids[i]);
+          } catch {
+            return true; // torn down: stop waiting
+          }
+        };
+        while (live && performance.now() - started < 20_000 && !loaded()) {
+          await new Promise((r) => setTimeout(r, 250));
+        }
+        if (!live) return;
+        setGoesReady((s) => [...s, i]);
+      }
+    })();
+    return () => {
+      live = false;
+      safe(() => {
+        for (const id of ids) {
+          if (map.getLayer(id)) map.removeLayer(id);
+          if (map.getSource(id)) map.removeSource(id);
+        }
+      });
+    };
+  }, [ready, mapRef, styleEpoch, goesOn, goes]);
+  // show the loaded frame nearest the one asked for
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map || !goesReady.length) return;
+    const pick = goesReady.reduce((a, b) => (Math.abs(b - goesIdx) < Math.abs(a - goesIdx) ? b : a));
+    try {
+      if (!map.getStyle()) return;
+      for (const i of goesReady) {
+        if (map.getLayer(goesId(i)))
+          map.setPaintProperty(goesId(i), "raster-opacity", i === pick ? gibsLayer("goes").opacity : GOES_HIDDEN);
+      }
+    } catch {
+      /* style mid-swap */
+    }
+    setGoesShown(pick);
+  }, [ready, mapRef, goesIdx, goesReady]);
+  // play: step through the loaded frames; never starts by itself under
+  // reduced motion, and pauses when the tab is hidden
+  useEffect(() => {
+    if (!goesOn || !goesPlaying || goesReady.length < 2) return;
+    const order = [...goesReady].sort((a, b) => a - b);
+    const t = window.setInterval(() => {
+      setGoesIdx((i) => order.find((k) => k > i) ?? order[0]);
+    }, 700);
+    return () => window.clearInterval(t);
+  }, [goesOn, goesPlaying, goesReady]);
+  useEffect(() => {
+    const onVis = () => {
+      if (document.hidden) setGoesPlaying(false);
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
 
   // frame the map on North Carolina once it's ready, leaving room for the side
   // panels, so the state fills the view rather than the whole Southeast
@@ -658,6 +925,32 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
     onToggle: () => setRadarOn((v) => !v),
   });
 
+  const gibsOffline = isOffline(off);
+  const gibsRows: LayerRow[] = GIBS_LAYERS.map((l) => {
+    let meta = l.source;
+    if (gibsOffline) meta = "not available offline";
+    else if (gibsOn[l.key] && l.key === "goes") {
+      const f = goes?.frames[goesShown];
+      meta = f ? `${timeLabel(l, f.time)} · ${l.source}` : goes?.error ? "unavailable" : "loading…";
+    } else if (gibsOn[l.key])
+      meta = l.key in gibsLatest ? `${timeLabel(l, gibsWhen(l.key))} · ${l.source}` : "loading…";
+    return {
+      id: `gibs-${l.key}`,
+      label: l.label,
+      meta,
+      checked: gibsOn[l.key],
+      disabled: gibsOffline,
+      reason: gibsOffline
+        ? offlineReason(off, /imagery|NASA|satellite|tile/i)
+        : `${l.product}. ${l.rule[0].toUpperCase()}${l.rule.slice(1)}.`,
+      onToggle: () => setGibsOn((s) => ({ ...s, [l.key]: !s[l.key] })),
+    };
+  });
+  // the still layers that are on and can take a date
+  const gibsDated = gibsOffline
+    ? []
+    : GIBS_LAYERS.filter((l) => l.key !== "goes" && gibsOn[l.key] && l.key in gibsLatest);
+
   const floodItems: RankedItem[] = floodRanked.map((f) => ({
     id: f.properties.id,
     primary: f.properties.title,
@@ -910,6 +1203,30 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
           <div className={layersOpen ? "mt-2.5" : "hidden"}>
             <LayerToggles rows={layerRows} />
 
+            <div className="mt-3 border-t border-line pt-2.5">
+              <p className="mb-2 text-2xs font-medium text-ink-dim">NASA satellite imagery</p>
+              <LayerToggles rows={gibsRows} />
+              {gibsDated.map((l) => (
+                <GibsDateControl
+                  key={l.key}
+                  layer={l}
+                  time={gibsWhen(l.key)}
+                  latest={gibsLatest[l.key] ?? null}
+                  onChange={(t) => setGibsPick((s) => ({ ...s, [l.key]: t }))}
+                  onStep={(n) =>
+                    setGibsPick((s) => {
+                      const from = s[l.key] ?? gibsLatest[l.key];
+                      if (!from) return s;
+                      const to = shiftTime(l, from, n);
+                      const latest = gibsLatest[l.key];
+                      if ((latest && to > latest) || (l.since && to < l.since)) return s;
+                      return { ...s, [l.key]: to };
+                    })
+                  }
+                />
+              ))}
+            </div>
+
             <details className="mt-2 text-2xs text-ink-faint">
               <summary className="cursor-pointer hover:text-ink">Optional data keys</summary>
               <p className="mt-1.5 leading-relaxed">
@@ -967,7 +1284,7 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
               onClick={onOpenAbout}
               className="pressable mt-3 border-t border-line pt-2.5 text-2xs text-ink-faint hover:text-ink"
             >
-              About Groma
+              About NC Recon
             </button>
           </div>
         </section>
@@ -1028,6 +1345,65 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
         />
       )}
 
+      {/* GOES-East loop strip, stacked above the radar strip when both are on */}
+      {gibsOn.goes && !gibsOffline && (
+        <div
+          className={`absolute left-1/2 z-20 w-[min(420px,calc(100%-1.5rem))] -translate-x-1/2 ${
+            radarOn ? "bottom-[8.5rem] md:bottom-[4.5rem]" : "bottom-20 md:bottom-4"
+          }`}
+        >
+          <div className="panel flex items-center gap-3 px-3 py-2">
+            <button
+              onClick={() => setGoesPlaying((p) => !p)}
+              disabled={goesReady.length < 2}
+              className="pressable grid h-7 w-7 shrink-0 place-items-center rounded-md bg-accent text-accent-ink disabled:opacity-45"
+              aria-label={goesPlaying ? "Pause GOES-East loop" : "Play GOES-East loop"}
+            >
+              {goesPlaying ? (
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden>
+                  <rect x="2" y="1.5" width="3" height="9" rx="0.6" />
+                  <rect x="7" y="1.5" width="3" height="9" rx="0.6" />
+                </svg>
+              ) : (
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden>
+                  <path d="M3 1.7v8.6a.6.6 0 0 0 .92.5l6.6-4.3a.6.6 0 0 0 0-1L3.92 1.2A.6.6 0 0 0 3 1.7Z" />
+                </svg>
+              )}
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={Math.max(0, (goes?.frames.length ?? 1) - 1)}
+              value={goesIdx}
+              disabled={!goes?.frames.length}
+              onChange={(e) => {
+                setGoesPlaying(false);
+                setGoesIdx(Number(e.target.value));
+              }}
+              aria-label="GOES-East image"
+              className="ba-range h-1 flex-1 cursor-pointer accent-accent"
+            />
+            <div className="tnum shrink-0 text-right text-2xs leading-tight text-ink-dim">
+              <div className="text-ink">GOES-East GeoColor</div>
+              {goes?.error ? (
+                <div className="text-ink-faint">{goes.error}</div>
+              ) : goes && goes.frames[goesShown] ? (
+                <div className="text-ink-faint">
+                  {utcHHMM(goes.frames[goesShown].at)} UTC · {agoLabel(goes.frames[goesShown].at)}
+                </div>
+              ) : (
+                <div className="text-ink-faint">Finding the newest images…</div>
+              )}
+              {goes && !goes.error && goesReady.length < goes.frames.length && (
+                <div className="text-ink-faint">
+                  Loading images {goesReady.length} of {goes.frames.length}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* selected feature */}
       {selected && (
         <FeatureCallout
@@ -1051,6 +1427,77 @@ export default function NCDashboard({ onOpenAssess, onOpenAbout }: Props) {
             </a>
           )}
         </FeatureCallout>
+      )}
+    </div>
+  );
+}
+
+/** Date (or half-hour) control for one NASA layer: its GIBS product name, the
+ * time shown, earlier / later steps, the date rule and the GIBS legend. */
+function GibsDateControl({
+  layer,
+  time,
+  latest,
+  onChange,
+  onStep,
+}: {
+  layer: GibsLayer;
+  time: string | null;
+  latest: string | null;
+  onChange: (t: string) => void;
+  onStep: (n: number) => void;
+}) {
+  const daily = layer.step === "P1D";
+  const unit = daily ? "day" : "half hour";
+  const atLatest = !time || !latest || time >= latest;
+  const atFirst = !time || (!!layer.since && time <= layer.since);
+  const step = "pressable grid h-5 w-5 shrink-0 place-items-center rounded-sm border border-line text-ink-dim hover:text-ink disabled:opacity-40";
+  return (
+    <div className="mt-2 rounded-md border border-line px-2 py-1.5">
+      <p className="text-2xs leading-snug text-ink">{layer.product}</p>
+      <div className="mt-1 flex items-center gap-1.5">
+        <button
+          className={step}
+          disabled={atFirst}
+          onClick={() => onStep(-1)}
+          aria-label={`${layer.label}: one ${unit} earlier`}
+        >
+          ‹
+        </button>
+        {daily ? (
+          <input
+            type="date"
+            value={time ?? ""}
+            min={layer.since}
+            max={latest ?? undefined}
+            disabled={!time}
+            onChange={(e) => e.target.value && onChange(e.target.value)}
+            aria-label={`${layer.label} date, UTC`}
+            className="tnum min-w-0 flex-1 rounded-sm border border-line bg-transparent px-1 text-2xs text-ink"
+          />
+        ) : (
+          <span className="tnum flex-1 text-center text-2xs text-ink">{timeLabel(layer, time)}</span>
+        )}
+        <button
+          className={step}
+          disabled={atLatest}
+          onClick={() => onStep(1)}
+          aria-label={`${layer.label}: one ${unit} later`}
+        >
+          ›
+        </button>
+        {daily && <span className="text-2xs text-ink-faint">UTC</span>}
+      </div>
+      <p className="mt-1 text-2xs leading-snug text-ink-faint">
+        {layer.rule[0].toUpperCase()}
+        {layer.rule.slice(1)}. {layer.source}.
+      </p>
+      {layer.legend && (
+        <img
+          src={layer.legend}
+          alt={`${layer.product} legend`}
+          className="mt-1.5 w-3/4 rounded-sm bg-white p-0.5"
+        />
       )}
     </div>
   );

@@ -6,7 +6,7 @@
   POST /ops/owner/chip           link holder: before / after image
   POST /ops/lookup               anyone: banded answer around an address or point (POST so a
                                  survivor's address never sits in a URL an access log keeps)
-  GET  /ops/index                anyone: the Groma Index, every area (disseminate/index.py)
+  GET  /ops/index                anyone: the NC Recon Index, every area (disseminate/index.py)
   GET  /ops/index/{area}         anyone: one area's preliminary damage summary
 
 TEST areas are refused everywhere here: their building calls stay unseen

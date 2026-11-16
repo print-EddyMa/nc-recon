@@ -3,365 +3,461 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Groma Disaster Assessment</title>
+<title>NC Recon Disaster Assessment</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Groma calls the damage to every building after a disaster from public imagery, lidar and field records. Explore the Swannanoa valley after Hurricane Helene in 3D.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%20role%3D%22img%22%20aria-label%3D%22Groma%22%3E%0A%20%20%0A%20%20%3C%21--%20the%20Roman%20surveyor%27s%20groma%3A%20staff%2C%20cross-arm%2C%20two%20plumb%20lines%2C%20the%20ground%20--%3E%0A%20%20%3Cg%20fill%3D%22none%22%20stroke%3D%22%231B2124%22%20stroke-linecap%3D%22round%22%3E%0A%20%20%20%20%3Cline%20x1%3D%2232%22%20y1%3D%229%22%20x2%3D%2232%22%20y2%3D%2255%22%20stroke-width%3D%223.2%22/%3E%0A%20%20%20%20%3Cline%20x1%3D%229%22%20y1%3D%2215%22%20x2%3D%2255%22%20y2%3D%2215%22%20stroke-width%3D%223.2%22/%3E%0A%20%20%20%20%3Cline%20x1%3D%2212%22%20y1%3D%2215%22%20x2%3D%2212%22%20y2%3D%2239%22%20stroke-width%3D%221.4%22/%3E%0A%20%20%20%20%3Cline%20x1%3D%2252%22%20y1%3D%2215%22%20x2%3D%2252%22%20y2%3D%2239%22%20stroke-width%3D%221.4%22/%3E%0A%20%20%20%20%3Cline%20x1%3D%226%22%20y1%3D%2256%22%20x2%3D%2258%22%20y2%3D%2256%22%20stroke-width%3D%223.2%22/%3E%0A%20%20%3C/g%3E%0A%20%20%3Cpath%20d%3D%22M12%2038.5%20l-3.6%203.4%203.6%206%203.6-6z%20M52%2038.5%20l-3.6%203.4%203.6%206%203.6-6z%22%20fill%3D%22%23B9853F%22/%3E%0A%20%20%3Ccircle%20cx%3D%2232%22%20cy%3D%229%22%20r%3D%222.6%22%20fill%3D%22%23B9853F%22/%3E%0A%3C/svg%3E%0A">
-<link rel="preload" as="image" href="assets/web/hero.webp" imagesrcset="assets/web/hero-960.webp 960w, assets/web/hero.webp 1920w" imagesizes="100vw">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<meta name="description" content="NC Recon reads public imagery after a disaster and calls the damage to every building, then shows roads likely cut, landing-zone candidates and search sectors. Free and open source. Explore the Swannanoa valley after Hurricane Helene in 3D.">
+<meta name="theme-color" content="#0B0B0B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%22-16%20-16%20132%20132%22%20role%3D%22img%22%20aria-label%3D%22NC%20Recon%22%3E%3Crect%20x%3D%22-16%22%20y%3D%22-16%22%20width%3D%22132%22%20height%3D%22132%22%20rx%3D%2228%22%20fill%3D%22%230B0B0B%22/%3E%3Crect%20x%3D%227%22%20y%3D%227%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22%23F5F3EE%22/%3E%3Crect%20x%3D%2236%22%20y%3D%227%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22%23F5F3EE%22/%3E%3Crect%20x%3D%2265%22%20y%3D%227%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22%23F5F3EE%22/%3E%3Crect%20x%3D%227%22%20y%3D%2236%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22%23F5F3EE%22/%3E%3Crect%20x%3D%2236%22%20y%3D%2236%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22%23F5F3EE%22/%3E%3Crect%20x%3D%2265%22%20y%3D%2236%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22%23F5F3EE%22/%3E%3Crect%20x%3D%227%22%20y%3D%2265%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22%23F5F3EE%22/%3E%3Crect%20x%3D%2236%22%20y%3D%2265%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22%23F5F3EE%22/%3E%3Crect%20x%3D%2269.2%22%20y%3D%2268.4%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22%23FF5A1F%22%20transform%3D%22rotate%2819%2081.2%2080.4%29%22/%3E%3C/svg%3E%0A">
+<link rel="preload" as="font" type="font/woff2" href="assets/web/fonts/archivo-latin-standard-normal.woff2" crossorigin>
 <style>
-/* Hallmark · macrostructure: product homepage (hero, statement, product list, live demo, proof, use, CTA blocks, link footer)
- * theme: custom (one sans family, light-first, monochrome; colour only in data) · Public Sans + IBM Plex Mono
- * references studied 2026-10-26: palantir.com, nvidia.com, about.meta.com (one family, short headlines, product rows, CTA blocks)
- * pre-emit critique: P5 H5 E4 S5 R5 V4 */
+/* Hallmark · macrostructure: Marquee Hero, cut like the launch film · tone: austere, technical · anchor hue: signal orange
+ * theme: custom, atmospheric · vibe: launch film, hard cuts, near-black, one orange tile
+ * paper #0B0B0B · ink #F5F3EE · signal #FF5A1F · Archivo expanded + Archivo + IBM Plex Mono
+ * axes: dark / expanded-grotesk / warm · nav: N5 floating bar, square · footer: Ft5 statement
+ * enrichment: hero tile wall (canvas, one tile per building), real CAP photograph, live WebGL terrain
+ * hex tokens are deliberate: the WebGL and canvas code reads them, and three.js does not parse oklch
+ * pre-emit critique: P5 H5 E4 S5 R4 V5 */
+@font-face { font-family: "Archivo"; src: url("assets/web/fonts/archivo-latin-standard-normal.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; font-style: normal; font-display: swap; }
+@font-face { font-family: "IBM Plex Mono"; src: url("assets/web/fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+
 :root {
-  --bg: #FFFFFF; --bg-2: #F4F4F2; --ink: #111111; --ink-2: #4A4A4A; --ink-3: #737373;
-  --line: #E6E6E3; --line-2: #CCCCC7; --btn: #111111; --on-btn: #FFFFFF;
-  --paper: #F1F0EB; --sheet: #FFFFFF; --contour: #8F6A44; --hydro: #1F5FA8; --hydro-ink: #FFFFFF;
-  --signal: #111111; --focus: #1F5FA8; --map-bg: #E8E7E2; --lz: #1F7A5A; --on-lz: #FFFFFF;
+  /* brand */
+  --black: #0B0B0B; --white: #F5F3EE; --signal: #FF5A1F;
+  /* surfaces, dark by default; .light flips them for one band */
+  --bg: #0B0B0B; --bg-2: #161615; --sheet: #111110; --ink: #F5F3EE; --ink-2: #BFBDB6; --ink-3: #94928B;
+  --line: #262624; --line-2: #3F3E3A; --btn: #F5F3EE; --on-btn: #0B0B0B; --tile: #191918;
+  /* map and data, hex because the WebGL and canvas code reads them */
+  --paper: #2A2A27; --contour: #A8A69E; --map-bg: #0B0B0B; --sector: #F5F3EE; --sector-ink: #0B0B0B; --ring: #F5F3EE;
+  --lz: #2FA67A; --on-lz: #0B0B0B;
   --d0: #98A09A; --d1: #E2B33A; --d2: #E1852C; --d3: #CC4A28; --d4: #9E1A2C; --dep: #D6802E; --scour: #3478C4;
-  --code-bg: #111111; --code-ink: #EDEDED; --code-dim: #8C8C8C;
-  --sans: "Public Sans", "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  --code-bg: #161615; --code-ink: #EDEBE4; --code-dim: #94928B;
+  /* type */
+  --sans: "Archivo", "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-  --measure: 80rem;
-  --ease: cubic-bezier(0.22, 1, 0.36, 1);
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0A0A0A; --bg-2: #151515; --ink: #F2F2F2; --ink-2: #B5B5B5; --ink-3: #8A8A8A;
-    --line: #262626; --line-2: #3A3A3A; --btn: #F2F2F2; --on-btn: #0A0A0A;
-    --paper: #1B1B19; --sheet: #111111; --contour: #B98A5A; --hydro: #6EA8E0; --hydro-ink: #0A1420;
-    --signal: #F2F2F2; --focus: #6EA8E0; --map-bg: #121211; --code-bg: #000000;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #0A0A0A; --bg-2: #151515; --ink: #F2F2F2; --ink-2: #B5B5B5; --ink-3: #8A8A8A;
-  --line: #262626; --line-2: #3A3A3A; --btn: #F2F2F2; --on-btn: #0A0A0A;
-  --paper: #1B1B19; --sheet: #111111; --contour: #B98A5A; --hydro: #6EA8E0; --hydro-ink: #0A1420;
-  --signal: #F2F2F2; --focus: #6EA8E0; --map-bg: #121211; --code-bg: #000000;
+  --wide: 104%; --heavy: 720;
+  /* space and motion */
+  --measure: 100rem; --gutter: clamp(1.25rem, 4vw, 3.5rem); --nav-h: 4.75rem; --band: clamp(4.5rem, 10vw, 9rem);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); --dur-micro: 120ms; --dur-long: 420ms;
+  --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M1 8h12.5M8.5 3 13.5 8l-5 5' fill='none' stroke='%23000' stroke-width='2'/%3E%3C/svg%3E");
   color-scheme: dark;
+}
+@media (min-width: 40rem) { :root { --wide: 116%; } }
+.light {
+  --bg: #F5F3EE; --bg-2: #EAE7DF; --sheet: #FBFAF6; --ink: #0B0B0B; --ink-2: #45443F; --ink-3: #66645E;
+  --line: #D9D6CD; --line-2: #B4B0A5; --btn: #0B0B0B; --on-btn: #F5F3EE;
+  background: var(--bg); color: var(--ink);
 }
 
 * { box-sizing: border-box; }
 html, body { overflow-x: clip; }
-html { scroll-behavior: smooth; scroll-padding-top: 72px; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 400 1rem/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
+html { scroll-padding-top: var(--nav-h); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 1.0625rem/1.5 var(--sans); font-stretch: 100%; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 a { color: inherit; text-underline-offset: 3px; text-decoration-thickness: 1px; }
-:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.btn:focus-visible, .tabs button:focus-visible, .menu summary:focus-visible { outline-color: var(--ink); }   /* a filled control's label is the band's colour */
 img { max-width: 100%; }
-.wrap { max-width: var(--measure); margin: 0 auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
-h1, h2, h3 { font-weight: 500; font-style: normal; margin: 0; letter-spacing: -0.02em; text-wrap: balance; overflow-wrap: anywhere; min-width: 0; }
+.wrap { width: 100%; max-width: var(--measure); margin-inline: auto; padding-left: max(var(--gutter), env(safe-area-inset-left, 0px)); padding-right: max(var(--gutter), env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-weight: var(--heavy); font-stretch: var(--wide); font-style: normal; margin: 0; letter-spacing: -0.02em; text-wrap: balance; overflow-wrap: anywhere; min-width: 0; }
+h1 { font-size: clamp(2.5rem, 7.6vw, 7.75rem); line-height: 0.98; letter-spacing: -0.03em; }
+h2 { font-size: clamp(2.2rem, 6.4vw, 6rem); line-height: 1; letter-spacing: -0.028em; }
 p { margin: 0; max-width: 62ch; }
-.cap { font: 400 0.8125rem/1.4 var(--sans); color: var(--ink-3); }
+.cap { font-size: 0.875rem; line-height: 1.45; color: var(--ink-3); }
 .mono { font-family: var(--mono); }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.arr { display: inline-block; flex: none; width: 1em; height: 1em; vertical-align: -0.12em; background: currentColor; -webkit-mask: var(--arrow) center / contain no-repeat; mask: var(--arrow) center / contain no-repeat; }
+.arr.out { transform: rotate(-45deg); }
+.arr.up { transform: rotate(-90deg); }
 
-/* buttons */
-.btn { display: inline-flex; align-items: center; gap: 0.45rem; min-height: 2.75rem; padding: 0 1.25rem; border-radius: 999px; border: 1px solid var(--btn); background: var(--btn); color: var(--on-btn); font: 500 0.9375rem/1 var(--sans); text-decoration: none; white-space: nowrap; cursor: pointer; transition: opacity 150ms var(--ease), background-color 150ms var(--ease), color 150ms var(--ease); }
-.btn:hover { opacity: 0.86; }
+/* buttons: square, like the tiles */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 3rem; padding: 0 1.4rem; border: 1px solid var(--btn); background: var(--btn); color: var(--on-btn); font: 600 1rem/1 var(--sans); text-decoration: none; white-space: nowrap; cursor: pointer; }
 .btn:active { transform: translateY(1px); }
 .btn.ghost { background: transparent; color: var(--ink); border-color: var(--line-2); }
-.btn.ghost:hover { opacity: 1; border-color: var(--ink); }
-.btn.small { min-height: 2.25rem; padding: 0 1rem; font-size: 0.875rem; }
-.btn.primary { background: var(--btn); color: var(--on-btn); border-color: var(--btn); }
+.btn.signal { background: var(--signal); border-color: var(--signal); color: var(--black); }
+.btn.small { min-height: 2.5rem; padding: 0 0.9rem; font-size: 0.9rem; }
+@media (hover: hover) {
+  .btn:hover { background: transparent; color: var(--ink); }
+  .btn.ghost:hover { background: var(--btn); color: var(--on-btn); border-color: var(--btn); }
+  .btn.signal:hover { background: var(--white); border-color: var(--white); color: var(--black); }
+}
 
-/* top bar */
-.top { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); -webkit-backdrop-filter: saturate(1.4) blur(12px); backdrop-filter: saturate(1.4) blur(12px); border-bottom: 1px solid var(--line); }
-.top .wrap { display: flex; align-items: center; gap: 2rem; height: 64px; }
-.brand { display: flex; align-items: center; gap: 0.55rem; color: var(--ink); text-decoration: none; }
-.brand svg { width: 26px; height: 26px; flex: none; --bronze: #A8743E; }
-.brand b { font-weight: 600; font-size: 1.2rem; letter-spacing: -0.01em; }
-.top nav { display: flex; gap: 1.75rem; }
-.top nav a { color: var(--ink-2); text-decoration: none; font-size: 0.9375rem; white-space: nowrap; }
-.top nav a:hover { color: var(--ink); }
-.top .right { margin-left: auto; display: flex; align-items: center; gap: 1.25rem; }
-.top .right > a:not(.btn) { color: var(--ink-2); text-decoration: none; font-size: 0.9375rem; white-space: nowrap; }
-@media (max-width: 860px) { .top nav, .top .right > a:not(.btn) { display: none; } }
+/* top bar: one floating bar, square */
+.top { position: fixed; z-index: 30; top: 0.625rem; left: max(0.625rem, env(safe-area-inset-left, 0px)); right: max(0.625rem, env(safe-area-inset-right, 0px)); display: flex; align-items: center; gap: 1.75rem; height: 3.25rem; padding: 0 0.375rem 0 0.75rem; background: color-mix(in srgb, var(--black) 94%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid var(--line-2); color: var(--white); }
+.brand { display: inline-flex; align-items: center; gap: 0.55rem; color: inherit; text-decoration: none; white-space: nowrap; }
+.brand svg { width: 1.5rem; height: 1.5rem; flex: none; }
+.brand b { font-weight: 720; font-stretch: 112%; font-size: 1.0625rem; letter-spacing: -0.01em; }
+.top > nav { display: none; gap: 1.5rem; }
+.top a.lk { color: var(--ink-2); text-decoration: none; font-size: 0.9375rem; white-space: nowrap; }
+.top a.lk:hover { color: var(--ink); }
+.top .right { margin-left: auto; display: flex; align-items: center; gap: 0.375rem; }
+.top .right .lk { display: none; margin-right: 1rem; }
+.top .btn.small { min-height: 2.5rem; }
+.top .right > .btn.small { display: none; }
+@media (min-width: 22.5rem) { .top .right > .btn.small { display: inline-flex; } }
+.menu summary { display: flex; align-items: center; min-height: 2.5rem; padding: 0 0.7rem; list-style: none; cursor: pointer; font-weight: 600; font-size: 0.9rem; border: 1px solid var(--line-2); }
+.menu summary::-webkit-details-marker { display: none; }
+.menu[open] summary { background: var(--white); color: var(--black); border-color: var(--white); }
+.menu nav { position: absolute; right: 0; top: calc(100% + 0.625rem); width: min(16rem, calc(100vw - 2.5rem)); display: grid; background: var(--black); border: 1px solid var(--line-2); padding: 0.375rem; }
+.menu nav a { display: flex; align-items: center; min-height: 2.75rem; padding: 0 0.75rem; text-decoration: none; }
+.menu nav a:hover { background: var(--white); color: var(--black); }
+@media (min-width: 62rem) {
+  .top > nav { display: flex; }
+  .top .right .lk { display: inline; }
+  .menu { display: none; }
+}
 
-/* hero: one photograph, one line, two buttons */
-.hero { position: relative; height: clamp(560px, 84vh, 900px); overflow: hidden; color: #FFFFFF; background: #1A1A1A; }
-.hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 55%; }
-.hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.62) 100%), linear-gradient(90deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 55%); }
-.hero .wrap { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: clamp(2.5rem, 6vw, 4.5rem); }
-h1 { font-size: clamp(2.75rem, 6.6vw, 5.75rem); line-height: 1; letter-spacing: -0.035em; max-width: 13ch; }
-.hero p { margin-top: 1.25rem; font-size: clamp(1.05rem, 1.4vw, 1.25rem); color: rgba(255,255,255,0.86); max-width: 40ch; }
-.hero .ctas { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 2rem; }
-.hero .btn { background: #FFFFFF; color: #111111; border-color: #FFFFFF; }
-.hero .btn.ghost { background: transparent; color: #FFFFFF; border-color: rgba(255,255,255,0.6); }
-.hero .btn.ghost:hover { border-color: #FFFFFF; }
-.hero .credit { position: absolute; right: max(20px, env(safe-area-inset-right, 0px)); bottom: 1rem; z-index: 1; font-size: 0.75rem; color: rgba(255,255,255,0.7); max-width: 22rem; text-align: right; }
-@media (max-width: 700px) { .hero .credit { position: static; text-align: left; margin-top: 1.5rem; } }
+/* hero: one tile per building, set on the wall behind the line */
+.hero { position: relative; isolation: isolate; display: flex; min-height: clamp(40rem, 100svh, 62rem); background: var(--bg); overflow: clip; }
+#tiles { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; display: block; }
+.hero-in { display: flex; flex-direction: column; justify-content: space-between; gap: 2.5rem; padding-top: calc(var(--nav-h) + clamp(1.25rem, 5vh, 3.5rem)); padding-bottom: 5.5rem; }
+.hero h1 { max-width: 15ch; }
+.hero h1, .hero .sub, .hero .run, .hero .cap { mix-blend-mode: difference; }   /* the words hold up while the ring passes under them */
+.hero-foot { display: grid; gap: 1.5rem; }
+.hero .sub { font-size: clamp(1.125rem, 1.6vw, 1.375rem); line-height: 1.38; max-width: 40ch; }
+.ctas { display: flex; flex-wrap: wrap; gap: 0.625rem; }
+.run { display: flex; gap: clamp(1.5rem, 4vw, 3rem); margin: 0; }
+.run dt { font-size: 0.8125rem; color: var(--ink-3); }
+.run dd { margin: 0; font-family: var(--mono); font-size: clamp(1.5rem, 2.6vw, 2.25rem); line-height: 1.15; font-variant-numeric: tabular-nums; }
+.hero .cap { max-width: 46ch; color: var(--ink-2); }
+.odd { position: absolute; z-index: 1; width: 2.75rem; height: 2.75rem; transform: translate(-50%, -50%); color: var(--ink); text-decoration: none; }
+.odd[hidden] { display: none; }
+.odd span { position: absolute; right: 100%; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 0.4rem; margin-right: 0.15rem; padding: 0.2rem 0.45rem; background: var(--bg); font: 500 0.75rem/1.3 var(--mono); white-space: nowrap; }
+.odd:hover span { background: var(--white); color: var(--black); }
+@media (min-width: 60rem) {
+  .hero-in { padding-bottom: clamp(2rem, 5vh, 3.5rem); }
+  .hero-foot { grid-template-columns: minmax(0, 34rem) minmax(0, 26rem); align-items: end; gap: 1.5rem clamp(3rem, 6vw, 6rem); }
+}
 
-/* sections */
-section.band > .wrap { padding-block: clamp(4.5rem, 9vw, 8rem); }
-.band.alt { background: var(--bg-2); }
-.head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 28rem); gap: 1rem 4rem; align-items: end; }
-@media (max-width: 880px) { .head { grid-template-columns: minmax(0, 1fr); } }
-h2 { font-size: clamp(2rem, 4vw, 3.25rem); line-height: 1.05; letter-spacing: -0.03em; }
-.lede { color: var(--ink-2); font-size: 1.0625rem; }
+/* stakes: the photograph, then the words */
+.stakes { background: var(--black); color: var(--white); --ink: #F5F3EE; --ink-3: #C9C7C0; }
+.stakes > img { display: block; width: 100%; height: clamp(18rem, 48vw, 36rem); object-fit: cover; object-position: 50% 55%; filter: grayscale(1) contrast(1.1) brightness(0.62); }
+.stakes-in { display: grid; gap: 2.5rem clamp(2rem, 6vw, 6rem); padding-block: clamp(2.5rem, 6vw, 5rem); }
+.say { display: grid; gap: 1.25rem; align-content: start; }
+.say p.big { font-weight: 640; font-stretch: var(--wide); font-size: clamp(1.625rem, 3vw, 3rem); line-height: 1.06; letter-spacing: -0.024em; max-width: 24ch; }
+.say .cap { max-width: 56ch; font-size: 0.9375rem; }
+@media (min-width: 60rem) { .stakes-in { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.say .after { max-width: 44ch; font-size: clamp(1.125rem, 1.6vw, 1.375rem); line-height: 1.38; color: var(--ink); }
 
-/* statement */
-.statement p { font-size: clamp(1.75rem, 3.4vw, 2.9rem); line-height: 1.16; letter-spacing: -0.025em; max-width: 30ch; color: var(--ink); }
-.statement p span { color: var(--ink-3); }
-.statement .cap { margin-top: 1.5rem; font-size: 0.875rem; }
+/* the cut: three facts, side by side */
+.cuts { background: var(--black); }
+.cuts-in { display: grid; grid-template-columns: minmax(0, 1fr); }
+.cut { display: flex; align-items: flex-end; min-width: 0; padding: clamp(2.5rem, 5vw, 4.5rem) clamp(1.25rem, 3vw, 3rem); background: var(--bg); color: var(--ink); }
+.cut.o { background: var(--signal); color: var(--black); }
+.cut-fig { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1em 0.2em; margin: 0; max-width: none; font-weight: var(--heavy); font-stretch: 112%; letter-spacing: -0.04em; }
+.cut-fig b { font-weight: inherit; font-size: clamp(4rem, 9.5vw, 9.5rem); line-height: 0.9; }
+.cut-fig span { font-size: clamp(1.25rem, 2.2vw, 2.25rem); line-height: 1; letter-spacing: -0.02em; }
+.cuts .cap { margin: 0; padding-block: 1.25rem; max-width: none; font-size: 1rem; color: var(--ink-2); background: var(--bg); }
+@media (min-width: 48rem) { .cuts-in { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
-/* products: names in a list, one line each */
-.products { list-style: none; margin: 2.5rem 0 0; padding: 0; border-top: 1px solid var(--line); }
-.products a { display: grid; grid-template-columns: minmax(0, 18rem) minmax(0, 1fr) auto; gap: 0.5rem 2.5rem; align-items: center; padding: 1.6rem 0.25rem; border-bottom: 1px solid var(--line); color: var(--ink); text-decoration: none; transition: background-color 150ms var(--ease); }
-.products a:hover { background: var(--bg-2); }
-.products .name { font-size: clamp(2rem, 4vw, 3.25rem); line-height: 1; letter-spacing: -0.035em; }
-.products .desc { color: var(--ink-2); font-size: 1.0625rem; max-width: 52ch; }
-.products .meta { display: flex; align-items: center; gap: 0.75rem; color: var(--ink-3); font-size: 0.8125rem; white-space: nowrap; }
-.products .arr { opacity: 0; transform: translateX(-4px); transition: opacity 150ms var(--ease), transform 150ms var(--ease); color: var(--ink); }
-.products a:hover .arr { opacity: 1; transform: none; }
-.tag { border: 1px solid var(--line-2); border-radius: 999px; padding: 0.15rem 0.55rem; font-size: 0.75rem; color: var(--ink-2); }
-@media (max-width: 760px) { .products a { grid-template-columns: minmax(0, 1fr) auto; } .products .desc { grid-column: 1 / -1; } }
+/* bands */
+section.band > .wrap { padding-block: var(--band); }
+.head { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem 3rem; }
+.lede { color: var(--ink-2); font-size: clamp(1.0625rem, 1.4vw, 1.25rem); line-height: 1.42; }
+@media (min-width: 60rem) {
+  .head { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .head h2 { grid-column: 1 / -1; }
+  .head .lede { grid-column: 2; }
+}
 
 /* the live valley */
-.explorer > .wrap { padding-block: clamp(4.5rem, 9vw, 8rem) 2rem; }
-.quad { border-block: 1px solid var(--line); background: var(--map-bg); display: grid; grid-template-columns: minmax(0, 1fr) 19rem; }
-@media (max-width: 960px) { .quad { grid-template-columns: minmax(0, 1fr); } }
-.stage { position: relative; height: clamp(440px, 74vh, 760px); min-width: 0; overflow: hidden; background: var(--map-bg); }
+.explorer { background: var(--bg); }
+.explorer > .wrap { padding-block: var(--band) 2.5rem; }
+.quad { display: grid; grid-template-columns: minmax(0, 1fr); border-block: 1px solid var(--line); background: var(--map-bg); }
+.stage { position: relative; height: clamp(26rem, 78svh, 56rem); min-width: 0; overflow: hidden; background: var(--map-bg); }
 .stage canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: pan-y; }
 .stage.live canvas { touch-action: none; cursor: grab; }
 .stage.live canvas:active { cursor: grabbing; }
-.poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity 600ms var(--ease); }
+.poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity var(--dur-long) var(--ease-out); }
 .stage.ready .poster { opacity: 0; pointer-events: none; }
-.hud { position: absolute; font: 400 0.75rem/1.4 var(--mono); color: var(--ink); background: color-mix(in srgb, var(--sheet) 90%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border: 1px solid var(--line); border-radius: 10px; padding: 0.5rem 0.7rem; pointer-events: none; }
-.hud.read { left: 1rem; bottom: 1rem; max-width: calc(100% - 10rem); }
+.hud { position: absolute; font: 500 0.75rem/1.4 var(--mono); color: var(--ink); background: color-mix(in srgb, var(--sheet) 88%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border: 1px solid var(--line-2); padding: 0.5rem 0.7rem; pointer-events: none; }
+.hud.read { left: 0.75rem; bottom: 0.75rem; max-width: calc(100% - 1.5rem); }
 .hud.read b { font-weight: 500; }
-.hud.scale { right: 1rem; bottom: 1rem; display: flex; flex-direction: column; gap: 0.25rem; align-items: flex-end; }
+.hud.scale { right: 0.75rem; top: 4rem; display: flex; flex-direction: column; gap: 0.25rem; align-items: flex-end; }
 .hud.scale i { display: block; height: 6px; border: 1px solid var(--ink); border-top: 0; }
-@media (max-width: 600px) { .hud.scale { bottom: auto; top: 4rem; } .hud.read { max-width: calc(100% - 2rem); } }
-.explore { position: absolute; top: 1rem; left: 1rem; display: flex; gap: 0.45rem; flex-wrap: wrap; z-index: 2; }
-.explore .btn { background: color-mix(in srgb, var(--sheet) 92%, transparent); color: var(--ink); border-color: var(--line); }
+.explore { position: absolute; top: 0.75rem; left: 0.75rem; display: flex; gap: 0.375rem; flex-wrap: wrap; z-index: 2; }
+.explore .btn { background: color-mix(in srgb, var(--sheet) 90%, transparent); color: var(--ink); border-color: var(--line-2); }
 .explore .btn.primary { background: var(--btn); color: var(--on-btn); border-color: var(--btn); }
-.cover { position: absolute; inset: 0; display: grid; place-items: center; background: transparent; border: 0; cursor: pointer; padding: 0; z-index: 1; }
-.cover span { font: 500 0.9375rem/1.3 var(--sans); color: var(--on-btn); background: var(--btn); border-radius: 999px; padding: 0.75rem 1.25rem; max-width: 80%; text-align: center; }
+@media (hover: hover) {
+  .explore .btn:hover { background: var(--btn); color: var(--on-btn); border-color: var(--btn); }
+  .explore .btn.primary:hover { background: transparent; color: var(--ink); }
+}
+.cover { position: absolute; inset: 0; display: grid; place-items: center; background: transparent; border: 0; cursor: pointer; padding: 0; z-index: 1; color: inherit; }
+.cover span { font: 600 1rem/1.3 var(--sans); color: var(--on-btn); background: var(--btn); padding: 0.8rem 1.25rem; max-width: 80%; text-align: center; }
 @media (hover: none) { .cover { display: none; } }
 .stage.live .cover { display: none; }
-.nogl { position: absolute; left: 1rem; top: 4rem; right: 1rem; font-size: 0.875rem; background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; padding: 0.55rem 0.8rem; }
-.legend { background: var(--sheet); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-width: 0; margin: 0; }
-@media (max-width: 960px) { .legend { border-left: 0; border-top: 1px solid var(--line); } }
+.nogl { position: absolute; left: 0.75rem; top: 4rem; right: 0.75rem; max-width: none; font-size: 0.875rem; background: var(--sheet); border: 1px solid var(--line-2); padding: 0.55rem 0.8rem; }
+.legend { background: var(--sheet); border-top: 1px solid var(--line); display: flex; flex-direction: column; min-width: 0; margin: 0; }
 .legend fieldset { border: 0; border-top: 1px solid var(--line); margin: 0; padding: 1rem 1.15rem; display: grid; gap: 0.5rem; min-width: 0; }
 .legend fieldset:first-of-type { border-top: 0; }
 .legend legend { padding: 0; float: left; width: 100%; margin-bottom: 0.45rem; }
-.opt { display: grid; grid-template-columns: 1.1rem 1.6rem minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; font-size: 0.9rem; cursor: pointer; }
+.opt { display: grid; grid-template-columns: 1.1rem 1.6rem minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; min-height: 1.75rem; font-size: 0.9375rem; cursor: pointer; }
 .opt input { margin: 0; accent-color: var(--ink); width: 1rem; height: 1rem; }
-.opt .n { font: 400 0.75rem/1 var(--mono); color: var(--ink-3); font-variant-numeric: tabular-nums; }
-.sw { width: 1.6rem; height: 0.8rem; border-radius: 2px; }
+.opt .n { font: 500 0.75rem/1 var(--mono); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.sw { width: 1.6rem; height: 0.8rem; }
 .sw.heat { background: linear-gradient(90deg, var(--d1), var(--d2), var(--d3), var(--d4)); }
 .sw.ground { background: linear-gradient(90deg, var(--scour) 0 50%, var(--dep) 50% 100%); }
 .sw.road { background: linear-gradient(var(--d4), var(--d4)) center / 100% 3px no-repeat; }
 .sw.lz { background: radial-gradient(circle, var(--lz) 0 3px, transparent 4px); }
-.sw.sector { border: 2px solid var(--hydro); }
-.sw.img { background: linear-gradient(135deg, var(--contour), var(--lz)); opacity: 0.75; }
+.sw.sector { border: 2px solid var(--sector); }
+.sw.img { background: linear-gradient(135deg, var(--contour), var(--bg-2)); }
 .sw.relief { background: repeating-linear-gradient(0deg, var(--paper) 0 3px, var(--contour) 3px 4px); }
-.facts { margin: auto 0 0; padding: 1rem 1.15rem 0.7rem; border-top: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem 0.8rem; font-size: 0.85rem; }
+.facts { margin: auto 0 0; padding: 1rem 1.15rem 0.7rem; border-top: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem 0.8rem; font-size: 0.875rem; }
 .facts dt { color: var(--ink-2); }
-.facts dd { margin: 0; font: 500 0.85rem/1.5 var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
-.src { padding: 0 1.15rem 1.15rem; font-size: 0.75rem; color: var(--ink-3); line-height: 1.5; }
+.facts dd { margin: 0; font: 500 0.875rem/1.5 var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+.src { padding: 0 1.15rem 1.15rem; font-size: 0.8125rem; color: var(--ink-3); line-height: 1.45; }
+@media (min-width: 60rem) {
+  .quad { grid-template-columns: minmax(0, 1fr) 21rem; }
+  .legend { border-top: 0; border-left: 1px solid var(--line); }
+  .hud.scale { top: auto; bottom: 0.75rem; }
+  .hud.read { max-width: calc(100% - 10rem); }
+}
+
+/* products: the words are the list */
+.ck-verdict { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1.25rem; margin-top: clamp(2rem, 4vw, 3rem); }
+.ck-verdict b { font-weight: var(--heavy); font-stretch: var(--wide); font-size: clamp(1.75rem, 3.6vw, 3rem); letter-spacing: -0.02em; }
+.ck-verdict span { color: var(--ink-2); }
+.ck { width: 100%; border-collapse: collapse; margin-top: 1.25rem; font-size: 0.9375rem; }
+.ck th { text-align: left; font-weight: 600; color: var(--ink-3); font-size: 0.8125rem; padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid var(--line-2); }
+.ck td { padding: 0.75rem 0.75rem 0.75rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.ck td:first-child { font-weight: 600; width: 34%; }
+.ck td:last-child { white-space: nowrap; font-family: var(--mono); font-size: 0.8125rem; }
+.ck .ok::before, .ck .warn::before { content: ""; display: inline-block; width: 0.55em; height: 0.55em; margin-right: 0.45em; border-radius: 50%; vertical-align: 0.05em; }
+.ck .ok::before { background: #2E7D4E; } .ck .warn::before { background: #B07800; }
+.ck-note { margin-top: 1.25rem; max-width: 64ch; color: var(--ink-2); }
+@media (max-width: 40rem) { .ck td:first-child { width: auto; } .ck thead { display: none; } .ck tr { display: grid; grid-template-columns: 1fr auto; padding: 0.5rem 0; border-bottom: 1px solid var(--line); } .ck td { border: 0; padding: 0.125rem 0; } .ck td:nth-child(2) { grid-column: 1 / -1; grid-row: 2; color: var(--ink-2); } }
+.products { list-style: none; margin: clamp(2.5rem, 5vw, 4rem) 0 0; padding: 0; border-top: 1px solid var(--line-2); }
+.products a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem 1.5rem; align-items: center; padding: 1.25rem 0.5rem; border-bottom: 1px solid var(--line-2); color: var(--ink); text-decoration: none; }
+.products .name { font-weight: var(--heavy); font-stretch: var(--wide); font-size: clamp(2.5rem, 7.4vw, 6.75rem); line-height: 1; letter-spacing: -0.03em; }
+.products .desc { grid-column: 1 / -1; grid-row: 2; color: var(--ink-2); max-width: 54ch; }
+.products .meta { display: flex; align-items: center; gap: 0.75rem; white-space: nowrap; font-size: clamp(1.25rem, 2.4vw, 2rem); }
+.tag { border: 1px solid currentColor; padding: 0.15rem 0.45rem; font: 500 0.75rem/1.2 var(--mono); }
+@media (hover: hover) {
+  .products a:hover { background: var(--ink); color: var(--bg); }
+  .products a:hover .desc { color: inherit; }
+}
+@media (min-width: 60rem) {
+  .products a { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) 7rem; padding-block: 1.4rem; }
+  .products .desc { grid-column: 2; grid-row: 1; }
+  .products .meta { justify-content: flex-end; }
+}
 
 /* how one building gets its call */
-.anat { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2rem clamp(2rem, 5vw, 5rem); margin-top: 3rem; }
-@media (max-width: 880px) { .anat { grid-template-columns: minmax(0, 1fr); } }
-.stackwrap { position: sticky; top: 5rem; height: min(70vh, 560px); display: grid; place-items: center; perspective: 1500px; }
-@media (max-width: 880px) { .stackwrap { top: 64px; height: 300px; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); } }
-.stack { position: relative; width: 280px; height: 280px; transform-style: preserve-3d; transform: rotateX(56deg) rotateZ(-36deg) translateZ(-60px); }
-@media (max-width: 880px) { .stack { width: 150px; height: 150px; transform: rotateX(56deg) rotateZ(-36deg) translateZ(-40px); } }
-.plate { position: absolute; inset: 0; transform-style: preserve-3d; transform: translateZ(calc(var(--i) * var(--gap, 34px))); transition: transform 600ms var(--ease), opacity 450ms var(--ease); }
-.plate.ahead { opacity: 0; transform: translateZ(calc(var(--i) * var(--gap, 34px) + 120px)); }
-.plate .face { transition: filter 400ms var(--ease); }
-.plate:not(.on) .face { filter: saturate(0.2) brightness(0.75); }
-@media (max-width: 880px) { .plate { --gap: 20px; } }
+.anat { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem clamp(2rem, 5vw, 5rem); margin-top: 3rem; }
+.stackwrap { height: 18.75rem; display: grid; place-items: center; perspective: 1500px; background: var(--bg); border-bottom: 1px solid var(--line); }
+.stack { position: relative; width: 150px; height: 150px; transform-style: preserve-3d; transform: rotateX(56deg) rotateZ(-36deg) translateZ(-40px); }
+.plate { --gap: 20px; position: absolute; inset: 0; transform-style: preserve-3d; transform: translateZ(calc(var(--i) * var(--gap))); transition: transform var(--dur-long) var(--ease-out), opacity var(--dur-long) var(--ease-out); }
+.plate .face { transition: filter var(--dur-long) var(--ease-out); }
+.plate:not(.on) .face { filter: saturate(0.2) brightness(0.72); }
 .plate.on .face { box-shadow: 0 0 0 2px var(--ink); }
-.stack[data-step="5"] .plate, .stack[data-step="6"] .plate { --gap: 44px; }
-@media (max-width: 880px) { .stack[data-step="5"] .plate, .stack[data-step="6"] .plate { --gap: 26px; } }
-.face { position: absolute; inset: 0; background: var(--sheet); border: 1px solid var(--line-2); overflow: hidden; }
+.stack[data-step="5"] .plate, .stack[data-step="6"] .plate { --gap: 26px; }
+.face { position: absolute; inset: 0; background: var(--bg-2); border: 1px solid var(--line-2); overflow: hidden; }
 .face img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .face svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.face.card { padding: 10px; display: flex; flex-direction: column; gap: 5px; font: 400 9px/1.25 var(--mono); color: var(--ink-2); }
-.face.card b { font: 600 13px/1 var(--sans); color: var(--ink); }
+.face.card { padding: 10px; display: flex; flex-direction: column; gap: 5px; font: 500 9px/1.25 var(--mono); color: var(--ink-2); }
+.face.card b { font: 700 13px/1 var(--sans); color: var(--ink); }
 .bars { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; align-items: end; height: 46px; }
 .bars i { display: block; min-height: 2px; }
 .bars-l { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; font-size: 7px; color: var(--ink-3); text-align: center; }
-.plate .tag { position: absolute; left: 100%; top: 0; margin-left: 12px; white-space: nowrap; border: 0; padding: 0; font: 400 11px/1 var(--sans); color: var(--ink-2); }
-@media (max-width: 880px) { .plate .tag { display: none; } }
+.plate .tag { display: none; position: absolute; left: 100%; top: 0; margin-left: 12px; white-space: nowrap; border: 0; padding: 0; font: 500 11px/1 var(--mono); color: var(--ink-2); }
 .steps { list-style: none; margin: 0; padding: 0; display: grid; counter-reset: s; }
-.steps li { min-height: 26vh; display: grid; align-content: center; gap: 0.5rem; padding-block: 1.4rem; border-top: 1px solid var(--line); counter-increment: s; }
-@media (max-width: 880px) { .steps li { min-height: 0; padding-block: 1.4rem; } }
-.steps li::before { content: counter(s) " / 6"; font: 400 0.8125rem/1 var(--mono); color: var(--ink-3); }
-.steps h3 { font-size: clamp(1.4rem, 2.2vw, 1.75rem); line-height: 1.1; letter-spacing: -0.02em; }
+.steps li { display: grid; align-content: center; gap: 0.5rem; padding-block: 1.4rem; border-top: 1px solid var(--line); counter-increment: s; cursor: pointer; }
+.steps li.on { border-top-color: var(--ink); }
+.steps li:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.steps li::before { content: counter(s) " / 6"; font: 500 0.8125rem/1 var(--mono); color: var(--ink-3); }
+.steps h3 { font-size: clamp(1.5rem, 2.4vw, 2rem); line-height: 1.08; letter-spacing: -0.02em; }
 .steps p { color: var(--ink-2); }
+.steps b { color: var(--ink); font-weight: 600; }
+@media (min-width: 60rem) {
+  .anat { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .stackwrap { height: 35rem; border-bottom: 0; }
+  .stack { width: 280px; height: 280px; transform: rotateX(56deg) rotateZ(-36deg) translateZ(-60px); }
+  .plate { --gap: 34px; }
+  .stack[data-step="5"] .plate, .stack[data-step="6"] .plate { --gap: 44px; }
+  .plate .tag { display: block; }
+}
+
+/* who it's for: tiles of uneven width, each one a mail link */
+.who { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; margin-top: clamp(2.5rem, 5vw, 4rem); background: var(--line-2); border: 1px solid var(--line-2); }
+.who a { display: flex; flex-direction: column; gap: 0.75rem; min-height: 15rem; padding: 1.5rem; background: var(--bg); color: var(--ink); text-decoration: none; min-width: 0; }
+.who b { font-weight: var(--heavy); font-stretch: var(--wide); font-size: clamp(1.5rem, 2.3vw, 2.125rem); letter-spacing: -0.02em; line-height: 1.08; }
+.who span.t { color: var(--ink-2); flex: 1; max-width: 48ch; }
+.who i { display: inline-flex; align-items: center; gap: 0.4rem; font-style: normal; font-weight: 600; white-space: nowrap; }
+@media (hover: hover) {
+  .who a:hover { background: var(--ink); color: var(--bg); }
+  .who a:hover span.t { color: inherit; }
+}
+@media (min-width: 40rem) { .who { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 72rem) {
+  .who { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .who a:nth-child(1), .who a:nth-child(6) { grid-column: span 2; }
+  .who a { min-height: 19rem; }
+}
 
 /* proof */
-.proof .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3rem clamp(2rem, 6vw, 6rem); margin-top: 3rem; }
-@media (max-width: 880px) { .proof .grid { grid-template-columns: minmax(0, 1fr); } }
-.fig { border-top: 1px solid var(--ink); padding-top: 1.25rem; display: grid; gap: 0.75rem; align-content: start; }
-.fig .num { font-size: clamp(4.5rem, 10vw, 8rem); line-height: 0.85; letter-spacing: -0.05em; font-weight: 500; font-variant-numeric: tabular-nums; }
-.fig .num small { font-size: 0.45em; letter-spacing: -0.02em; color: var(--ink-3); }
-.fig h3 { font-size: 1.375rem; letter-spacing: -0.015em; }
-.fig p { color: var(--ink-2); }
-.fig .cap { border-top: 1px solid var(--line); padding-top: 0.75rem; max-width: none; }
+.figs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 3.5rem; margin-top: clamp(2.5rem, 5vw, 4rem); }
+.fig { border-top: 2px solid var(--ink); padding-top: 1.25rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem clamp(2rem, 5vw, 5rem); align-content: start; min-width: 0; }
+.fig-t { display: grid; gap: 1rem; align-content: start; min-width: 0; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 1.25rem 2rem; }
+.num { margin: 0; font-weight: var(--heavy); font-stretch: 112%; font-size: clamp(4.25rem, 11vw, 6rem); line-height: 0.9; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; }
+.num small { font-size: 0.42em; letter-spacing: -0.02em; margin-left: 0.04em; }
+.pair .k { margin-top: 0.5rem; font-weight: 600; font-size: 1rem; }
+.fig h3 { font-size: clamp(1.4rem, 2vw, 1.75rem); letter-spacing: -0.015em; line-height: 1.1; }
+.fig-t > p { color: var(--ink-2); }
+.fig .cap { border-top: 1px solid var(--line-2); padding-top: 0.75rem; max-width: none; color: var(--ink-3); }
+.fig .cap strong { color: var(--ink); font-weight: 600; }
+@media (min-width: 60rem) {
+  .fig { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); }
+  .num { font-size: clamp(4.25rem, 7.6vw, 8.5rem); }
+}
 
 /* use it */
-.tabs { display: flex; gap: 0.4rem; margin-top: 2.5rem; overflow-x: auto; padding-bottom: 2px; }
-.tabs button { background: none; border: 1px solid var(--line-2); border-radius: 999px; min-height: 2.5rem; padding: 0 1.1rem; font: 500 0.9rem/1 var(--sans); color: var(--ink-2); cursor: pointer; white-space: nowrap; }
-.tabs button[aria-selected="true"] { color: var(--on-btn); background: var(--btn); border-color: var(--btn); }
+.tabs { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-top: clamp(2.5rem, 5vw, 3.5rem); }
+.tabs button { flex: none; background: none; border: 1px solid var(--line-2); min-height: 2.75rem; padding: 0 1rem; font: 600 0.9375rem/1 var(--sans); color: var(--ink-2); cursor: pointer; white-space: nowrap; }
 .tabs button:hover { color: var(--ink); border-color: var(--ink); }
-.tabs button[aria-selected="true"]:hover { color: var(--on-btn); }
-.panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 2rem clamp(2rem, 5vw, 4.5rem); padding-top: 2.25rem; }
-@media (max-width: 880px) { .panel { grid-template-columns: minmax(0, 1fr); } }
+.tabs button[aria-selected="true"] { color: var(--on-btn); background: var(--btn); border-color: var(--btn); }
+.panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem clamp(2rem, 5vw, 4.5rem); padding-top: 2.25rem; }
 .panel[hidden] { display: none; }
-.panel h3 { font-size: clamp(1.6rem, 2.6vw, 2.1rem); line-height: 1.08; letter-spacing: -0.025em; }
+.panel h3 { font-size: clamp(1.75rem, 3.2vw, 3rem); line-height: 1.04; letter-spacing: -0.025em; }
 .panel ol { margin: 1.25rem 0 0; padding-left: 1.3rem; display: grid; gap: 0.7rem; color: var(--ink-2); }
 .panel ol b { color: var(--ink); font-weight: 600; }
-.dl { border: 1px solid var(--line); border-radius: 14px; background: var(--sheet); padding: 1.15rem; display: grid; gap: 0.8rem; align-content: start; min-width: 0; }
+.dl { border: 1px solid var(--line-2); background: var(--sheet); padding: 1.15rem; display: grid; gap: 0.8rem; align-content: start; min-width: 0; }
 .dl .acts { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .dl .note { font-size: 0.8125rem; color: var(--ink-3); }
 .dl .note:empty { display: none; }
-pre.code { margin: 0; background: var(--code-bg); color: var(--code-ink); font: 400 0.78rem/1.65 var(--mono); padding: 1rem 1.1rem; overflow-x: auto; border-radius: 10px; }
+pre.code { margin: 0; background: var(--code-bg); color: var(--code-ink); font: 500 0.78rem/1.65 var(--mono); padding: 1rem 1.1rem; overflow-x: auto; }
 pre.code .c { color: var(--code-dim); }
-.peek { margin: 0; max-height: 12rem; overflow: auto; background: var(--bg-2); border-radius: 10px; font: 400 0.75rem/1.5 var(--mono); padding: 0.7rem 0.8rem; white-space: pre; }
+.peek { margin: 0; max-height: 12rem; overflow: auto; background: var(--bg-2); font: 500 0.75rem/1.5 var(--mono); padding: 0.7rem 0.8rem; white-space: pre; }
 .codehead { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
-
-/* who it's for: plain text cards, each one a mail link */
-.who { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 2.5rem; }
-@media (max-width: 960px) { .who { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 620px) { .who { grid-template-columns: minmax(0, 1fr); } }
-.who a { display: flex; flex-direction: column; gap: 0.75rem; padding: 1.5rem; border: 1px solid var(--line); border-radius: 16px; color: var(--ink); text-decoration: none; background: var(--sheet); transition: border-color 150ms var(--ease); min-width: 0; }
-.who a:hover { border-color: var(--ink); }
-.who b { font-weight: 500; font-size: 1.375rem; letter-spacing: -0.02em; line-height: 1.15; }
-.who span { color: var(--ink-2); flex: 1; }
-.who i { font-style: normal; font-weight: 500; font-size: 0.9375rem; }
+@media (min-width: 60rem) { .panel { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); } }
 
 /* pricing */
-.plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 2.5rem; }
-@media (max-width: 900px) { .plans { grid-template-columns: minmax(0, 1fr); } }
-.plan { display: flex; flex-direction: column; gap: 1rem; padding: 1.75rem; border: 1px solid var(--line); border-radius: 16px; background: var(--sheet); min-width: 0; }
-.plan.featured { border-color: var(--ink); }
-.plan h3 { font-size: 1.25rem; letter-spacing: -0.015em; }
-.plan .price { font-size: 2.25rem; font-weight: 500; letter-spacing: -0.035em; line-height: 1; }
-.plan ul { margin: 0; padding: 0 0 0 1.1rem; display: grid; gap: 0.5rem; color: var(--ink-2); flex: 1; }
+.plans { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; margin-top: clamp(2.5rem, 5vw, 4rem); background: var(--line-2); border: 1px solid var(--line-2); }
+.plan { display: flex; flex-direction: column; gap: 1rem; padding: 1.75rem; background: var(--bg); color: var(--ink); min-width: 0; }
+.plan h3 { font-size: 1.375rem; letter-spacing: -0.015em; }
+.plan .price { font-weight: var(--heavy); font-stretch: var(--wide); font-size: clamp(2rem, 3.2vw, 2.75rem); letter-spacing: -0.03em; line-height: 1.02; }
+.plan ul { margin: 0; padding: 0 0 0 1.1rem; display: grid; gap: 0.5rem; align-content: start; color: var(--ink-2); flex: 1; }
 .plan .btn { align-self: flex-start; }
+@media (min-width: 60rem) { .plans { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr) minmax(0, 1fr); } }
 
-/* call-to-action blocks */
-section.band.cta > .wrap { padding-top: 0; }
-.go { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
-@media (max-width: 760px) { .go { grid-template-columns: minmax(0, 1fr); } }
-.go a { position: relative; display: flex; flex-direction: column; justify-content: space-between; min-height: 15rem; padding: 1.75rem; border-radius: 16px; text-decoration: none; background: var(--bg-2); color: var(--ink); border: 1px solid var(--line); transition: background-color 150ms var(--ease); }
-.go a.dark { background: var(--btn); color: var(--on-btn); border-color: var(--btn); }
-.go a:hover { background: var(--line); }
-.go a.dark:hover { background: var(--btn); opacity: 0.9; }
-.go b { font-weight: 500; font-size: clamp(1.75rem, 3.2vw, 2.6rem); letter-spacing: -0.03em; line-height: 1.05; }
-.go span { font-size: 1rem; opacity: 0.75; max-width: 36ch; }
-.go .arr { position: absolute; top: 1.5rem; right: 1.75rem; font-size: 1.5rem; opacity: 1; }
+/* call to action: the one loud band */
+.go-band { background: var(--signal); color: var(--black); }
+.go { display: grid; grid-template-columns: minmax(0, 1fr); }
+.go a { display: flex; flex-direction: column; justify-content: space-between; gap: 2.5rem; min-height: 15rem; padding: clamp(1.5rem, 4vw, 3.5rem); color: inherit; text-decoration: none; border-top: 1px solid var(--black); min-width: 0; }
+.go a:first-child { border-top: 0; }
+.go .arr { align-self: flex-end; width: clamp(1.75rem, 3vw, 2.75rem); height: clamp(1.75rem, 3vw, 2.75rem); }
+.go b { font-weight: var(--heavy); font-stretch: var(--wide); font-size: clamp(2.2rem, 5.2vw, 5rem); letter-spacing: -0.03em; line-height: 1; overflow-wrap: anywhere; }
+.go span:not(.arr) { display: block; margin-top: 0.75rem; font-size: 1.0625rem; max-width: 40ch; }
+@media (hover: hover) { .go a:hover { background: var(--black); color: var(--white); } }
+@media (min-width: 52rem) {
+  .go { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .go a { border-top: 0; border-left: 1px solid var(--black); min-height: 26rem; }
+  .go a:first-child { border-left: 0; }
+}
 
-/* footer */
-footer { background: var(--bg-2); border-top: 1px solid var(--line); font-size: 0.875rem; }
-footer .wrap { padding-block: 3.5rem 2.5rem; }
-.fcols { display: grid; grid-template-columns: minmax(0, 1.3fr) repeat(2, minmax(0, 0.7fr)) minmax(0, 1.4fr); gap: 2rem 3rem; }
-@media (max-width: 880px) { .fcols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
-@media (max-width: 480px) { .fcols { grid-template-columns: minmax(0, 1fr); } }
-.fcols h4 { margin: 0 0 0.75rem; font-size: 0.8125rem; font-weight: 600; color: var(--ink); }
+/* footer: closes on the rule that matters */
+footer { background: var(--bg); font-size: 0.9375rem; }
+footer .wrap { padding-block: var(--band) 2rem; }
+.closing { font-weight: var(--heavy); font-stretch: var(--wide); font-size: clamp(2.2rem, 6.4vw, 6rem); line-height: 1; letter-spacing: -0.028em; max-width: 20ch; }
+.fcols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem 3rem; margin-top: clamp(3rem, 7vw, 6rem); padding-top: 2rem; border-top: 1px solid var(--line-2); }
+.fcols h4 { margin: 0 0 0.75rem; font-size: 0.875rem; font-weight: 600; color: var(--ink); }
 .fcols ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; align-content: start; }
-.fcols a { color: var(--ink-2); text-decoration: none; white-space: nowrap; }
-.fcols a:hover { color: var(--ink); text-decoration: underline; }
-.fcols p { color: var(--ink-3); }
-.legal { margin-top: 3rem; padding-top: 1.25rem; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; justify-content: space-between; color: var(--ink-3); font-size: 0.8125rem; }
+.fcols a:not(.brand) { color: var(--ink-2); text-decoration: none; white-space: nowrap; }
+.fcols a:not(.brand):hover { color: var(--ink); text-decoration: underline; }
+.fcols p { color: var(--ink-3); font-size: 0.875rem; }
+.fcols .brand { font-size: 1.125rem; }
+.legal { margin-top: 2.5rem; padding-top: 1.25rem; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; justify-content: space-between; color: var(--ink-3); font-size: 0.8125rem; }
+@media (min-width: 30rem) { .fcols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .fcols > :first-child, .fcols > :last-child { grid-column: 1 / -1; } }
+@media (min-width: 60rem) { .fcols { grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr) minmax(0, 0.8fr) minmax(0, 1.5fr); } .fcols > :first-child, .fcols > :last-child { grid-column: auto; } }
 
-.plumb { transform-box: view-box; transform-origin: var(--px) 15px; animation: settle 2.6s cubic-bezier(.3,.6,.2,1) both; }
-@keyframes settle { 0% { transform: rotate(9deg); } 30% { transform: rotate(-5deg); } 55% { transform: rotate(2.5deg); } 78% { transform: rotate(-1deg); } 100% { transform: rotate(0); } }
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  .plumb { animation: none; }
-  .plate, .poster, .btn, .products a, .products .arr { transition: none; }
+  .plate, .plate .face, .poster { transition: none; }
 }
 </style>
 
 </head>
 <body>
 <header class="top">
-  <div class="wrap">
-    <a class="brand" href="#top" aria-label="Groma, top of page"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round"><line x1="32" y1="9" x2="32" y2="55" stroke-width="3.2"/><line x1="9" y1="15" x2="55" y2="15" stroke-width="3.2"/><line x1="6" y1="56" x2="58" y2="56" stroke-width="3.2"/></g><g class="plumb" style="--px:12px"><line x1="12" y1="15" x2="12" y2="39" stroke="currentColor" stroke-width="1.4"/><path d="M12 38.5 l-3.6 3.4 3.6 6 3.6-6z" fill="var(--bronze)"/></g><g class="plumb" style="--px:52px"><line x1="52" y1="15" x2="52" y2="39" stroke="currentColor" stroke-width="1.4"/><path d="M52 38.5 l-3.6 3.4 3.6 6 3.6-6z" fill="var(--bronze)"/></g><circle cx="32" cy="9" r="2.6" fill="var(--bronze)"/></svg><b>Groma</b></a>
-    <nav aria-label="Sections">
-      <a href="#product">Product</a>
-      <a href="#who">Who it's for</a>
-      <a href="#explore">Live demo</a>
-      <a href="#proof">Results</a>
-      <a href="#pricing">Pricing</a>
-    </nav>
-    <div class="right">
-      <a href="https://github.com/print-EddyMa/nc-recon" target="_blank" rel="noopener">GitHub</a>
-      <a class="btn small" href="#pricing">Get started</a>
-    </div>
+  <a class="brand" href="#top" aria-label="NC Recon, top of page"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor"><rect x="7" y="7" width="24" height="24"/><rect x="36" y="7" width="24" height="24"/><rect x="65" y="7" width="24" height="24"/><rect x="7" y="36" width="24" height="24"/><rect x="36" y="36" width="24" height="24"/><rect x="65" y="36" width="24" height="24"/><rect x="7" y="65" width="24" height="24"/><rect x="36" y="65" width="24" height="24"/></g><rect x="69.2" y="68.4" width="24" height="24" fill="var(--signal)" transform="rotate(19 81.2 80.4)"/></svg><b>NC Recon</b></a>
+  <nav aria-label="Sections">
+    <a class="lk" href="#explore">Live demo</a>
+    <a class="lk" href="#product">Product</a>
+    <a class="lk" href="#checks">Self-checks</a>
+    <a class="lk" href="#who">Who it's for</a>
+    <a class="lk" href="#proof">Results</a>
+    <a class="lk" href="#pricing">Pricing</a>
+  </nav>
+  <div class="right">
+    <a class="lk" href="https://github.com/print-EddyMa/nc-recon" target="_blank" rel="noopener">GitHub</a>
+    <details class="menu" id="menu">
+      <summary>Menu</summary>
+      <nav aria-label="Sections, small screens">
+        <a href="#explore">Live demo</a>
+        <a href="#product">Product</a>
+        <a href="#how">How a call is made</a>
+        <a href="#checks">Self-checks</a>
+        <a href="#who">Who it's for</a>
+        <a href="#proof">Results</a>
+        <a href="#use">Use it</a>
+        <a href="#pricing">Pricing</a>
+        <a href="https://github.com/print-EddyMa/nc-recon" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </details>
+    <a class="btn small" href="#pricing">Get started</a>
   </div>
 </header>
 
 <main id="top">
-  <section class="hero" aria-labelledby="h1">
-    <img src="assets/web/hero.webp" srcset="assets/web/hero-960.webp 960w, assets/web/hero.webp 1920w" sizes="100vw" fetchpriority="high" alt="Civil Air Patrol photograph over the Swannanoa valley the day after Hurricane Helene: homes in mud beside the flooded river">
-    <div class="wrap">
+  <section class="hero" id="hero" aria-labelledby="h1">
+    <canvas id="tiles" aria-hidden="true"></canvas>
+    <div class="wrap hero-in">
       <h1 id="h1">Every building, after the disaster.</h1>
-      <p>Groma calls the damage to every building from public imagery, so search teams start in the right place.</p>
-      <div class="ctas">
-        <a class="btn" href="#pricing">Get started free</a>
-        <a class="btn ghost" href="#explore">See it work</a>
+      <div class="hero-foot">
+        <div class="side">
+          <p class="sub">NC Recon reads public imagery after a disaster and calls the damage to every building. Then it shows the roads likely cut, landing-zone candidates and search sectors. Free and open source.</p>
+          <div class="ctas" style="margin-top:1.5rem">
+            <a class="btn signal" href="#pricing">Get started free</a>
+            <a class="btn ghost" href="#explore">See it work</a>
+          </div>
+        </div>
+        <div class="side">
+          <dl class="run">
+            <div><dt>Buildings assessed</dt><dd id="run-n">893</dd></div>
+            <div><dt>Time</dt><dd id="run-t">01:28</dd></div>
+          </dl>
+          <p class="cap" style="margin-top:0.75rem">The Swannanoa run on one laptop, replayed 40 times faster. One tile per building, in no map order. The orange tile is the home whose call is walked through below.</p>
+        </div>
       </div>
-      <p class="credit">Civil Air Patrol over the Swannanoa valley, North Carolina, September 28, 2024.</p>
+    </div>
+    <a class="odd" id="odd" href="#how" aria-label="See how NC Recon called this one home" hidden><span aria-hidden="true">17S LV 7253 4080 <i class="arr"></i></span></a>
+  </section>
+
+  <section class="stakes" aria-label="Why NC Recon exists">
+    <img src="assets/web/hero.webp" srcset="assets/web/hero-960.webp 960w, assets/web/hero.webp 1920w" sizes="100vw" loading="lazy" decoding="async" alt="Civil Air Patrol photograph over the Swannanoa valley the day after Hurricane Helene: homes in mud beside the flooded river">
+    <div class="stakes-in wrap">
+      <div class="say">
+        <p class="big">After Helene, more than 100 search teams logged 80,000 damage assessments by hand.</p>
+        <p class="cap">Source: DHS Science and Technology, October 7, 2024. Photograph: Civil Air Patrol over the Swannanoa valley, North Carolina, September 28, 2024.</p>
+      </div>
+      <div class="say">
+        <p class="big">NC Recon was built after that storm and was not used in that response.</p>
+        <p class="after">It gives the next team a head start: every building, called from public imagery, with the evidence behind each call.</p>
+      </div>
     </div>
   </section>
 
-  <section class="band statement" aria-label="Why Groma exists">
-    <div class="wrap">
-      <p>After Helene, more than 100 search teams logged 80,000 damage assessments by hand. <span>Groma gives them a head start: every building, called from public imagery, with the evidence behind each call.</span></p>
-      <p class="cap">Source: DHS Science and Technology, October 7, 2024.</p>
+  <section class="cuts" id="cuts" aria-label="Speed">
+    <div class="cuts-in">
+      <div class="cut"><p class="cut-fig"><b>893</b><span>buildings</span></p></div>
+      <div class="cut light"><p class="cut-fig"><b>88</b><span>seconds</span></p></div>
+      <div class="cut o"><p class="cut-fig"><b>1</b><span>laptop</span></p></div>
     </div>
-  </section>
-
-  <section class="band alt" id="product" aria-labelledby="h-product">
-    <div class="wrap">
-      <div class="head">
-        <h2 id="h-product">What Groma does</h2>
-        <p class="lede">Any FEMA disaster, any US state. Open source under Apache-2.0; it runs on one laptop or a county server, with no cloud account.</p>
-      </div>
-      <ul class="products">
-        <li><a href="#how"><span class="name">Assess</span><span class="desc">Type a FEMA disaster number. Every building gets one of FEMA's five damage levels, a probability and the evidence.</span><span class="meta"><span class="arr" aria-hidden="true">→</span></span></a></li>
-        <li><a href="#how"><span class="name">Verify</span><span class="desc">People judge the uncertain calls without seeing the model's answer, with Civil Air Patrol photos of the building.</span><span class="meta"><span class="arr" aria-hidden="true">→</span></span></a></li>
-        <li><a href="#explore"><span class="name">Respond</span><span class="desc">Roads likely cut, people cut off, landing-zone candidates and 1 km search sectors, as KML for TAK.</span><span class="meta"><span class="arr" aria-hidden="true">→</span></span></a></li>
-        <li><a href="#use"><span class="name">Export</span><span class="desc">FEMA's damage survey fields, GeoPackage, File Geodatabase, KML and CSV with US National Grid.</span><span class="meta"><span class="arr" aria-hidden="true">→</span></span></a></li>
-        <li><a href="#use"><span class="name">Share</span><span class="desc">A state's day-3 assessment packet, private records for verified owners and public counts per area.</span><span class="meta"><span class="arr" aria-hidden="true">→</span></span></a></li>
-        <li><a href="#use"><span class="name">Offline</span><span class="desc">Carry an assessed area to a field laptop and work with no network. Addresses stay behind.</span><span class="meta"><span class="tag">Beta</span><span class="arr" aria-hidden="true">→</span></span></a></li>
-      </ul>
-    </div>
-  </section>
-
-
-  <section class="band" id="who" aria-labelledby="h-who">
-    <div class="wrap">
-      <div class="head">
-        <h2 id="h-who">Who it's for</h2>
-        <p class="lede">The same building-by-building call, packaged for the people who act on it.</p>
-      </div>
-      <div class="who">
-        <a href="mailto:ma.eddy.work@gmail.com?subject=Groma%20pilot%3A%20emergency%20management"><b>Emergency management</b><span>Counties, states and tribes. A damage count the day imagery arrives, the state's FEMA initial damage assessment packet, and search sectors ranked worst first.</span><i>Ask for a pilot <span aria-hidden="true">→</span></i></a>
-        <a href="mailto:ma.eddy.work@gmail.com?subject=Groma%3A%20insurance%20and%20lending"><b>Insurers and lenders</b><span>A call for every insured or financed building, with the probability, the imagery and the evidence, from a method you can inspect and re-run.</span><i>Talk to us <span aria-hidden="true">→</span></i></a>
-        <a href="mailto:ma.eddy.work@gmail.com?subject=Groma%3A%20National%20Guard%20and%20responders"><b>National Guard and responders</b><span>An offline field kit: damage, roads cut, people cut off, landing-zone candidates and 1 km sectors in US National Grid, ready for TAK.</span><i>Ask for a field kit <span aria-hidden="true">→</span></i></a>
-        <a href="mailto:ma.eddy.work@gmail.com?subject=Groma%3A%20aid%20and%20recovery"><b>Aid groups and nonprofits</b><span>Area-level damage counts to decide where cash, supplies and volunteers go first, without exposing any one home.</span><i>Talk to us <span aria-hidden="true">→</span></i></a>
-        <a href="mailto:ma.eddy.work@gmail.com?subject=Groma%3A%20research%20and%20data"><b>Researchers and AI labs</b><span>Building calls checked by people, field records to compare against, and every new disaster as a fresh test. The code is Apache-2.0.</span><i>Work with us <span aria-hidden="true">→</span></i></a>
-        <a href="mailto:ma.eddy.work@gmail.com?subject=Groma%3A%20a%20record%20for%20my%20home"><b>Residents</b><span>Through a county or legal aid group using Groma: how your street looks, and a private record of your own home for FEMA or your insurer.</span><i>Ask about your area <span aria-hidden="true">→</span></i></a>
-      </div>
-    </div>
+    <p class="cap"><span class="wrap" style="display:block">Swannanoa, North Carolina. This is speed, not accuracy: flood accuracy is still being validated.</span></p>
   </section>
 
   <section class="explorer" id="explore" aria-labelledby="h-explore">
     <div class="wrap">
       <div class="head">
         <h2 id="h-explore">Swannanoa after Helene, in 3D</h2>
-        <p class="lede">USGS elevation and NC OneMap imagery, with where the damage is, the roads likely cut and the search sectors Groma drew. Damage is smoothed over 70 m, so no single home can be picked out.</p>
+        <p class="lede">USGS elevation and NC OneMap imagery, with where the damage is, the roads likely cut and the search sectors NC Recon drew. Damage is smoothed over 70 m, so no single home can be picked out.</p>
       </div>
     </div>
     <div class="quad">
@@ -404,17 +500,37 @@ footer .wrap { padding-block: 3.5rem 2.5rem; }
     </div>
   </section>
 
+  <section class="band light" id="product" aria-labelledby="h-product">
+    <div class="wrap">
+      <div class="head">
+        <h2 id="h-product">What NC Recon does</h2>
+        <p class="lede">Any FEMA disaster, any US state. Open source under Apache-2.0; it runs on one laptop or a county server, with no cloud account.</p>
+      </div>
+      <ul class="products">
+        <li><a href="#how"><span class="name">Assess</span><span class="desc">Type a FEMA disaster number. Every building gets one of FEMA's five damage levels, a probability and the evidence.</span><span class="meta"><span class="arr" aria-hidden="true"></span></span></a></li>
+        <li><a href="#how"><span class="name">Verify</span><span class="desc">People judge the uncertain calls without seeing the model's answer, with Civil Air Patrol photos of the building.</span><span class="meta"><span class="arr" aria-hidden="true"></span></span></a></li>
+        <li><a href="#explore"><span class="name">Respond</span><span class="desc">Roads likely cut, people cut off, landing-zone candidates and 1 km search sectors, as KML for TAK.</span><span class="meta"><span class="arr" aria-hidden="true"></span></span></a></li>
+        <li><a href="#use"><span class="name">Export</span><span class="desc">FEMA's damage survey fields, GeoPackage, File Geodatabase, KML and CSV with US National Grid.</span><span class="meta"><span class="arr" aria-hidden="true"></span></span></a></li>
+        <li><a href="#use"><span class="name">Share</span><span class="desc">A state's day-3 assessment packet, private records for verified owners and public counts per area.</span><span class="meta"><span class="arr" aria-hidden="true"></span></span></a></li>
+        <li><a href="#checks"><span class="name">Self-check</span><span class="desc">Every assessment checks itself: buildings accounted for, totals recounted a second way, imagery dates, image alignment, model weights, landing zones against the aircraft. Each check shows its room to spare.</span><span class="meta"><span class="arr" aria-hidden="true"></span></span></a></li>
+        <li><a href="#checks"><span class="name">Brief</span><span class="desc">The situation in six lines, every figure tied to its evidence. Written by fixed rules, or by Claude if you add a key, with the numbers traced by code.</span><span class="meta"><span class="arr" aria-hidden="true"></span></span></a></li>
+        <li><a href="#use"><span class="name">Watch</span><span class="desc">Before the storm: NWS alerts, river forecasts and gauges, power and shelters, with NASA satellite imagery: GOES-East every 10 minutes, rain, soil moisture and radar flood extent.</span><span class="meta"><span class="arr" aria-hidden="true"></span></span></a></li>
+        <li><a href="#use"><span class="name">Offline</span><span class="desc">Carry an assessed area to a field laptop and work with no network. Addresses stay behind.</span><span class="meta"><span class="tag">Beta</span><span class="arr" aria-hidden="true"></span></span></a></li>
+      </ul>
+    </div>
+  </section>
+
   <section class="band" id="how" aria-labelledby="h-anat">
     <div class="wrap">
       <div class="head">
-        <h2 id="h-anat">How Groma calls one building</h2>
-        <p class="lede">A manufactured home in Swannanoa, record e874056f at US National Grid 17S LV 7253 4080. Six layers of evidence, stacked.</p>
+        <h2 id="h-anat">How NC Recon calls one building</h2>
+        <p class="lede">The orange tile: a manufactured home in Swannanoa, record e874056f at US National Grid 17S LV 7253 4080. Six layers of evidence, stacked.</p>
       </div>
       <div class="anat">
         <div class="stackwrap" aria-hidden="true">
-          <div class="stack" id="stack" data-step="1">
-            <div class="plate" style="--i:0" data-k="1"><div class="face"><img src="assets/web/chip_pre.jpg" alt="" loading="lazy"><svg viewBox="0 0 1 1" preserveAspectRatio="none"><polygon points="0.3488,0.4412 0.661,0.4807 0.6511,0.5588 0.3391,0.5193 0.3488,0.4412" fill="none" stroke="var(--hydro)" stroke-width="0.012"/></svg></div><span class="tag">Before, 2023</span></div>
-            <div class="plate" style="--i:1" data-k="2"><div class="face"><img src="assets/web/chip_post.jpg" alt="" loading="lazy"><svg viewBox="0 0 1 1" preserveAspectRatio="none"><polygon points="0.3488,0.4412 0.661,0.4807 0.6511,0.5588 0.3391,0.5193 0.3488,0.4412" fill="none" stroke="var(--hydro)" stroke-width="0.012"/></svg></div><span class="tag">After, 2025</span></div>
+          <div class="stack" id="stack" data-step="6">
+            <div class="plate" style="--i:0" data-k="1"><div class="face"><img src="assets/web/chip_pre.jpg" alt="" loading="lazy"><svg viewBox="0 0 1 1" preserveAspectRatio="none"><polygon points="0.3488,0.4412 0.661,0.4807 0.6511,0.5588 0.3391,0.5193 0.3488,0.4412" fill="none" stroke="var(--ring)" stroke-width="0.012"/></svg></div><span class="tag">Before, 2023</span></div>
+            <div class="plate" style="--i:1" data-k="2"><div class="face"><img src="assets/web/chip_post.jpg" alt="" loading="lazy"><svg viewBox="0 0 1 1" preserveAspectRatio="none"><polygon points="0.3488,0.4412 0.661,0.4807 0.6511,0.5588 0.3391,0.5193 0.3488,0.4412" fill="none" stroke="var(--ring)" stroke-width="0.012"/></svg></div><span class="tag">After, 2025</span></div>
             <div class="plate" style="--i:2" data-k="3"><div class="face"><img src="assets/web/anatomy_change.webp" alt="" loading="lazy"></div><span class="tag">Change</span></div>
             <div class="plate" style="--i:3" data-k="4"><div class="face"><img src="assets/web/anatomy_ground.png" alt="" loading="lazy" style="image-rendering:pixelated"></div><span class="tag">Ground, lidar</span></div>
             <div class="plate" style="--i:4" data-k="5"><div class="face card" id="an-ev"></div><span class="tag">Evidence</span></div>
@@ -433,25 +549,77 @@ footer .wrap { padding-block: 3.5rem 2.5rem; }
     </div>
   </section>
 
-  <section class="band alt proof" id="proof" aria-labelledby="h-proof">
+  <section class="band light" id="checks" aria-labelledby="h-checks">
+    <div class="wrap">
+      <div class="head">
+        <h2 id="h-checks">It checks itself</h2>
+        <p class="lede">An engineer checks a design before anyone builds it. NC Recon checks an assessment before anyone acts on it, and says how much room each check has left. Here is Swannanoa, as it stands today.</p>
+      </div>
+      <div class="ck-verdict"><b>Passed with warnings</b><span>8 passed, 4 warnings, 0 failed, 2 not checked</span></div>
+      <table class="ck">
+        <caption class="vh">Self-checks for the Swannanoa assessment</caption>
+        <thead><tr><th scope="col">Check</th><th scope="col">Result</th><th scope="col">Status</th></tr></thead>
+        <tbody>
+          <tr><td>Every building is accounted for</td><td>823 assessed and 70 not assessed make all 893</td><td class="ok">Pass</td></tr>
+          <tr><td>Headline totals match the buildings</td><td>Recounted from every building a second way, within rounding</td><td class="ok">Pass</td></tr>
+          <tr><td>After imagery postdates the storm</td><td>Taken 98 to 248 days after the event began</td><td class="ok">Pass</td></tr>
+          <tr><td>Before and after images line up</td><td>0.87 pixels against a 1 pixel limit, 15% to spare</td><td class="ok">Pass</td></tr>
+          <tr><td>Landing zones fit the aircraft</td><td>All 30 pass; the tightest clearing is exactly the 80 m a CH-47 needs</td><td class="ok">Pass</td></tr>
+          <tr><td>Image model and change signal agree</td><td>They rarely agree on severe damage; the note explains why</td><td class="warn">Warning</td></tr>
+          <tr><td>Calls needing a person</td><td>36% of assessed buildings are flagged for review</td><td class="warn">Warning</td></tr>
+          <tr><td>Agreement with field records</td><td>Search-team categories: Major or Destroyed F1 0.31</td><td class="warn">Warning</td></tr>
+        </tbody>
+      </table>
+      <p class="ck-note">A failed check labels the exports; it never blocks them. A skipped check always says why. The brief beside it ties every figure to a numbered piece of evidence, and code checks that each number traces before it is shown.</p>
+    </div>
+  </section>
+
+  <section class="band" id="who" aria-labelledby="h-who">
+    <div class="wrap">
+      <div class="head">
+        <h2 id="h-who">Who it's for</h2>
+        <p class="lede">The same building-by-building call, packaged for the people who act on it.</p>
+      </div>
+      <div class="who">
+        <a href="mailto:ma.eddy.work@gmail.com?subject=NC%20Recon%20pilot%3A%20emergency%20management"><b>Emergency management</b><span class="t">Counties, states and tribes. A damage count the day imagery arrives, the state's FEMA initial damage assessment packet, and search sectors ranked worst first.</span><i>Ask for a pilot <span class="arr" aria-hidden="true"></span></i></a>
+        <a href="mailto:ma.eddy.work@gmail.com?subject=NC%20Recon%3A%20insurance%20and%20lending"><b>Insurers and lenders</b><span class="t">A call for every insured or financed building, with the probability, the imagery and the evidence, from a method you can inspect and re-run.</span><i>Talk to us <span class="arr" aria-hidden="true"></span></i></a>
+        <a href="mailto:ma.eddy.work@gmail.com?subject=NC%20Recon%3A%20National%20Guard%20and%20responders"><b>National Guard and responders</b><span class="t">An offline field kit: damage, roads cut, people cut off, landing-zone candidates and 1 km sectors in US National Grid, ready for TAK.</span><i>Ask for a field kit <span class="arr" aria-hidden="true"></span></i></a>
+        <a href="mailto:ma.eddy.work@gmail.com?subject=NC%20Recon%3A%20aid%20and%20recovery"><b>Aid groups and nonprofits</b><span class="t">Area-level damage counts to decide where cash, supplies and volunteers go first, without exposing any one home.</span><i>Talk to us <span class="arr" aria-hidden="true"></span></i></a>
+        <a href="mailto:ma.eddy.work@gmail.com?subject=NC%20Recon%3A%20research%20and%20data"><b>Researchers and AI labs</b><span class="t">Building calls checked by people, field records to compare against, and every new disaster as a fresh test. The code is Apache-2.0.</span><i>Work with us <span class="arr" aria-hidden="true"></span></i></a>
+        <a href="mailto:ma.eddy.work@gmail.com?subject=NC%20Recon%3A%20a%20record%20for%20my%20home"><b>Residents</b><span class="t">Through a county or legal aid group using NC Recon: how your street looks, and a private record of your own home for FEMA or your insurer.</span><i>Ask about your area <span class="arr" aria-hidden="true"></span></i></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="band light" id="proof" aria-labelledby="h-proof">
     <div class="wrap">
       <div class="head">
         <h2 id="h-proof">Results so far</h2>
         <p class="lede">Measured against inspectors and search teams who were there. Where it falls short, we say so.</p>
       </div>
-      <div class="grid">
-        <div class="fig">
-          <p class="num">96<small>%</small></p>
-          <h3>Eaton fire, Los Angeles County</h3>
-          <p>CAL FIRE inspectors checked 2,246 buildings Groma's wildfire model had assessed. When it called a building destroyed or badly damaged, they agreed 95.7% of the time; it found 94.2% of the buildings they marked that way.</p>
-          <p class="cap">One run, rule fixed before it ran. The wildfire model alone, not the whole system.</p>
-        </div>
-        <div class="fig">
-          <p class="num">88<small> s</small></p>
-          <h3>Swannanoa, North Carolina</h3>
-          <p>All <span id="tb-n">893</span> buildings assessed on one laptop. Flood is harder: water inside a house does not show from above, so Groma found 15 of the 64 homes search teams recorded as Major or Destroyed. Every severe call goes to people before it counts.</p>
-          <p class="cap">Flood accuracy is still being validated.</p>
-        </div>
+      <div class="figs">
+        <article class="fig">
+          <div class="pair">
+            <div><p class="num">95.7<small>%</small></p><p class="k">Precision on Major or Destroyed</p></div>
+            <div><p class="num">94.2<small>%</small></p><p class="k">Recall on Major or Destroyed</p></div>
+          </div>
+          <div class="fig-t">
+            <h3>Eaton fire, Los Angeles County</h3>
+            <p>CAL FIRE inspectors checked 2,246 buildings NC Recon's wildfire model had assessed. When it called a building destroyed or badly damaged, they agreed 95.7% of the time; it found 94.2% of the buildings they marked that way.</p>
+            <p class="cap"><strong>One pre-registered held-out test.</strong> The wildfire model alone, not the whole system.</p>
+          </div>
+        </article>
+        <article class="fig">
+          <div class="pair">
+            <div><p class="num">893</p><p class="k">Buildings assessed</p></div>
+            <div><p class="num">88<small> s</small></p><p class="k">On one laptop</p></div>
+          </div>
+          <div class="fig-t">
+            <h3>Swannanoa, North Carolina</h3>
+            <p>Run after the storm on public imagery. Flood is harder: water inside a house does not show from above, so NC Recon found 15 of the 64 homes search teams recorded as Major or Destroyed. Every severe call goes to people before it counts.</p>
+            <p class="cap"><strong>Flood accuracy is not validated yet.</strong> The time here is speed, not accuracy.</p>
+          </div>
+        </article>
       </div>
     </div>
   </section>
@@ -472,21 +640,21 @@ footer .wrap { padding-block: 3.5rem 2.5rem; }
         <div>
           <h3>A damage count the day imagery arrives</h3>
           <ol>
-            <li><b>Start Groma</b> on a laptop or county server with the commands here.</li>
+            <li><b>Start NC Recon</b> on a laptop or county server with the commands here.</li>
             <li><b>New assessment:</b> enter the FEMA disaster number and pick the town.</li>
             <li><b>Send teams</b> by the ranked sectors and review queue. Export to FEMA's survey fields, GeoPackage or KML.</li>
           </ol>
         </div>
         <div class="dl">
           <div class="codehead"><span class="cap">Start it locally</span><button class="btn small ghost" type="button" data-copy="cmd-dev">Copy</button></div>
-<pre class="code" id="cmd-dev">git clone https://github.com/print-EddyMa/nc-recon groma
-cd groma/pipeline
+<pre class="code" id="cmd-dev">git clone https://github.com/print-EddyMa/nc-recon nc-recon
+cd nc-recon/pipeline
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 NCR_DEV_OPEN=1 .venv/bin/python server.py   <span class="c"># API on :8000</span>
 cd ../web && npm install
 echo "VITE_API_URL=http://127.0.0.1:8000" > .env.development.local
 npm run dev                                 <span class="c"># app on :5173</span></pre>
-          <p class="note">The general image model's weights file is not in the repository; until it is added, that one channel stays off and Groma says so.</p>
+          <p class="note">The general image model's weights are a 474 MB download. Docker fetches and checks them for you; without them that one channel stays off and NC Recon says so.</p>
           <div class="acts"><button class="btn small" type="button" id="dl-sectors">Download sectors (CSV)</button></div>
           <p class="note" id="st-sectors"></p>
         </div>
@@ -520,7 +688,7 @@ npm run dev                                 <span class="c"># app on :5173</span
         </div>
         <div class="dl">
           <div class="codehead"><span class="cap">Pack an area for a field laptop</span><button class="btn small ghost" type="button" data-copy="cmd-pack">Copy</button></div>
-<pre class="code" id="cmd-pack">cd groma/pipeline
+<pre class="code" id="cmd-pack">cd nc-recon/pipeline
 PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline pack --area swannanoa --tar</pre>
           <div class="acts">
             <button class="btn small" type="button" id="dl-plan">Download plan (GeoJSON)</button>
@@ -532,12 +700,11 @@ PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline pack --area swannanoa
     </div>
   </section>
 
-
-  <section class="band alt" id="pricing" aria-labelledby="h-pricing">
-    <div class="wrap">
+  <section class="band" id="pricing" aria-labelledby="h-pricing">
+    <div class="wrap" style="padding-top:0">
       <div class="head">
         <h2 id="h-pricing">Free during launch</h2>
-        <p class="lede">Every feature is free while Groma launches. Paid hosting and support will come later, announced well before anything changes.</p>
+        <p class="lede">Every feature is free while NC Recon launches. Paid hosting and support will come later, announced well before anything changes.</p>
       </div>
       <div class="plans">
         <div class="plan">
@@ -551,15 +718,15 @@ PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline pack --area swannanoa
           </ul>
           <a class="btn ghost" href="https://github.com/print-EddyMa/nc-recon" target="_blank" rel="noopener">Get it on GitHub</a>
         </div>
-        <div class="plan featured">
+        <div class="plan light">
           <h3>Pilot with us</h3>
           <p class="price">Free during launch</p>
           <ul>
-            <li>We set Groma up for your area and run the first assessment with you</li>
+            <li>We set NC Recon up for your area and run the first assessment with you</li>
             <li>Training for your team, and help during the next disaster</li>
             <li>Results in the formats you already use: FEMA survey fields, ArcGIS, TAK, CSV</li>
           </ul>
-          <a class="btn" href="mailto:ma.eddy.work@gmail.com?subject=Groma%20pilot%20request">Request a pilot</a>
+          <a class="btn" href="mailto:ma.eddy.work@gmail.com?subject=NC%20Recon%20pilot%20request">Request a pilot</a>
         </div>
         <div class="plan">
           <h3>Hosted and supported</h3>
@@ -569,33 +736,32 @@ PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline pack --area swannanoa
             <li>Support with response times agreed up front</li>
             <li>For agencies and companies that want it managed</li>
           </ul>
-          <a class="btn ghost" href="mailto:ma.eddy.work@gmail.com?subject=Groma%20hosted%20plan">Hear first</a>
+          <a class="btn ghost" href="mailto:ma.eddy.work@gmail.com?subject=NC%20Recon%20hosted%20plan">Hear first</a>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="band cta" aria-label="Get started">
-    <div class="wrap">
-      <div class="go">
-        <a class="dark" href="https://github.com/print-EddyMa/nc-recon" target="_blank" rel="noopener"><span class="arr" aria-hidden="true">↗</span><b>Get Groma</b><span>The source, the setup guide and the deployment files, on GitHub.</span></a>
-        <a href="mailto:ma.eddy.work@gmail.com?subject=Groma%20pilot%20request"><span class="arr" aria-hidden="true">→</span><b>Request a free pilot</b><span>For an emergency management office, an insurer, a Guard unit or an aid group.</span></a>
-      </div>
+  <section class="go-band" aria-label="Get started">
+    <div class="go">
+      <a href="https://github.com/print-EddyMa/nc-recon" target="_blank" rel="noopener"><span class="arr out" aria-hidden="true"></span><div><b>Get NC Recon</b><span>The source, the setup guide and the deployment files, on GitHub.</span></div></a>
+      <a href="mailto:ma.eddy.work@gmail.com?subject=NC%20Recon%20pilot%20request"><span class="arr" aria-hidden="true"></span><div><b>Request a free pilot</b><span>For an emergency management office, an insurer, a Guard unit or an aid group.</span></div></a>
     </div>
   </section>
 </main>
 
 <footer>
   <div class="wrap">
+    <p class="closing">Decision support. Verify on the ground.</p>
     <div class="fcols">
       <div>
-        <a class="brand" href="#top" aria-label="Groma, top of page"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round"><line x1="32" y1="9" x2="32" y2="55" stroke-width="3.2"/><line x1="9" y1="15" x2="55" y2="15" stroke-width="3.2"/><line x1="6" y1="56" x2="58" y2="56" stroke-width="3.2"/></g><g class="plumb" style="--px:12px"><line x1="12" y1="15" x2="12" y2="39" stroke="currentColor" stroke-width="1.4"/><path d="M12 38.5 l-3.6 3.4 3.6 6 3.6-6z" fill="var(--bronze)"/></g><g class="plumb" style="--px:52px"><line x1="52" y1="15" x2="52" y2="39" stroke="currentColor" stroke-width="1.4"/><path d="M52 38.5 l-3.6 3.4 3.6 6 3.6-6z" fill="var(--bronze)"/></g><circle cx="32" cy="9" r="2.6" fill="var(--bronze)"/></svg><b>Groma</b></a>
-        <p style="margin-top:0.9rem">Damage assessment for every building after a disaster. Named for the groma, the Roman surveyor's instrument that let gravity decide what was straight.</p>
+        <a class="brand" href="#top" aria-label="NC Recon, top of page"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor"><rect x="7" y="7" width="24" height="24"/><rect x="36" y="7" width="24" height="24"/><rect x="65" y="7" width="24" height="24"/><rect x="7" y="36" width="24" height="24"/><rect x="36" y="36" width="24" height="24"/><rect x="65" y="36" width="24" height="24"/><rect x="7" y="65" width="24" height="24"/><rect x="36" y="65" width="24" height="24"/></g><rect x="69.2" y="68.4" width="24" height="24" fill="var(--signal)" transform="rotate(19 81.2 80.4)"/></svg><b>NC Recon</b></a>
+        <p style="margin-top:0.9rem">Damage assessment for every building after a disaster.</p>
       </div>
       <div>
         <h4>Product</h4>
         <ul>
-          <li><a href="#product">What Groma does</a></li>
+          <li><a href="#product">What NC Recon does</a></li>
           <li><a href="#who">Who it's for</a></li>
           <li><a href="#explore">Live demo</a></li>
           <li><a href="#how">How a call is made</a></li>
@@ -617,7 +783,7 @@ PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline pack --area swannanoa
       </div>
     </div>
     <div class="legal">
-      <span>Decision support. Not an official FEMA or state emergency management damage assessment. Verify on the ground.</span>
+      <span>Not an official FEMA or state emergency management damage assessment. Built after Helene and not used in that response.</span>
       <span>Open source under the Apache License 2.0.</span>
     </div>
   </div>
@@ -671,18 +837,19 @@ PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline pack --area swannanoa
     "<span>Review: queued for people</span><span>Search team: " + (an.field ? an.field.level : "–") + "</span>";
 
   var stack = $("stack"), plates = stack.querySelectorAll(".plate");
+  var stepItems = document.querySelectorAll("#steps li");
   function setStep(k) {
     k = Number(k);
     stack.setAttribute("data-step", k);
-    plates.forEach(function (p) { var pk = Number(p.getAttribute("data-k")); p.classList.toggle("on", pk === k); p.classList.toggle("ahead", pk > k); });
+    plates.forEach(function (p) { p.classList.toggle("on", Number(p.getAttribute("data-k")) === k); });
+    stepItems.forEach(function (li) { li.classList.toggle("on", Number(li.getAttribute("data-k")) === k); });
   }
-  setStep(1);
-  if ("IntersectionObserver" in window) {
-    var io = new IntersectionObserver(function (es) {
-      es.forEach(function (e) { if (e.isIntersecting) setStep(e.target.getAttribute("data-k")); });
-    }, { rootMargin: "-40% 0px -50% 0px" });
-    document.querySelectorAll("#steps li").forEach(function (li) { io.observe(li); });
-  }
+  setStep(6);
+  stepItems.forEach(function (li) {           // hover, click or focus a step to light its layer
+    li.tabIndex = 0;
+    var pick = function () { setStep(li.getAttribute("data-k")); };
+    li.addEventListener("pointerenter", pick); li.addEventListener("click", pick); li.addEventListener("focus", pick);
+  });
 
   // tabs
   var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
@@ -723,7 +890,7 @@ PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline pack --area swannanoa
 
   // public sample files, built from the run's outputs
   var record = {
-    source: "Groma (decision support, unofficial)", event: "Hurricane Helene, DR-4827-NC", area: "Swannanoa, NC",
+    source: "NC Recon (decision support, unofficial)", event: "Hurricane Helene, DR-4827-NC", area: "Swannanoa, NC",
     record: "e874056f", usng_10m: an.usng, damage_level: an.level, damage_probs: an.probs,
     needs_review: an.needs_review, evidence: ev, lidar_ring_max_change_m: an.dz_ring_max_m,
     field_reference: an.field ? { source: "Buncombe County SARCOP extract", level: an.field.level } : null,
@@ -742,11 +909,11 @@ PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline pack --area swannanoa
     L.sectors.forEach(function (s) { f.push({ type: "Feature", properties: { kind: "search_sector", usng_1km: s.usng, priority: s.priority, major_or_destroyed_expected: s.severe }, geometry: { type: "Polygon", coordinates: [s.ll.concat([s.ll[0]])] } }); });
     L.lz.forEach(function (z) { f.push({ type: "Feature", properties: { kind: "landing_zone_candidate", usng: z.usng, clear_diameter_m: z.d, slope_deg: z.slope, fits: z.fits, note: "candidate for reconnaissance, not an approved landing zone" }, geometry: { type: "Point", coordinates: z.ll } }); });
     L.roads.forEach(function (r) { f.push({ type: "Feature", properties: { kind: "road", status: r.s }, geometry: { type: "LineString", coordinates: r.ll } }); });
-    return { type: "FeatureCollection", name: "Groma plan, Swannanoa NC, Hurricane Helene", features: f };
+    return { type: "FeatureCollection", name: "NC Recon plan, Swannanoa NC, Hurricane Helene", features: f };
   }
   function esc(s) { return String(s).replace(/[<>&]/g, function (c) { return { "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]; }); }
   function planKml() {
-    var k = '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Groma plan, Swannanoa NC</name>\n';
+    var k = '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>NC Recon plan, Swannanoa NC</name>\n';
     k += '<Style id="sec"><LineStyle><color>ffa0682a</color><width>2</width></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>';
     k += '<Style id="lz"><IconStyle><color>ff5a7a1f</color></IconStyle></Style><Style id="road"><LineStyle><color>ff2c1a9e</color><width>3</width></LineStyle></Style>\n';
     L.sectors.forEach(function (s) {
@@ -774,14 +941,139 @@ PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline pack --area swannanoa
       } catch (e) { status.textContent = "This view blocks downloads."; }
     });
   }
-  $("dl-sectors").addEventListener("click", function () { save("groma-swannanoa-sectors.csv", sectorsCsv(), $("st-sectors")); });
-  $("dl-record").addEventListener("click", function () { save("groma-swannanoa-record.json", JSON.stringify(record, null, 2) + "\n", $("st-record")); });
-  $("dl-plan").addEventListener("click", function () { save("groma-swannanoa-plan.json", JSON.stringify(planGeo()) + "\n", $("st-plan")); });
+  $("dl-sectors").addEventListener("click", function () { save("ncrecon-swannanoa-sectors.csv", sectorsCsv(), $("st-sectors")); });
+  $("dl-record").addEventListener("click", function () { save("ncrecon-swannanoa-record.json", JSON.stringify(record, null, 2) + "\n", $("st-record")); });
+  $("dl-plan").addEventListener("click", function () { save("ncrecon-swannanoa-plan.json", JSON.stringify(planGeo()) + "\n", $("st-plan")); });
   $("cp-kml").addEventListener("click", function () {
     copyText(planKml(), $("cp-kml"), function (ok) { $("st-plan").textContent = ok ? "KML copied. Paste it into a file ending in .kml." : "Copying is blocked here."; });
   });
 
-  window.__groma = { L: L, A: A, tok: tok };
+  window.__ncrecon = { L: L, A: A, tok: tok };
+})();
+</script>
+<script>
+// hero tile wall: one tile per building in the Swannanoa run, in the proportions of the mark.
+// Tile order means nothing; only the last tile stands for a real building, the showcase home.
+(function () {
+  "use strict";
+  var hero = document.getElementById("hero"), c = document.getElementById("tiles"), odd = document.getElementById("odd");
+  var ctx = c.getContext && c.getContext("2d");
+  if (!ctx) { odd.hidden = true; return; }
+  var G = window.__ncrecon, N = G.L.structures, tok = G.tok;
+  var nEl = document.getElementById("run-n"), tEl = document.getElementById("run-t");
+  var FULL = tok("--white"), DIM = tok("--tile"), SIGNAL = tok("--signal");
+  var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var hover = matchMedia("(hover: hover) and (pointer: fine)").matches;
+  var SWEEP = 2200, KNOCK = 240, SECONDS = 88;   // 88 s replayed in 2.2 s: 40 times faster
+  var m = null, t0 = null, done = reduce, knock = reduce ? 1 : 0, knockT = null;
+  var mouse = null, glow = 0, pending = false;
+
+  function layout() {
+    var W = hero.clientWidth, H = hero.clientHeight, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
+    var cols = Math.max(6, Math.round(Math.sqrt(N * W / H)));
+    function foot(q) { return Math.max(q * 0.6, 26); }           // room for the knocked tile and its link below the last row
+    while (Math.ceil(N / cols) * W / cols + foot(W / cols) > H) cols++;
+    var rows = Math.ceil(N / cols), p = W / cols, s = p * 24 / 29, top = H - rows * p - foot(p), left = p * 2.5 / 29;
+    var xs = new Float32Array(N), ys = new Float32Array(N), ds = new Float32Array(N), gl = new Float32Array(N);
+    var ox = W * 0.72, oy = H * 0.38, dmax = 0;
+    for (var i = 0; i < N; i++) {
+      xs[i] = left + (i % cols) * p; ys[i] = top + Math.floor(i / cols) * p;
+      ds[i] = Math.hypot(xs[i] + s / 2 - ox, ys[i] + s / 2 - oy);
+      if (ds[i] > dmax) dmax = ds[i];
+    }
+    ds[N - 1] = dmax;   // the odd one out lands last
+    // the wall lifts toward the odd one, away from the words
+    var reach = W * 0.5, lift = W < 640 ? 0.09 : 0.16;
+    for (var g = 0; g < N - 1; g++) gl[g] = lift * Math.pow(Math.max(0, 1 - Math.hypot(xs[g] - xs[N - 1], ys[g] - ys[N - 1]) / reach), 1.6);
+    m = { W: W, H: H, dpr: dpr, p: p, s: s, xs: xs, ys: ys, ds: ds, gl: gl, dmax: dmax };
+    // same knock as the mark: 4.2 and 3.4 units across a 29 unit pitch, turned 19 degrees
+    var dx = p * 4.2 / 29, dy = p * 3.4 / 29;
+    m.ox = dx; m.oy = dy;
+    odd.style.left = (xs[N - 1] + s / 2 + dx) + "px";
+    odd.style.top = (ys[N - 1] + s / 2 + dy) + "px";
+    var label = odd.querySelector("span");
+    if (label) label.style.display = xs[N - 1] < 260 ? "none" : "";
+  }
+
+  function clock(sec) { var s = Math.floor(sec); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); }
+
+  function draw(now) {
+    pending = false;
+    if (!m) layout();
+    var more = false, s = m.s, xs = m.xs, ys = m.ys, ds = m.ds, r = Infinity, band = m.p * 7;
+    ctx.setTransform(m.dpr, 0, 0, m.dpr, 0, 0);
+    ctx.clearRect(0, 0, m.W, m.H);
+    if (!done) {
+      if (t0 === null) t0 = now;
+      var k = Math.min(1, (now - t0) / SWEEP);
+      r = k * m.dmax * 1.001;
+      var seen = 0;
+      for (var q = 0; q < N; q++) if (ds[q] <= r) seen++;
+      nEl.textContent = seen; tEl.textContent = clock(k * SECONDS);
+      more = true;
+      if (k >= 1) {
+        done = true; nEl.textContent = N; tEl.textContent = clock(SECONDS);
+        knockT = now;
+      }
+    }
+    ctx.fillStyle = DIM;
+    for (var i = 0; i < N - 1; i++) if (ds[i] <= r) ctx.fillRect(xs[i], ys[i], s, s);
+    // the ring: bright just behind the sweep, or around the pointer afterwards
+    ctx.fillStyle = FULL;
+    for (var j = 0; j < N - 1; j++) {
+      if (ds[j] > r) continue;
+      var a = m.gl[j];
+      if (r !== Infinity) a = Math.max(a, 1 - (r - ds[j]) / band);
+      else if (mouse && glow > 0) {
+        var off = Math.abs(Math.hypot(xs[j] + s / 2 - mouse.x, ys[j] + s / 2 - mouse.y) - mouse.r);
+        a = Math.max(a, Math.max(0, 1 - off / (m.p * 1.6)) * 0.42 * glow);
+      }
+      if (a > 0.01) { ctx.globalAlpha = a; ctx.fillRect(xs[j], ys[j], s, s); }
+    }
+    ctx.globalAlpha = 1;
+    if (done) {
+      if (knockT !== null) {
+        var e = Math.min(1, (now - knockT) / KNOCK);
+        knock = 1 - Math.pow(1 - e, 3);
+        if (e < 1) more = true; else { knockT = null; odd.hidden = false; }
+      } else if (odd.hidden) odd.hidden = false;
+      ctx.save();
+      ctx.translate(xs[N - 1] + s / 2 + m.ox * knock, ys[N - 1] + s / 2 + m.oy * knock);
+      ctx.rotate(knock * 19 * Math.PI / 180);
+      ctx.fillStyle = SIGNAL;
+      ctx.fillRect(-s / 2, -s / 2, s, s);
+      ctx.restore();
+    }
+    if (hover && !reduce && done) {
+      var target = mouse && mouse.on ? 1 : 0;
+      if (glow !== target) { glow += Math.sign(target - glow) * 0.08; if (Math.abs(glow - target) < 0.08) glow = target; more = true; }
+    }
+    if (more) ask();
+  }
+  function ask() { if (!pending) { pending = true; requestAnimationFrame(draw); } }
+
+  layout();
+  if (!reduce) { nEl.textContent = "0"; tEl.textContent = "00:00"; }
+  ask();
+  if ("ResizeObserver" in window) new ResizeObserver(function () { layout(); ask(); }).observe(hero);
+  else window.addEventListener("resize", function () { layout(); ask(); });
+  if (hover && !reduce) {
+    hero.addEventListener("pointermove", function (e) {
+      var b = hero.getBoundingClientRect();
+      mouse = { x: e.clientX - b.left, y: e.clientY - b.top, r: Math.min(m.W, m.H) * 0.2, on: true };
+      if (done) ask();
+    });
+    hero.addEventListener("pointerleave", function () { if (mouse) mouse.on = false; ask(); });
+  }
+})();
+
+// small-screen menu closes after a jump
+(function () {
+  var menu = document.getElementById("menu");
+  menu.addEventListener("click", function (e) { if (e.target.closest("a")) menu.open = false; });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") menu.open = false; });
+  document.addEventListener("click", function (e) { if (menu.open && !menu.contains(e.target)) menu.open = false; });
 })();
 </script>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
@@ -789,7 +1081,7 @@ PYTHONPATH=src .venv/bin/python -m terratriage.ops.offline pack --area swannanoa
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-const G = window.__groma, L = G.L, A = G.A, tok = G.tok;
+const G = window.__ncrecon, L = G.L, A = G.A, tok = G.tok;
 const stage = document.getElementById("stage");
 const canvas = document.getElementById("gl");
 const nogl = () => { document.getElementById("nogl").hidden = false; };
@@ -864,7 +1156,7 @@ function build(demBuf) {
   scene.add(sun);
 
   const imgs = {};
-  const relief = document.createElement("canvas");
+  const relief = document.createElement("canvas"); relief.width = 0;
   function buildRelief() {
     const RW = 1080, RH = 750;
     relief.width = RW; relief.height = RH;
@@ -918,14 +1210,14 @@ function build(demBuf) {
     if (state.sectors) {
       ctx.font = "500 34px 'IBM Plex Mono', monospace";
       for (const s of L.sectors) {
-        ctx.strokeStyle = tok("--hydro"); ctx.lineWidth = 5; poly(s.p); ctx.closePath(); ctx.stroke();
+        ctx.strokeStyle = tok("--sector"); ctx.lineWidth = 5; poly(s.p); ctx.closePath(); ctx.stroke();
         const x = s.p[3][0] * tc.width + 14, y = s.p[3][1] * tc.height + 46;
-        ctx.fillStyle = tok("--hydro"); ctx.fillRect(x - 8, y - 34, ctx.measureText(String(s.priority)).width + 16, 44);
-        ctx.fillStyle = tok("--hydro-ink"); ctx.fillText(String(s.priority), x, y);
+        ctx.fillStyle = tok("--sector"); ctx.fillRect(x - 8, y - 34, ctx.measureText(String(s.priority)).width + 16, 44);
+        ctx.fillStyle = tok("--sector-ink"); ctx.fillText(String(s.priority), x, y);
       }
     }
     if (state.lz) {
-      ctx.font = "600 20px 'Public Sans', sans-serif";
+      ctx.font = "700 20px Archivo, sans-serif";
       for (const p of L.lz) {
         const x = p.p[0] * tc.width, y = p.p[1] * tc.height;
         ctx.fillStyle = tok("--lz"); ctx.beginPath(); ctx.arc(x, y, 15, 0, Math.PI * 2); ctx.fill();
@@ -1020,16 +1312,15 @@ function build(demBuf) {
   for (const [id] of ids) document.getElementById(id).addEventListener("change", () => { readState(); paint(); });
 
   function sky() { const c = new THREE.Color(tok("--map-bg")); scene.background = c; scene.fog = new THREE.Fog(c, 12, 30); }
-  const themeChanged = () => { relief.width = 0; sky(); paint(); };
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", themeChanged);
-  new MutationObserver(themeChanged).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
-  Promise.all([loadImg(A.post), loadImg(A.pre), loadImg(A.heat), loadImg(A.ground)]).then(([post, pre, heat, ground]) => {
+  // the canvas labels need their faces before the first paint
+  const faces = Promise.all([document.fonts.load("500 34px 'IBM Plex Mono'"), document.fonts.load("700 20px Archivo")]).catch(() => null);
+  Promise.all([loadImg(A.post), loadImg(A.pre), loadImg(A.heat), loadImg(A.ground), faces]).then(([post, pre, heat, ground]) => {
     Object.assign(imgs, { post, pre, heat, ground });
     readState(); sky(); paint(); resize();
     new ResizeObserver(resize).observe(stage);
     stage.classList.add("ready");
-    flyTo(home, 2600);
+    flyTo(home, 0);
   }).catch(nogl);
 }
 

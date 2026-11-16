@@ -1,4 +1,4 @@
-"""Groma Verify: task selection, blind judgments, consensus, release,
+"""NC Recon Verify: task selection, blind judgments, consensus, release,
 dataset and hold-out isolation (terratriage.ops.truth)."""
 import csv
 import io

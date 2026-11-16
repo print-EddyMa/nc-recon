@@ -1,4 +1,4 @@
-"""Capture the real Groma app for the launch film:
+"""Capture the real NC Recon app for the launch film:
 `python video/launch/capture.py [--base http://localhost:5176]`.
 
 Runs against a scratch API (scratch registry, jobs, truth, labels, audit and

@@ -1,4 +1,4 @@
-# How responders work, and what Groma must give them (research, 2026-10-22)
+# How responders work, and what NC Recon must give them (research, 2026-10-22)
 
 ## Points that change the product
 

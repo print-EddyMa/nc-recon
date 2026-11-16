@@ -1,4 +1,4 @@
-"""Build the Groma website: `python3 site/build.py`.
+"""Build the NC Recon website: `python3 site/build.py`.
 
 Writes two copies from template.html, assets/chips.json and assets/terrain/
 (baked from real public data by assets/prep_terrain.py):
@@ -6,8 +6,9 @@ Writes two copies from template.html, assets/chips.json and assets/terrain/
   site/artifact.html  the same page without the document wrapper, for publishing
 
 Images and the elevation grid are separate files in assets/web/ (written by
-assets/web_assets.py) so the page itself stays small; publish that folder with
-the page, at the same relative paths.
+assets/web_assets.py) so the page itself stays small; the fonts live there too,
+in assets/web/fonts/. Publish that folder with the page, at the same relative
+paths.
 
 Set CONTACT before launch (an email or URL shown in the pilot section).
 """
@@ -21,22 +22,18 @@ CONTACT = "ma.eddy.work@gmail.com"  # shown on the site: pilot requests, questio
 REPO = "https://github.com/print-EddyMa/nc-recon"
 EXAMPLE = "e874056f"  # Swannanoa manufactured home: search team and model both say Destroyed
 
-MARK_INNER = (
-    '<g fill="none" stroke="currentColor" stroke-linecap="round">'
-    '<line x1="32" y1="9" x2="32" y2="55" stroke-width="3.2"/>'
-    '<line x1="9" y1="15" x2="55" y2="15" stroke-width="3.2"/>'
-    '<line x1="6" y1="56" x2="58" y2="56" stroke-width="3.2"/></g>'
-    '<g class="plumb" style="--px:12px"><line x1="12" y1="15" x2="12" y2="39" stroke="currentColor" stroke-width="1.4"/>'
-    '<path d="M12 38.5 l-3.6 3.4 3.6 6 3.6-6z" fill="var(--bronze)"/></g>'
-    '<g class="plumb" style="--px:52px"><line x1="52" y1="15" x2="52" y2="39" stroke="currentColor" stroke-width="1.4"/>'
-    '<path d="M52 38.5 l-3.6 3.4 3.6 6 3.6-6z" fill="var(--bronze)"/></g>'
-    '<circle cx="32" cy="9" r="2.6" fill="var(--bronze)"/>'
-)
-MARK = f'<svg viewBox="0 0 64 64" aria-hidden="true">{MARK_INNER}</svg>'
+
+def mark() -> str:
+    """The NC Recon mark, "the odd one out": eight tiles in ink, one orange tile knocked out of line.
+    Same geometry as docs/brand/mark-on-dark.svg; the ink follows the band it sits on."""
+    tiles = "".join(f'<rect x="{x}" y="{y}" width="24" height="24"/>' for y in (7, 36, 65) for x in (7, 36, 65) if (x, y) != (65, 65))
+    return (f'<svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor">{tiles}</g>'
+            '<rect x="69.2" y="68.4" width="24" height="24" fill="var(--signal)" transform="rotate(19 81.2 80.4)"/></svg>')
 
 
 WEB_FILES = ("hero.webp", "hero-960.webp", "poster.webp", "post.webp", "pre.webp", "heat.png", "ground.png",
-             "dem.json", "anatomy_change.webp", "anatomy_ground.png", "chip_pre.jpg", "chip_post.jpg")
+             "dem.json", "anatomy_change.webp", "anatomy_ground.png", "chip_pre.jpg", "chip_post.jpg",
+             "fonts/archivo-latin-standard-normal.woff2", "fonts/ibm-plex-mono-latin-500-normal.woff2")
 
 
 def main() -> None:
@@ -49,13 +46,15 @@ def main() -> None:
     ring = lambda r: " ".join(f"{x},{y}" for x, y in r)  # noqa: E731
     favicon = open(os.path.join(HERE, "logo.svg"), encoding="utf-8").read()
     assert CONTACT, "set CONTACT: the site's pilot and pricing buttons mail it"
-    brief = (f'<a href="mailto:{CONTACT}?subject=Groma%20pilot%20request"><span class="arr" aria-hidden="true">→</span>'
-             '<b>Request a free pilot</b><span>For an emergency management office, an insurer, a Guard unit or an aid group.</span></a>'
+    brief = (f'<a href="mailto:{CONTACT}?subject=NC%20Recon%20pilot%20request"><span class="arr" aria-hidden="true"></span>'
+             '<div><b>Request a free pilot</b><span>For an emergency management office, an insurer, a Guard unit or an aid group.</span></div></a>'
              if CONTACT else
-             '<a href="#explore"><span class="arr" aria-hidden="true">↑</span><b>See it work</b>'
-             '<span>Turn the Swannanoa valley in 3D, with the damage, roads cut and search sectors.</span></a>')
+             '<a href="#explore"><span class="arr up" aria-hidden="true"></span><div><b>See it work</b>'
+             '<span>Turn the Swannanoa valley in 3D, with the damage, roads cut and search sectors.</span></div></a>')
     terr = os.path.join(HERE, "assets", "terrain")
     missing = [f for f in WEB_FILES if not os.path.exists(os.path.join(HERE, "assets", "web", f))]
+    fonts = [f for f in missing if f.startswith("fonts/")]
+    assert not fonts, f"copy the fonts into site/assets/web/fonts/ (see site/README.md): {fonts}"
     assert not missing, f"run python3 site/assets/web_assets.py first: {missing}"
     layers = json.load(open(os.path.join(terr, "layers.json"), encoding="utf-8"))
     # heavy files stay outside the page (assets/web, written by assets/web_assets.py) and load
@@ -68,7 +67,6 @@ def main() -> None:
         "__LAYERS__": as_json(layers), "__ASSETS__": as_json(assets),
         "__ANAT_CHANGE__": web + "anatomy_change.webp", "__ANAT_GROUND__": web + "anatomy_ground.png",
         "__N_STRUCT__": f"{layers['structures']:,}", "__USNG__": layers["anatomy"]["usng"],
-        "__MARK_INNER__": MARK_INNER, "__MARK__": MARK,
         "__FAVICON__": urllib.parse.quote(favicon.split("<title>")[0] + favicon.split("</title>")[1]),
         "__PRE__": web + "chip_pre.jpg", "__POST__": web + "chip_post.jpg",
         "__RING_PRE__": ring(rec["pre_ring"]), "__RING_POST__": ring(rec["post_ring"]),
@@ -81,6 +79,7 @@ def main() -> None:
     }
     for k, v in subs.items():
         t = t.replace(k, v)
+    t = t.replace("__MARK__", mark())
     left = re.findall(r"__[A-Z][A-Z_]+__", t)
     assert not left, left[:5]
     assert "—" not in t, "no em dashes"

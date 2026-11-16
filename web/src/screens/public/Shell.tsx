@@ -1,8 +1,8 @@
-// The frame for Groma's public pages (check a street, the index, an owner's
+// The frame for NC Recon's public pages (check a street, the index, an owner's
 // record), matching the website: a light top bar, one sans family, a quiet
 // footer with links. No operator chrome, nothing that needs a token.
 import type { ReactNode } from "react";
-import { GromaMark } from "../../components/ui/GromaMark";
+import { Mark } from "../../components/ui/Mark";
 import { DISCLAIMER } from "../../lib/ops";
 
 const LINKS = [
@@ -23,9 +23,9 @@ export function PublicShell({
     <div className="h-full overflow-y-auto bg-surface print:h-auto print:overflow-visible">
       <header className="sticky top-0 z-10 border-b border-line bg-surface/90 backdrop-blur print:hidden">
         <div className="public-wrap flex h-16 items-center gap-4 sm:gap-8">
-          <a href="#/check" className="flex items-center gap-2 text-ink" aria-label="Groma, check a street">
-            <GromaMark className="h-[26px] w-[26px]" />
-            <span className="text-[19px] font-semibold tracking-[-0.01em]">Groma</span>
+          <a href="#/check" className="flex items-center gap-2 text-ink" aria-label="NC Recon, check a street">
+            <Mark className="h-[22px] w-auto" />
+            <span className="text-[19px] font-semibold tracking-[-0.01em]">NC Recon</span>
           </a>
           <nav aria-label="Public pages" className="ml-auto flex items-center gap-4 text-[14px] sm:gap-7 sm:text-[15px]">
             {LINKS.map((l) => (

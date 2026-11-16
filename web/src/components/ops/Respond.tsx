@@ -100,7 +100,7 @@ export default function Respond({
       const b = await downloadResponseKml(areaId);
       const a = document.createElement("a");
       a.href = URL.createObjectURL(b);
-      a.download = `groma-${areaId}-response-plan.kml`;
+      a.download = `ncrecon-${areaId}-response-plan.kml`;
       a.click();
       URL.revokeObjectURL(a.href);
     } catch (e) {

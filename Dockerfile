@@ -1,23 +1,23 @@
-# Groma: one container = ops API + assessment worker + web app (same origin).
+# NC Recon: one container = ops API + assessment worker + web app (same origin).
 #
 #   docker compose up -d --build            (see docker-compose.yml, docs/ops/DEPLOYMENT.md)
 #
 # Models, all built in so one `docker compose up -d --build` is a complete install:
-#  * Groma's wildfire model (pipeline/data/model/weights, in git) + its ResNet-18
+#  * NC Recon's wildfire model (pipeline/data/model/weights, in git) + its ResNet-18
 #    encoder (downloaded from download.pytorch.org, SHA-256 checked).
 #  * The general image model (xView2 CMU baseline, BSD-3; trained on xBD,
 #    non-commercial data terms): the `model` stage downloads the ONNX file from
-#    Groma's `model-general-v1` release and checks its SHA-256. Build with
-#    `--build-arg GROMA_GENERAL_MODEL=0` to skip it (CI does); Groma then says
+#    NC Recon's `model-general-v1` release and checks its SHA-256. Build with
+#    `--build-arg NCR_GENERAL_MODEL=0` to skip it (CI does); NC Recon then says
 #    that channel is off.
 
 # ---------------------------------------------------- general image model --
 # The xView2 baseline classifier, already converted to ONNX (BSD-3, licences/
-# xview2-baseline-BSD-3.txt), from Groma's release; the SHA-256 is checked.
+# xview2-baseline-BSD-3.txt), from NC Recon's release; the SHA-256 is checked.
 FROM python:3.13-slim AS model
-ARG GROMA_GENERAL_MODEL=1
+ARG NCR_GENERAL_MODEL=1
 WORKDIR /m
-RUN mkdir -p out && if [ "$GROMA_GENERAL_MODEL" = "1" ]; then \
+RUN mkdir -p out && if [ "$NCR_GENERAL_MODEL" = "1" ]; then \
       python -c "import urllib.request; urllib.request.urlretrieve('https://github.com/print-EddyMa/nc-recon/releases/download/model-general-v1/xview2_cmu_classifier.onnx', 'out/xview2_cmu_classifier.onnx')" \
       && echo "711fbdd47d99c4e1d5e7d6a84ec5c8d1c8a5eaeb84ea90d1969e10cd02fdb18f  out/xview2_cmu_classifier.onnx" | sha256sum -c - ; \
     fi

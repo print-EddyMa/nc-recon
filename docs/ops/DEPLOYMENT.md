@@ -1,4 +1,4 @@
-# Deploying Groma
+# Deploying NC Recon
 
 One container runs everything: the web app, the API and the assessment worker.
 Caddy sits in front for HTTPS. No paid services or keys are required.
@@ -16,7 +16,7 @@ Caddy sits in front for HTTPS. No paid services or keys are required.
 ## First deployment
 
 ```bash
-git clone https://github.com/print-EddyMa/nc-recon groma && cd groma
+git clone https://github.com/print-EddyMa/nc-recon nc-recon && cd nc-recon
 # 1. settings
 cp .env.example .env
 python3 -c "import secrets; print(secrets.token_urlsafe(32))"   # paste into TERRATRIAGE_TOKEN
@@ -65,14 +65,14 @@ Open `https://<NCR_DOMAIN>/`. Analysts paste the token once under
 
 Both are built into the image by the Dockerfile:
 
-* **Groma's wildfire model**: weights in git (`pipeline/data/model/weights`,
+* **NC Recon's wildfire model**: weights in git (`pipeline/data/model/weights`,
   copied to `/app/model`, `NCR_MODEL_DIR`), plus its ResNet-18 encoder,
   downloaded from download.pytorch.org and SHA-256-checked at build
   (`TORCH_HOME=/app/torch`). It runs on CPU PyTorch.
 * **The general image model** (flood and wind): the `model` build stage
-  downloads the ONNX file from Groma's `model-general-v1` release (the xView2
+  downloads the ONNX file from NC Recon's `model-general-v1` release (the xView2
   baseline classifier, BSD-3, converted with `pipeline/scripts/export_onnx.py`)
-  and checks its SHA-256. `--build-arg GROMA_GENERAL_MODEL=0` skips it (CI
+  and checks its SHA-256. `--build-arg NCR_GENERAL_MODEL=0` skips it (CI
   does). Its training data is non-commercial: see `docs/model/MODEL_CARD.md`.
 
 To use your own copy of the general model instead, mount it:
@@ -108,7 +108,7 @@ docker compose cp ncrecon:/app/data/backup.tar.gz ./ncrecon-backup-$(date +%F).t
 
 ## When sources are down
 
-Federal services fail during disasters. Groma degrades rather than stops:
+Federal services fail during disasters. NC Recon degrades rather than stops:
 
 | Source down | Effect |
 |---|---|

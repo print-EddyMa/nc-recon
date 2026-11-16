@@ -185,11 +185,11 @@ def test_unsafe_tars_are_refused(tmp_path, kind):
                 setattr(ti, k, v)
             tf.addfile(ti, io.BytesIO(data))
         if kind == "traversal":
-            add("groma-pack-x/../../evil.txt")
+            add("ncrecon-pack-x/../../evil.txt")
         elif kind == "absolute":
             add("/tmp/evil.txt")
         elif kind == "symlink":
-            ti = tarfile.TarInfo("groma-pack-x/link")
+            ti = tarfile.TarInfo("ncrecon-pack-x/link")
             ti.type, ti.linkname = tarfile.SYMTYPE, "/etc/passwd"
             tf.addfile(ti)
         else:

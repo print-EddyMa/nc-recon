@@ -1,4 +1,4 @@
-# Groma Verify: a ground-truth engine for disaster damage
+# NC Recon Verify: a ground-truth engine for disaster damage
 
 *Concept and first build, 2026-10-21.*
 
@@ -13,7 +13,7 @@ free (GAO), and no public, structure-level, field-verified damage dataset exists
 for the event. Models are getting cheap (Google Earth AI and similar); verified
 truth is not.
 
-**Groma Verify** turns Groma from a tool that makes calls into an engine
+**NC Recon Verify** turns NC Recon from a tool that makes calls into an engine
 that makes *verified* calls, and keeps every verification as data:
 
 1. **Pick what matters.** After an assessment, rank every building by how much a
@@ -40,7 +40,7 @@ that makes *verified* calls, and keeps every verification as data:
 
 ## Why this can grow
 
-* **It runs wherever the pipeline runs.** Any town Groma can assess becomes a
+* **It runs wherever the pipeline runs.** Any town NC Recon can assess becomes a
   verification job. Bring your own disaster.
 * **It compounds.** Each event adds labels with negatives; each label makes the
   next event's calls better calibrated; better calls mean fewer buildings need

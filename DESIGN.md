@@ -1,14 +1,16 @@
-# Design - Groma
+# Design - NC Recon
 
-Locked design system for the Groma web app (`web/`) and site (`site/`).
+Locked design system for the NC Recon web app (`web/`) and site (`site/`).
 `web/src/index.css` `:root` and `web/tailwind.config.js` are the source of
 truth; amend there and here together. Screens **share** this system: a new
 screen uses the kit in `web/src/components/ui/kit.tsx`, not its own look.
 
-Last full pass: 2026-10-26 (de-AI pass after studying palantir.com,
+Last site pass: 2026-11-04 (Hallmark redesign in the launch film's language; see
+**The site** below; the app and public pages are unchanged by it). Last full
+pass: 2026-10-26 (de-AI pass after studying palantir.com,
 nvidia.com and about.meta.com: one sans family for app and site, a light-first
 site, short copy; public pages). Before that, 2026-10-23 (one brand with the
-site: obsidian and limestone, cast bronze; public pages). Before that, 2026-10-22 (Groma
+site: obsidian and limestone, cast bronze; public pages). Before that, 2026-10-22 (NC Recon
 rename, operations-console redesign). The research behind it (FEMA lifelines
 toolkit, WCAG 2.2, NASA Worldview, NN/g, USWDS) is summarised at the end.
 
@@ -19,8 +21,10 @@ toolkit, WCAG 2.2, NASA Worldview, NN/g, USWDS) is summarised at the end.
 **A working instrument for people acting on a disaster.** County and state
 emergency managers in an EOC, National Guard planners, search teams, insurers.
 Every mark means one thing; every number carries its uncertainty and an
-absolute as-of time; every screen says what to do next. The brand is the
-Roman surveyor's groma: an instrument that measures the same way every time.
+absolute as-of time; every screen says what to do next. The app's brand is the
+North Carolina outline with a scan ring over the Triangle: it looks the same way every time.
+The website has moved to the new mark, "the odd one out" (`docs/brand/`); the
+app still carries the outline until it is changed on purpose.
 
 - **Genre** · utilitarian instrument (operations console), not a dashboard of
   KPI cards
@@ -32,7 +36,7 @@ Roman surveyor's groma: an instrument that measures the same way every time.
 
 ## The frame (App shell)
 
-- **Top bar, 48 px.** Groma mark + "Groma" (Public Sans, semibold); the four jobs: **Assess**,
+- **Top bar, 48 px.** NC Recon mark + "NC Recon" (Public Sans, semibold); the four jobs: **Assess**,
   **Verify**, **Conditions**, **Help** (icon + label, accent underline on the
   current one); right side: data-source status (one dot summarising every
   feed, list on click), responder access (key), theme.
@@ -87,6 +91,47 @@ Roman surveyor's groma: an instrument that measures the same way every time.
 - Swipe is unavailable in 3D; the camera tilts once, never rotates by itself,
   and does not animate under reduced motion.
 
+## The site (`site/template.html`)
+
+Cut like the launch film: near-black, hard cuts between bands, expanded type,
+one orange. Marketing, not an instrument, so it may be loud where the app may
+not; the honesty rules are the same.
+
+- **Palette.** Paper `#0B0B0B`, ink `#F5F3EE`, signal `#FF5A1F`; dark only, no
+  `prefers-color-scheme` switch. `.light` flips the surface tokens for one band
+  (product, results, the pilot plan) and is the hard cut. Tokens stay hex: the
+  WebGL and canvas code reads them, and three.js does not parse `oklch()`.
+- **Orange is the signal, never severity.** It sits inside the damage ramp, so
+  it stays off the map, the legend, the anatomy plates and the damage bars. It
+  appears on the mark, the odd tile, the primary button, the third cut and the
+  closing band. Map sectors and the home's outline are off-white.
+- **Type.** Archivo for everything, self-hosted (`site/assets/web/fonts/`, OFL):
+  display at `font-stretch` 116% and weight 720 (104% below 40rem, so words do
+  not break), body at 100%. IBM Plex Mono 500 for figures that line up, grid
+  references and code. Archivo has no arrows, so arrows are the CSS `.arr` mask.
+- **Shape.** Square corners everywhere, like the tiles. Hover is a hard
+  inversion with no transition.
+- **Mark.** `site/logo.svg` is `docs/brand/app-icon.svg`; `mark()` in
+  `site/build.py` writes the 3x3 tiles inline, ink in `currentColor`.
+- **Hero tile wall.** One tile per building in the Swannanoa run, in the mark's
+  proportions, read from `layers.json`. Tile order means nothing and carries no
+  damage: all tiles are the same except the last, the showcase home. One sweep
+  on load replays the run 40 times faster, and the caption says so; the count
+  and clock end on the real 893 and 01:28. A ring follows the pointer on
+  desktop. Reduced motion shows the final state.
+- **The cut.** 893 buildings, 88 seconds, 1 laptop: three bands side by side,
+  with the speed caveat under them.
+- **No scroll animation.** Nothing is pinned, swapped, revealed or moved by
+  scrolling, and anchors jump. The user finds it annoying; do not add it back.
+- **Motion budget.** The hero sweep on load, and the anatomy stack, which
+  lights a layer when a step is hovered, clicked or focused. Hero text uses `mix-blend-mode: difference` so it
+  holds up while the ring passes under it.
+- **Structure.** Hallmark: Marquee Hero, floating square bar (N5), statement
+  footer (Ft5) that closes on "Verify on the ground".
+- **Public-page limits.** No per-building geometry except the showcase home
+  (17S LV 7253 4080); damage only as the 70 m smoothed density; no building
+  views of TEST areas. Numbers keep their caveats beside them.
+
 ## Offline (field laptop)
 
 - `lib/offline.ts` asks `GET /ops/offline` once at start-up and caches the
@@ -108,31 +153,32 @@ under `@media (prefers-color-scheme: dark) :root:not([data-theme=light])` and
 
 | Token | Light (limestone) | Dark (obsidian) | Role |
 |---|---|---|---|
-| `--canvas` | `#EEEAE2` | `#0E0D0B` | page ground |
-| `--surface` | `#FAF8F3` | `#171512` | panels, bars |
-| `--surface-2` | `#E8E2D7` | `#201D19` | insets, tracks, skeletons |
-| `--line` / `--line-strong` | `#DDD5C7` / `#BFB5A4` | `#2C2823` / `#433D35` | hairlines |
-| `--ink` / `-dim` / `-faint` | `#181512` / `#4B443B` / `#6F665A` | `#EDE6DA` / `#B5AB9C` / `#8A8072` | text |
-| `--accent` | `#8E5B27` cast bronze | `#D2A06A` | interaction, "this is live" and the brand |
-| `--brand` | `#8E5B27` | `#D2A06A` | the mark's plumb bobs |
+| `--canvas` | `#F4F2ED` | `#0A0A0A` | page ground |
+| `--surface` | `#FBFAF7` | `#131312` | panels, bars |
+| `--surface-2` | `#E9E6DF` | `#1C1C1A` | insets, tracks, skeletons |
+| `--line` / `--line-strong` | `#DEDAD2` / `#BEB9AF` | `#282825` / `#403F3B` | hairlines |
+| `--ink` / `-dim` / `-faint` | `#0F0F0E` / `#4A4742` / `#6A665F` | `#F5F3EE` / `#B6B3AC` / `#8A8780` | text |
+| `--accent` | `#0F0F0E` ink | `#F5F3EE` | interaction: the selected tab, primary buttons |
+| `--brand` | `#DE4812` | `#FF5A1F` | the odd tile of the NC Recon mark, and nothing else |
 | `--review` | `#2563EB` | `#60A5FA` | needs-review outline: off the damage ramp, legible on imagery |
 | `--st-ok/warn/bad/unknown` | green / amber / red / grey | lighter for dark | system and lifeline status in UI chrome |
 
-**Accent discipline.** Bronze is interaction and brand, never severity, under
-~5 % of any view. It sits darker and browner than every step of the damage
-ramp, and the map never uses it for a damage level (only the extent of a new
-assessment). No gradients, no glow, no glass. The website uses the same
-values (`site/template.html`).
+**Accent discipline (2026-11-15, the brand pass).** Interaction is ink, as on
+the site: near-black on paper, off-white on near-black. Signal orange is the
+brand and appears only as the odd tile of the mark, never in the app's chrome
+or on the map, because the FEMA damage ramp already uses orange and red. Titles
+are Archivo, expanded (`.title-display`, `font-display`), the face of the site
+and the launch film; text stays Public Sans and figures IBM Plex Mono. No
+gradients, no glow, no glass, and no scroll-driven motion.
 
 **Public pages** (`#/check`, `#/index`, `#/record/...`, `screens/public/Shell.tsx`)
-look like the site: a light sticky top bar, large medium-weight titles, black
+keep the look of the 2026-10-26 site: a light sticky top bar, large medium-weight titles, black
 pill buttons (`.btn-pill`), large fields (`.field-lg`), monochrome except for
 damage data, and the disclaimer in the footer. They never show operator
 chrome or anything that needs a token.
 
-**The site** (`site/template.html`) is light-first and monochrome: white
-ground, near-black type and buttons, colour only in data (the damage ramp,
-map layers). Bronze survives only in the mark's plumb bobs.
+**The site** (`site/template.html`) has its own palette, from the launch
+film; see **The site** below.
 
 ### Damage scale (data, identical in both themes)
 
@@ -227,7 +273,7 @@ bound, not a finding.
 ## Declined, and why
 
 - Command palette, auto-tilt, auto-rotating cameras, count-ups: decoration on
-  an instrument. (3D is an opt-in view, below, never the default.)
+  an instrument (the marketing site's one replay count is labelled as a replay). (3D is an opt-in view, below, never the default.)
 - Cesium / Google 3D tiles and paid traffic: metered services and a second map
   engine.
 - Red-only night mode: current night-vision practice; the dark theme is the

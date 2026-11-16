@@ -129,7 +129,7 @@ def plan_kml(d: dict[str, Any]) -> str:
         for k, c, icon in (("sector", "ff00a5ff", "placemark_square"), ("lz", "ff00ff00", "heliport"),
                            ("cutoff", "ff0000ff", "caution"), ("facility", "ff00ffff", "triangle")))
     return ('<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document>'
-            f"<name>Groma response plan: {escape(area)}</name>"
+            f"<name>NC Recon response plan: {escape(area)}</name>"
             f"<description>{escape(d.get('disclaimer', ''))}</description>{styles}{''.join(parts)}"
             "</Document></kml>")
 
@@ -141,4 +141,4 @@ def response_kml(area: str, request: Request, authorization: str | None = Header
     kml = plan_kml(_read(area, "response.json"))
     audit.record("export_response_kml", request, area)
     return Response(kml, media_type="application/vnd.google-earth.kml+xml",
-                    headers={"Content-Disposition": f'attachment; filename="groma-{area}-response.kml"'})
+                    headers={"Content-Disposition": f'attachment; filename="ncrecon-{area}-response.kml"'})

@@ -1,8 +1,9 @@
-# Groma damage model v0 (`groma-dmg-v0`): model card
+# NC Recon damage model v0 (`ncrecon-dmg-v0`): model card
 
-*Status: research model. It is not wired into assessments. The xView2-trained
-E1 classifier remains the optical channel until this model is better on
-held-out events.*
+*Status: in use for wildfire only. Since 2026-10-22 this model runs as
+evidence channel M1 and replaces the xView2-trained E1 classifier on wildfire
+assessments, by the pre-registered Altadena rule below. Every other hazard
+still uses E1. Flood and wind accuracy are not validated.*
 
 ## What it is
 
@@ -26,7 +27,7 @@ git-ignored; they are not in the repository.
 
 E1 is trained on xBD, whose terms are non-commercial. A model trained only on
 public-domain imagery and public labels carries no such restriction from its
-data. That is what lets Groma use it in paid products later.
+data. That is what lets NC Recon use it in paid products later.
 
 ## Training data (every source and its licence)
 
@@ -149,10 +150,14 @@ pipeline's own footprints and matching.
 
 **Frozen inputs (sha256).**
 
+The product was renamed NC Recon after this evaluation. The model files were
+renamed with it; their bytes are unchanged, so these hashes still hold, and the
+`model` field inside the frozen JSON keeps the id it was trained under.
+
 | Item | sha256 |
 |---|---|
-| `data/model/weights/groma-dmg-v0.npz` | 5abdb8362259713af9ff074a93129e897b228b41f914ce9d9c7e4af05d2e7222 |
-| `data/model/weights/groma-dmg-v0.json` | 3c92fa924d0f59553c8d7316691a0c7d1fcb789dec1fd699ba50b00b9012b77c |
+| `data/model/weights/ncrecon-dmg-v0.npz` | 5abdb8362259713af9ff074a93129e897b228b41f914ce9d9c7e4af05d2e7222 |
+| `data/model/weights/ncrecon-dmg-v0.json` | 3c92fa924d0f59553c8d7316691a0c7d1fcb789dec1fd699ba50b00b9012b77c |
 | torchvision `resnet18-f37072fd.pth` (frozen encoder) | f37072fd47e89c5e827621c5baffa7500819f7896bbacec160b1a16c560e07ec |
 | `data/raw/altadena/pre_2022-05-05_2022-05-11.tif` | 5a4590edc3e3cdf67694e9e8f877f8e383092949044990d13e4dc45200712808 |
 | `data/raw/altadena/post_2025-01-28.tif` | 60703e449388d93e3bb94a290e48a2886c526321d9b281328f2c9791dc2b4164 |
@@ -238,7 +243,7 @@ Where M1 still misses, by DINS level (rows) and M1's call (columns):
 - **The middle levels stay weak**, as on Palisades.
 
 **Run record:**
-- The result is in `data/model/weights/groma-dmg-v0.prereg.altadena.json`
+- The result is in `data/model/weights/ncrecon-dmg-v0.prereg.altadena.json`
   (sha256 74979064a90ac93525487a8ebc7d19dff55c132f1d44774c22dcdbe73129abc3).
 - The run happened in a scratch output folder. The live `data/output/ops` (37
   files) had identical sha256 hashes before and after.
@@ -277,16 +282,16 @@ Where M1 still misses, by DINS level (rows) and M1's call (columns):
 
 ## Release and licence (launch, 2026-10-26)
 
-* **Groma's wildfire model** (`pipeline/data/model/weights/groma-dmg-v0.npz`
+* **NC Recon's wildfire model** (`pipeline/data/model/weights/ncrecon-dmg-v0.npz`
   and `.json`) ships with the code under Apache-2.0. Its encoder is the
   torchvision ResNet-18 ImageNet checkpoint (BSD-3), downloaded and
   SHA-256-checked at install (`terratriage.ops.model.fetch_encoder`); the
   Docker image builds it in.
 * **The general image model** used for flood and wind (xView2 CMU baseline,
   BSD-3, Copyright 2019 Carnegie Mellon University) is published converted to
-  ONNX as Groma's `model-general-v1` release with its licence; the Docker build
+  ONNX as NC Recon's `model-general-v1` release with its licence; the Docker build
   downloads it and checks the SHA-256. It was trained on xBD, whose data terms
-  are non-commercial, which fits Groma while it is free. **Before any paid
+  are non-commercial, which fits NC Recon while it is free. **Before any paid
   plan**, flood and wind need a model trained only on commercially usable
   data, the way the wildfire model was.
 * **What is measured:** only the wildfire model, once, on Eaton (above). The

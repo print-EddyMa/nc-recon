@@ -4,7 +4,7 @@ After Helene, Civil Air Patrol crews flew western North Carolina and FEMA
 published every frame as a point (camera position, heading, time, a direct
 link to the JPEG): `Image_Points_view`, 159,819 obliques and 704,948 nadir
 frames nationally. Over Swannanoa the obliques were shot on 2024-09-28, two
-days after the crest, months before the spring-2025 orthos Groma reads.
+days after the crest, months before the spring-2025 orthos NC Recon reads.
 
 What this module does and does not do:
 * It finds the frames that probably show a building: an oblique whose camera

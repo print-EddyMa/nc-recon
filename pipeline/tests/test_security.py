@@ -1,4 +1,4 @@
-"""Security properties of the Groma service, checked offline.
+"""Security properties of the NC Recon service, checked offline.
 
 One place that pins down what must stay true as modules change: responder
 data fails closed, inputs that reach files or upstream queries are

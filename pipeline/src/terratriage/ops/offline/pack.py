@@ -134,7 +134,7 @@ def build(area: str, out_root: str, *, allow_test: bool = False, with_web: str |
     if role == "TEST" and not allow_test:
         raise PackError(f"{area} is a TEST (hold-out) area; refusing to pack it unless --allow-test")
     stamp = time.strftime("%Y%m%d", time.gmtime())
-    root = os.path.join(out_root, f"groma-pack-{area}-{stamp}")
+    root = os.path.join(out_root, f"ncrecon-pack-{area}-{stamp}")
     if os.path.exists(root):
         shutil.rmtree(root)
     os.makedirs(root)
@@ -224,7 +224,7 @@ def build(area: str, out_root: str, *, allow_test: bool = False, with_web: str |
     manifest = {
         "format": FORMAT, "area": area, "role": role, "event_id": eid, "event_spec": espec,
         "area_spec": aspec, "spec_origin": origin, "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "groma_version": version, "bytes": total, "files": files, "basemap": bm,
+        "ncrecon_version": version, "bytes": total, "files": files, "basemap": bm,
         "left_out": left_out + ["labels, Verify judgments, the audit log, the registry and the service token"],
         "labels": LABELS_NOTE, "offline_limits": OFFLINE_LIMITS,
         "licences": {"imagery": "as recorded in the assessment provenance", "basemap": basemap.LICENSE,
@@ -346,7 +346,7 @@ def import_pack(path: str, *, replace: bool = False) -> dict[str, Any]:
     work = None
     root = path
     if os.path.isfile(path):
-        work = tempfile.mkdtemp(prefix="groma-pack-")
+        work = tempfile.mkdtemp(prefix="ncrecon-pack-")
         root = _extract(path, work)
     try:
         m = verify(root)

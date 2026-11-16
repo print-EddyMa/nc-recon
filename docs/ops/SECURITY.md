@@ -1,4 +1,4 @@
-# Groma security model and review record
+# NC Recon security model and review record
 
 *Security review of the integrated build, 2026-10-22. What the service
 protects, how, what was found and fixed in this review, and what an operator
@@ -59,7 +59,7 @@ must still do. The checks that keep these properties true are in
   address views, labels, Verify judgments and exports, exports, assessments,
   event creation, deletions, photo views, response product views, builds and
   KML downloads, and reference views.
-* **No personal tracking.** Groma observes places and assets. It does not
+* **No personal tracking.** NC Recon observes places and assets. It does not
   track people, read licence plates or recognise faces, and outbound
   requests carry a User-Agent naming the project, never a personal contact
   unless an operator sets `NCR_CONTACT`.

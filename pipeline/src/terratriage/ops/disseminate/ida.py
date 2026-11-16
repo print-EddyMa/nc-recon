@@ -1,7 +1,7 @@
 """Initial damage assessment (IDA) packet: `run.py ops-ida --area X`.
 
 What a state, tribe or county sends FEMA before a joint preliminary damage
-assessment (PDA), built from one Groma run. It follows FEMA's Preliminary
+assessment (PDA), built from one NC Recon run. It follows FEMA's Preliminary
 Damage Assessment Guide (July 2025), which says an SLTT government "may use
 Artificial Intelligence (AI) and machine learning" in its IDA and that FEMA
 validates an IDA dataset exported "as either an Excel file or a Geospatial
@@ -22,7 +22,7 @@ Rules:
   time of assessment, the appropriate damage category should be assigned").
 * Questions imagery cannot answer (utilities out, shelters, fatalities,
   insurance, employers) are left for the local official, never guessed.
-* Every page says whether Groma's calls have been measured for this hazard.
+* Every page says whether NC Recon's calls have been measured for this hazard.
 """
 from __future__ import annotations
 
@@ -81,7 +81,7 @@ def validation_note(hazards: list[str], audience: str = "state") -> str:
     """What has, and has not, been measured for this hazard. Figures from
     docs/model/MODEL_CARD.md (pre-registered Eaton hold-out, 2,246 buildings)."""
     if "wildfire" in hazards:
-        return ("Wildfire: Groma's wildfire image model was scored once on a held-out fire (Eaton, 2025) against "
+        return ("Wildfire: NC Recon's wildfire image model was scored once on a held-out fire (Eaton, 2025) against "
                 "CAL FIRE inspections: for Major or Destroyed, precision 0.957 and recall 0.942 on 2,246 buildings. "
                 "The middle levels (Affected, Minor) are weaker, and the full pipeline has not yet been scored on a "
                 "new fire. " + TAIL[audience][0])
@@ -89,7 +89,7 @@ def validation_note(hazards: list[str], audience: str = "state") -> str:
 
     names = ", ".join(label(h) for h in hazards) or "this hazard"
     which = "these hazards" if len(hazards) > 1 else "this hazard"
-    return (f"{names[:1].upper()}{names[1:]}: Groma's damage calls have not been validated against field records "
+    return (f"{names[:1].upper()}{names[1:]}: NC Recon's damage calls have not been validated against field records "
             f"for {which}. " + TAIL[audience][1])
 
 
@@ -283,7 +283,7 @@ def build(area: str, out_dir: str | None = None) -> dict[str, Any]:
     paths["narrative"] = p
 
     with open(os.path.join(d, "README.txt"), "w", encoding="utf-8") as fh:
-        fh.write(f"Groma IDA packet: {area}\n\n{DISCLAIMER}\n\n{note}\n\n"
+        fh.write(f"NC Recon IDA packet: {area}\n\n{DISCLAIMER}\n\n{note}\n\n"
                  "Contains street addresses. Share with emergency management only; do not post publicly.\n\n"
                  f"{area}_ida.xlsx: IA homes in FEMA survey fields (sheet 'IA homes'), summary counts, homes by "
                  "type, roads cut, site visit schedule, method and sources.\n"
@@ -409,7 +409,7 @@ th[scope=row]{{width:2.2rem;color:#5b544a;font-weight:500}} td p{{margin:.2rem 0
 <p class="warn"><b>Remote assessment.</b> {_e(f['note'])} {_e(DISCLAIMER)}</p>
 
 <h2>Joint PDA plan of action: Individual Assistance items</h2>
-<p><b>Methodology for validating degree of damage.</b> Groma's remote calls from imagery, with {f['review']} homes flagged to verify first. Validate the flagged homes and a sample of the rest door to door or by windshield survey, highest sectors first.</p>
+<p><b>Methodology for validating degree of damage.</b> NC Recon's remote calls from imagery, with {f['review']} homes flagged to verify first. Validate the flagged homes and a sample of the rest door to door or by windshield survey, highest sectors first.</p>
 <table><thead><tr><th>Level</th><th>Homes (most likely level)</th><th>Expected (sum of probabilities)</th></tr></thead><tbody>{counts}</tbody></table>
 <p><b>Homes inaccessible.</b> {_e(inacc_line)}</p>
 <p><b>Roads with a mapped landslide or reported closure.</b> Homes on them may still have another route; only homes with no route out count as inaccessible above. Possible blocks (debris, unverified bridges) are in the spreadsheet.</p><ul>{street_li}</ul>
@@ -418,6 +418,6 @@ th[scope=row]{{width:2.2rem;color:#5b544a;font-weight:500}} td p{{margin:.2rem 0
 
 <h2>PDA narrative report (FEMA PDA guide, Appendix F)</h2>
 <table><tbody>{rows}</tbody></table>
-<p class="meta">Built by Groma from public imagery, building inventories and OpenStreetMap roads. FEMA PDA guide: {_e(PDA_GUIDE)}</p>
+<p class="meta">Built by NC Recon from public imagery, building inventories and OpenStreetMap roads. FEMA PDA guide: {_e(PDA_GUIDE)}</p>
 </body></html>
 """

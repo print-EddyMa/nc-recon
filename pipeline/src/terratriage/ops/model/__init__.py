@@ -1,4 +1,4 @@
-"""Groma's own building damage model (licence-clean by construction).
+"""NC Recon's own building damage model (licence-clean by construction).
 
 Trained only on public-domain imagery and public labels:
   pre    USDA NAIP (public domain), latest collection before the incident,

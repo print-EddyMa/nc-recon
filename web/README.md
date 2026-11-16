@@ -1,4 +1,4 @@
-# Groma web
+# NC Recon web
 
 React 19 + TypeScript + Vite, Tailwind, MapLibre GL 6 with deck.gl 9.4
 overlays. Three screens: Operations (`src/screens/Ops.tsx`), Conditions

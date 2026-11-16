@@ -43,4 +43,4 @@ jobs:
     needs: [pipeline, web]
     steps:
       - uses: actions/checkout@v4
-      - run: docker build --build-arg GROMA_GENERAL_MODEL=0 -t groma:ci .   # skip the 500 MB general-model download in CI
+      - run: docker build --build-arg NCR_GENERAL_MODEL=0 -t ncrecon:ci .   # skip the 500 MB general-model download in CI

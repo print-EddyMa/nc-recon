@@ -92,7 +92,7 @@ export default function Record({ token }: { token: string }) {
             <b className="font-semibold">Not confirmed by anyone at the building.</b> This is a remote assessment from
             imagery
             {rec.confirmed_by_people
-              ? `. People reviewing the imagery without seeing Groma's answer agreed on ${rec.people_checked.label}.`
+              ? `. People reviewing the imagery without seeing NC Recon's answer agreed on ${rec.people_checked.label}.`
               : rec.needs_review
                 ? ". It is flagged for people to check."
                 : "."}

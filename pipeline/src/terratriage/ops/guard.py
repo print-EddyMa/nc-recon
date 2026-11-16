@@ -157,6 +157,8 @@ _CONNECT = [
     "https://firms.modaps.eosdis.nasa.gov",
     "https://api.climate.ncsu.edu",
     "https://www.fema.gov",
+    # NASA GIBS imagery tiles and time domains (Conditions map, web/src/lib/gibs.ts)
+    "https://gibs.earthdata.nasa.gov",
     # AWS Terrain Tiles (terrarium elevation PNGs) for the optional 3-D terrain;
     # MapLibre fetches raster-dem from a worker, so it is a connect-src. Scoped
     # to the bucket path: a bare s3.amazonaws.com would admit every bucket

@@ -17,7 +17,7 @@ operator runs with NCR_DEV_OPEN=1 for local development - see ops/auth.py):
   GET  /ops/areas/{area}/responder      ncr_id -> address sidecar
   GET  /ops/areas/{area}/fema-assistance  FEMA assistance by ZIP beside the assessment
   GET  /ops/areas/{area}/field-reference  Helene SAR field categories beside the calls (Buncombe)
-  GET  /ops/truth/next?area=&worker=&role=   Groma Verify: next blind verification task
+  GET  /ops/truth/next?area=&worker=&role=   NC Recon Verify: next blind verification task
   POST /ops/truth/judgments                  one blind judgment
   GET  /ops/truth/areas/{area}               verification progress for an area
   GET  /ops/truth/metrics                    verified structures, verifiers, reliability
@@ -312,7 +312,7 @@ def fema_assistance(area: str, request: Request, authorization: str | None = Hea
 
 @router.get("/areas/{area}/field-reference")
 def field_reference(area: str, request: Request, authorization: str | None = Header(default=None)):
-    """Groma's calls beside the Helene search-and-rescue field categories
+    """NC Recon's calls beside the Helene search-and-rescue field categories
     for the same structures (Buncombe's public SARCOP extract). Responder-only:
     the per-structure pairs locate damage calls. Read from the stored
     comparison (`run.py ops-sarcop`); never computed on request, and never for
@@ -556,7 +556,7 @@ def export_zip(area: str, request: Request, authorization: str | None = Header(d
                 full = os.path.join(root, f)
                 z.write(full, os.path.relpath(full, d))
     return Response(buf.getvalue(), media_type="application/zip",
-                    headers={"Content-Disposition": f'attachment; filename="groma-{area}-responder.zip"'})
+                    headers={"Content-Disposition": f'attachment; filename="ncrecon-{area}-responder.zip"'})
 
 
 @router.get("/areas/{area}/ida.zip")
@@ -576,7 +576,7 @@ def ida_zip(area: str, request: Request, authorization: str | None = Header(defa
         for f in sorted(os.listdir(out["dir"])):
             z.write(os.path.join(out["dir"], f), f)
     return Response(buf.getvalue(), media_type="application/zip",
-                    headers={"Content-Disposition": f'attachment; filename="groma-{area}-ida.zip"'})
+                    headers={"Content-Disposition": f'attachment; filename="ncrecon-{area}-ida.zip"'})
 
 
 # --------------------------------------------------------------------------- #

@@ -103,9 +103,9 @@ development machine; CI builds it). Still to do by hand: **Run again** on
 Marion, and `run.py ops-assess --area spruce_pine`, to clear the duplicate
 structure ids in their stored outputs.
 
-## Groma Verify: the ground-truth engine (2026-10-21)
+## NC Recon Verify: the ground-truth engine (2026-10-21)
 
-Concept: `docs/truth/README.md`. Groma makes calls; Verify turns them into
+Concept: `docs/truth/README.md`. NC Recon makes calls; Verify turns them into
 verified labels and keeps them as data. `ops/truth.py`:
 
 * **Tasks by value of information:** model uncertainty (normalised entropy)
@@ -155,7 +155,7 @@ verified labels and keeps them as data. `ops/truth.py`:
   public SARCOP extract has FEMA-level categories, negatives included; only
   non-personal fields are requested. Swannanoa (TUNE): 370 waypoints, 262
   matched to an assessed structure (inside the footprint or within 10 m),
-  same level 36%, within one level 56%, kappa 0.02. When Groma's most likely
+  same level 36%, within one level 56%, kappa 0.02. When NC Recon's most likely
   level was Major or Destroyed, the teams agreed 22 of 27 times; it found 22 of
   the 114 buildings the teams called Major or Destroyed. Homes only (178 of the
   262; the rest are shops, churches and the like): agreed 15 of 19, found 15
@@ -272,7 +272,9 @@ The Maxar areas send 69% and 80% of assessed structures to review, the NC-ortho 
 change and a 7 px co-registration residual (NC orthos: 0.9 px). Old Fort's
 argmax "destroyed" count dropped from 129 to 52 once haze masking and
 footprint alignment went in. v2 reported 764 structures at Old Fort from OSM
-alone.
+alone. Since rules 2026-11-15.1 a residual over 1 px switches the change
+signal (E2) off for the whole area, so the Maxar areas need a reassess to
+apply it.
 
 Demo check: `npm run demo:validate` passes 10/10 runs, 0 external calls, 0
 console errors. Its frame-identical check fails, and fails identically when

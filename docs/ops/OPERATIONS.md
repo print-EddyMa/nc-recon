@@ -58,7 +58,7 @@ cd pipeline
    server (links are refused without it outside dev mode). Never for TEST areas.
 7. **Public pages**, no building-level data: `#/check` answers "how does my
    street look" with banded shares for the buildings within about 250 m (no
-   answer under 8 buildings); `#/index` and `GET /ops/index` are the Groma
+   answer under 8 buildings); `#/index` and `GET /ops/index` are the NC Recon
    Index, preliminary counts with 80% ranges per area, for newsrooms, aid groups
    and other apps.
 

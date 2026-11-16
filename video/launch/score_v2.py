@@ -3,12 +3,12 @@
 112 bpm, every section on a beat that matches compose_v2.py. All synthesised
 here (no samples, no third-party licence): kick, clap, hats, sub bass on the
 chord roots, plucked arpeggios, pads, risers into the drops, impacts and a
-bell for the groma. Dm, Bb, F, C; the anatomy and proof sections break down;
+bell for the closing mark. Dm, Bb, F, C; the anatomy and proof sections break down;
 the close resolves to D major. Voiceover from assets/vo2 (Kokoro, Apache-2.0),
 music ducked under it, mastered to -14 LUFS.
 
 Writes build/music_v2.wav, build/vo_v2.wav, build/mix_v2.wav and, with
-build/picture_v2.mp4, build/groma_launch_v2.mp4.
+build/picture_v2.mp4, build/ncrecon_launch_v2.mp4.
 """
 from __future__ import annotations
 
@@ -140,7 +140,7 @@ def build_music() -> np.ndarray:
             place(music, piano(hz(n + "3"), dur=4, vel=0.34), t(bb) + k * 0.02)
     for bb in (108, 116):
         place(drums, boom(0.5), t(bb))
-    # close: D major, bell on the plumb lines
+    # close: D major, bell on the closing mark
     place(music, pad([hz("D2"), hz("A2"), hz("F#3"), hz("D4")], 9.0, att=0.2, rel=5.0, level=0.16, cutoff=1800), t(124))
     for k, n in enumerate(["D3", "A3", "F#4", "D5"]):
         place(music, piano(hz(n), dur=7, vel=0.45), t(124) + k * 0.03)
@@ -198,7 +198,7 @@ def main() -> None:
     if os.path.exists(pic):
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", pic, "-i", mix, "-c:v", "copy", "-c:a", "aac",
                         "-b:a", "256k", "-shortest", "-movflags", "+faststart",
-                        os.path.join(BUILD, "groma_launch_v2.mp4")], check=True)
+                        os.path.join(BUILD, "ncrecon_launch_v2.mp4")], check=True)
     print("mix", mix, "film", os.path.exists(pic))
 
 

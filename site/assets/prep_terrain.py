@@ -41,7 +41,7 @@ X0, X1, Y0, Y1 = 369_500.0, 376_700.0, 3_937_700.0, 3_942_700.0
 DEM_W, DEM_H = 432, 300          # ~16.7 m
 IMG_W, IMG_H = 2048, 1422        # ~3.5 m
 HEAT_W, HEAT_H = 720, 500        # 10 m
-UA = {"User-Agent": "Groma/2.0 (website asset build)"}
+UA = {"User-Agent": "NCRecon/2.0 (website asset build)"}
 NCO = "https://services.nconemap.gov/secure/rest/services/Imagery"
 DEP3 = "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer"
 

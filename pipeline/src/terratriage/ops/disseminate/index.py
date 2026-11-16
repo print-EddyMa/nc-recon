@@ -1,7 +1,7 @@
-"""The Groma Index: one public, preliminary damage summary per assessed area.
+"""The NC Recon Index: one public, preliminary damage summary per assessed area.
 
 `GET /ops/index` lists every area; `GET /ops/index/<area>` is one area's record
-(schema `groma.index/1`). Built for apps, newsrooms, aid groups and AI agents
+(schema `ncrecon.index/1`). Built for apps, newsrooms, aid groups and AI agents
 that need a number within days of a declaration: counts by FEMA level with an
 80% range, roads cut, people cut off, debris and building loss, the imagery
 dates and what has been validated. Nothing building-level: no addresses, no
@@ -19,7 +19,7 @@ from .. import DISCLAIMER, OPS_OUT
 from ..analyze.classes import FEMA, FEMA_LABEL
 from .aggregate import SUPPRESS
 
-SCHEMA = "groma.index/1"
+SCHEMA = "ncrecon.index/1"
 Z80 = 1.2816
 
 

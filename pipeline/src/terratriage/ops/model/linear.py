@@ -1,4 +1,4 @@
-"""Groma damage model v0: frozen encoder features + a linear classifier.
+"""NC Recon damage model v0: frozen encoder features + a linear classifier.
 
 `python -m terratriage.ops.model.linear --boxes palisades_west palisades_east --incident Palisades`
 
@@ -96,7 +96,7 @@ def _params(sc, clf) -> dict[str, np.ndarray]:
             "classes": clf.classes_}
 
 
-def fit(boxes: list[str], incident: str, tag: str = "groma-dmg-v0") -> dict[str, Any]:
+def fit(boxes: list[str], incident: str, tag: str = "ncrecon-dmg-v0") -> dict[str, Any]:
     t0 = time.time()
     pre, post, pts, sources = [], [], [], []
     for b in boxes:
@@ -136,7 +136,7 @@ def fit(boxes: list[str], incident: str, tag: str = "groma-dmg-v0") -> dict[str,
     return card
 
 
-def load(tag: str = "groma-dmg-v0") -> tuple[dict[str, np.ndarray], dict[str, Any]]:
+def load(tag: str = "ncrecon-dmg-v0") -> tuple[dict[str, np.ndarray], dict[str, Any]]:
     wdir = os.path.join(MODEL_DIR, "weights")
     with open(os.path.join(wdir, f"{tag}.json"), encoding="utf-8") as fh:
         card = json.load(fh)
@@ -152,7 +152,7 @@ def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(prog="python -m terratriage.ops.model.linear")
     ap.add_argument("--boxes", nargs="+", required=True)
     ap.add_argument("--incident", required=True)
-    ap.add_argument("--tag", default="groma-dmg-v0")
+    ap.add_argument("--tag", default="ncrecon-dmg-v0")
     a = ap.parse_args(argv)
     card = fit(a.boxes, a.incident, a.tag)
     print(json.dumps({k: card[k] for k in ("model", "label_counts", "validation")}, indent=1))

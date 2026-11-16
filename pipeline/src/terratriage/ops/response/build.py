@@ -155,7 +155,7 @@ def build(area: str, *, skip: tuple[str, ...] = (), write: bool = True) -> dict[
                                            "people_in_severe_expected", "cut_off_people")} for s in sec[:5]],
     }
     out = {
-        "schema": "groma.response/1", "area": area, "run_id": ar.run.get("run_id"),
+        "schema": "ncrecon.response/1", "area": area, "run_id": ar.run.get("run_id"),
         "generated_utc": utc_now(), "disclaimer": DISCLAIMER,
         "summary": summary,
         "access": {**{k: v for k, v in (acc or {}).items() if k not in ("per_building", "per_point", "layer_roads")},

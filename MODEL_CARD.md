@@ -1,4 +1,4 @@
-# Model card: Groma damage assessment (ops mode, fusion v1)
+# Model card: NC Recon damage assessment (ops mode, fusion v1)
 
 *Format after Mitchell et al. 2019. Last updated 2026-09-26.*
 

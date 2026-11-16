@@ -3,9 +3,10 @@
 # status: provisional = hand-set from physics/definitions, NOT tuned on labels.
 # Tune on TUNE AOIs only (scripts/run.py ops-calibrate); never on TEST.
 status: provisional
-version: 2026-09-26.1
+version: 2026-11-15.1
 
 geometry_limit_deg: 15          # pre/post off-nadir or sun-elevation difference
+coreg_residual_max_px: 1.0      # co-registration residual over this -> E2 unavailable, MISREGISTERED (process/coreg.py)
 
 # per-building masks
 cloud:
@@ -77,7 +78,7 @@ channels:
     # live in ground_change.LIKELIHOOD; no flag is no evidence.
     weight: 0.8
   M1:
-    name: Groma damage model (ops/model/channel.py)
+    name: NC Recon damage model (ops/model/channel.py)
     # off       never run
     # alongside run next to E1 (both vote)
     # replace   E1 is recorded as REPLACED_BY_M1 wherever M1 produced a call

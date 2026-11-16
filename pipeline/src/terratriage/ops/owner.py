@@ -6,7 +6,7 @@ Two answers, deliberately unequal:
   the evidence in plain words and whether people have confirmed it. Only
   through a signed, expiring link that an operator issues to a verified owner
   or occupant (legal aid intake, a county call centre, a FEMA registration
-  match: the verification happens outside Groma, by a partner who can do it).
+  match: the verification happens outside NC Recon, by a partner who can do it).
   The link is the credential, so it travels in the URL fragment (`#/record/<t>`)
   and is posted in a request body, never in a query string a server log keeps.
 
@@ -48,7 +48,7 @@ _B64 = re.compile(r"^[A-Za-z0-9_-]{8,400}$")
 CHANNEL = {
     "E1": "General image model", "E2": "Pixel change inside the outline", "E4": "Blue tarps on the roof",
     "E5": "Flood depth against the first floor", "E6": "Lidar ground change", "H": "Hazard footprint",
-    "M1": "Groma wildfire model",
+    "M1": "NC Recon wildfire model",
 }
 UNAVAILABLE = {
     "NO_WSE_SOURCE_ON_REACH": "no published river level for this stretch of river",

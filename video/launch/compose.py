@@ -75,7 +75,7 @@ def main() -> None:
             return f'<img class="app {cls}" src="{rel(app[k])}">'
         return f'<div class="app ph {cls}">app capture: {k}</div>'
 
-    html = f"""<!doctype html><html><head><meta charset="utf-8"><title>Groma launch film</title>
+    html = f"""<!doctype html><html><head><meta charset="utf-8"><title>NC Recon launch film</title>
 <style>
 @font-face {{ font-family: "Marcellus"; src: url({rel(os.path.join(FONTS, "@fontsource/marcellus/files/marcellus-latin-400-normal.woff2"))}); }}
 @font-face {{ font-family: "Public Sans"; font-weight: 100 900; src: url({rel(os.path.join(FONTS, "@fontsource-variable/public-sans/files/public-sans-latin-wght-normal.woff2"))}); }}
@@ -194,7 +194,7 @@ table.ia tr {{ opacity:0; }}
 
 <div class="layer" id="s12" style="background:var(--bg)">
   <svg class="mark" id="mark" viewBox="0 0 64 64">{MARK}</svg>
-  <div class="word" id="word">GROMA</div>
+  <div class="word" id="word">NC RECON</div>
   <div class="sub" id="sub">Disaster assessment</div>
   <div class="tag" id="tag">Building by building.</div>
   <div class="mono" id="credit" style="position:absolute;left:0;right:0;bottom:46px;text-align:center;font-size:17px;letter-spacing:.04em;color:var(--faint);opacity:0">Imagery: Civil Air Patrol / FEMA, NC OneMap, USGS 3DEP · Maps © OpenStreetMap contributors © CARTO · Decision support, not an official FEMA assessment</div></div>

@@ -19,7 +19,7 @@ def _feat(i, lvl, flags, occ=None, prim=None, review=False, probs=None):
          "occupancy": occ, "primary_occupancy": prim, "stories": 1,
          "fema": {"DMG_LEVEL": "x", "ASMT_TYPE": "Remote Sensing", "IMG_DATE": "2024-10-06",
                   "EVENT_NAME": "Test storm", "EVENT_DATE": "2024-09-25", "DIS_NUMBER": "DR-4999-SC",
-                  "SOURCE": "Groma"}}
+                  "SOURCE": "NC Recon"}}
     geom = {"type": "Polygon", "coordinates": [ring]} if lvl else {"type": "Point", "coordinates": p["centroid"]}
     return {"type": "Feature", "geometry": geom, "properties": p}
 

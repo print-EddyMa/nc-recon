@@ -7,9 +7,9 @@ import { useOffline } from "./lib/offline";
 import { useTheme } from "./lib/theme";
 import { API_URL } from "./lib/catalog";
 import { DISCLAIMER } from "./lib/ops";
-import { GromaMark } from "./components/ui/GromaMark";
+import { Mark } from "./components/ui/Mark";
 
-// Groma, operational build. The frame is three bands:
+// NC Recon, operational build. The frame is three bands:
 //   top     brand, the four jobs (Assess, Verify, Conditions, Help), system state
 //   middle  the screen
 //   bottom  the standing disclaimer and the service connection, always visible
@@ -120,10 +120,10 @@ function Console() {
               go("ops");
             }}
             className="flex items-center gap-2 rounded text-ink"
-            aria-label="Groma, assessments"
+            aria-label="NC Recon, assessments"
           >
-            <GromaMark className="h-6 w-6 shrink-0 sm:h-7 sm:w-7" />
-            <span className="title-display hidden text-[19px] sm:inline">Groma</span>
+            <Mark className="h-5 w-auto shrink-0 sm:h-[22px]" />
+            <span className="title-display hidden text-[19px] sm:inline">NC Recon</span>
           </a>
           <nav aria-label="Main" className="flex h-full items-stretch gap-0.5">
             {NAV.map((n) => {

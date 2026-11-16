@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 
-FORMAT = "groma-pack/1"
+FORMAT = "ncrecon-pack/1"
 
 
 def offline_mode() -> bool:

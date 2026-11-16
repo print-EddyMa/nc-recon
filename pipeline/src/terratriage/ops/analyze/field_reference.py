@@ -1,4 +1,4 @@
-"""Groma's calls beside published building-level damage records, any hazard:
+"""NC Recon's calls beside published building-level damage records, any hazard:
 `run.py ops-field-reference --area X [--source dins|fema_hgda|sarcop]`.
 
 Reference sources (keyless public ArcGIS layers, checked 2026-10-22):
@@ -14,7 +14,7 @@ Reference sources (keyless public ArcGIS layers, checked 2026-10-22):
   nemac      Buncombe County "Helene Visual Damage Assessment" points (UNCA
              NEMAC): damaged and destroyed buildings by cause (flood,
              landslide, tree on house). Positives only, so the summary is
-             recall-style: how many of them Groma also called damaged.
+             recall-style: how many of them NC Recon also called damaged.
   sarcop     Buncombe County's Helene search-and-rescue extract
              (analyze/sarcop_reference.py, unchanged).
 
@@ -133,7 +133,7 @@ def fetch_hgda(bbox, event) -> list[dict]:
 def fetch_nemac(bbox, event) -> list[dict]:
     """NEMAC building damage points (Helene, Buncombe County only). 'Damaged'
     has no level, so it is carried as 'affected' for matching and summarised
-    as 'Groma called any damage'."""
+    as 'NC Recon called any damage'."""
     if "helene" not in event.id:
         return []
     w, s, e, n = bbox
@@ -151,7 +151,7 @@ def fetch_nemac(bbox, event) -> list[dict]:
 
 
 def summarise_positives(pairs: list[dict]) -> dict[str, Any]:
-    """For a reference that lists only damaged buildings: how often Groma
+    """For a reference that lists only damaged buildings: how often NC Recon
     agrees there is damage. No precision or kappa: there are no negatives."""
     def rate(x, d):
         return None if d == 0 else round(x / d, 3)
@@ -179,7 +179,7 @@ SOURCES: dict[str, dict[str, Any]] = {
         "name": "CAL FIRE Damage Inspection (DINS) master layer", "url": DINS.rsplit("/query", 1)[0],
         "fields": DINS_FIELDS, "fetch": fetch_dins, "match_m": 15.0,
         "caveats": [
-            "DINS inspectors record a damage level from the ground; Groma reads imagery. The two can differ "
+            "DINS inspectors record a damage level from the ground; NC Recon reads imagery. The two can differ "
             "on the same building (interior or partial damage, debris clearance before the flight).",
             "DINS points sit on the structure or near it; a point more than 15 m from any footprint is not "
             "matched.",
@@ -201,9 +201,9 @@ SOURCES: dict[str, dict[str, Any]] = {
         "caveats": [
             "The layer lists damaged and destroyed buildings only, so these are recall-style figures: there are "
             "no undamaged buildings to measure false alarms against.",
-            "The analysts most likely read the same spring 2025 post-event imagery Groma reads, so agreement is "
+            "The analysts most likely read the same spring 2025 post-event imagery NC Recon reads, so agreement is "
             "between two reads of one picture, not an independent check.",
-            "'Damaged' carries no level; it is counted as agreement when Groma calls any damage.",
+            "'Damaged' carries no level; it is counted as agreement when NC Recon calls any damage.",
         ]},
 }
 
@@ -253,7 +253,7 @@ def compare_area(area: str, source: str | None = None, *, allow_test: bool = Fal
         "ncr_imagery": (run.get("provenance") or {}).get("imagery"),
         "match_rule": f"point inside a footprint, else nearest footprint within {spec['match_m']:g} m; "
                       "latest record wins",
-        "credible_set": f"smallest set of levels holding {int(sr.MASS * 100)}% of Groma's probability",
+        "credible_set": f"smallest set of levels holding {int(sr.MASS * 100)}% of NC Recon's probability",
         "counts": counts,
         "summary": summarise_positives(pairs) if spec.get("positives_only") else sr.summarise(pairs),
         "summary_homes": None if spec.get("positives_only") else
@@ -284,9 +284,9 @@ def format_summary(r: dict[str, Any]) -> str:
         c = r["counts"]
         lines = [f"{r['area']} ({r['role']}) vs {r['reference']['name']}",
                  f"  points {c['waypoints']}, matched {c['matched']}, unmatched {c['unmatched']}",
-                 f"  destroyed points {s['destroyed_points']}: Groma Major or Destroyed "
+                 f"  destroyed points {s['destroyed_points']}: NC Recon Major or Destroyed "
                  f"{s['ncr_major_or_destroyed_at_destroyed']}",
-                 f"  damaged points {s['damaged_points']}: Groma any damage {s['ncr_any_damage_at_damaged']}, "
+                 f"  damaged points {s['damaged_points']}: NC Recon any damage {s['ncr_any_damage_at_damaged']}, "
                  f"Minor or worse {s['ncr_minor_or_worse_at_damaged']}",
                  "  by cause: " + json.dumps(s["by_cause"])]
         return "\n".join(lines + ["  caveats:"] + [f"   - {x}" for x in r["caveats"]])

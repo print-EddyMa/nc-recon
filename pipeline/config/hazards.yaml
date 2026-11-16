@@ -9,7 +9,7 @@
 #   E1 optical damage classifier   E2 pixel change   E4 blue tarps
 #   E5 flood depth vs. first floor E6 lidar ground change (deposit / scour)
 #   H  hazard footprint / intensity prior
-#   M1 Groma's own damage model (ops/model; trained on public-domain imagery),
+#   M1 NC Recon's own damage model (ops/model; trained on public-domain imagery),
 #      wildfire only until it is evaluated on other hazards
 # footprint: hazard-footprint sources (collect/hazard_footprints.py); status
 #   built = used in assessments, planned = documented, not wired yet

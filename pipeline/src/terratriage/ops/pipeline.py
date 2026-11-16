@@ -298,7 +298,7 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
                 gc_reason = "LIDAR_UNAVAILABLE"
                 warnings.append(f"lidar ground change (E6) unavailable: {str(ex)[:160]}")
 
-    # M1: Groma's own damage model, per hazard (hazards.yaml) and per config
+    # M1: NC Recon's own damage model, per hazard (hazards.yaml) and per config
     # mode (context_rules.yaml channels.M1.mode: off | alongside | replace)
     m1, m1_mode, m1_reason = m1_for_area(applicable, pre_info.path, post_info.path,
                                          [shapely_transform(to_r, st.footprint_ll) for st in structs], warnings)
@@ -349,6 +349,7 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
         ev_b.m["alignment"] = al
         if any(v.get("weak") for v in al.values()):
             ev_b.reasons.append("FOOTPRINT_ALIGNMENT_WEAK")
+    gate_misregistered(evs, cr, ctx_rules, warnings)
     timings["evidence"] = time.time() - t
     t = time.time()
     logits, cnn_err = _cnn_logits(pre_info.path, post_info.path, polys_post, crs)
@@ -435,7 +436,7 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
                 "EVENT_NAME": ev.name,
                 "EVENT_DATE": ev.incident_begin.isoformat(),
                 "DIS_NUMBER": ",".join(d.fema_id for d in ev.declarations),
-                "SOURCE": "Groma (decision support, unofficial)",
+                "SOURCE": "NC Recon (decision support, unofficial)",
                 "USNG": usng(cx, cy, 10),
             },
         }
@@ -585,6 +586,20 @@ def run_area(area: str, *, limit: int | None = None, night: bool = True,
     return fc
 
 
+def gate_misregistered(evs: list, cr: dict, ctx_rules: dict, warnings: list[str]) -> bool:
+    """Pixel change means nothing on a misaligned pair (process/coreg.py): over the
+    residual limit the change channel is switched off for every building, not just
+    weighted down. channels.e2 then reports E2 unavailable as MISREGISTERED."""
+    res_px, res_max = cr.get("residual_px"), float(ctx_rules.get("coreg_residual_max_px", 1.0))
+    if not isinstance(res_px, (int, float)) or res_px <= res_max:
+        return False
+    for ev_b in evs:
+        ev_b.unavailable.setdefault("E2", "MISREGISTERED")
+    warnings.append(f"pre/post images misaligned (residual {res_px:.2f} px > {res_max:g} px): "
+                    "change signal (E2) switched off")
+    return True
+
+
 def count_interval(probs: np.ndarray, n: int = 2000, seed: int = 0, q=(10, 90)) -> dict[str, list[int]]:
     """80 % interval on per-class structure counts, sampling each structure's
     class independently from its probabilities (a lower bound on the true
@@ -602,7 +617,7 @@ def count_interval(probs: np.ndarray, n: int = 2000, seed: int = 0, q=(10, 90)) 
 
 def m1_for_area(applicable: set[str], pre_path: str, post_path: str, footprints_raster_crs: list,
                 warnings: list[str]) -> tuple[list | None, str, str]:
-    """Score every building once with the Groma damage model (ops/model).
+    """Score every building once with the NC Recon damage model (ops/model).
     Returns (one entry per building: None or {"probs": [5], ...}; mode; reason
     when unavailable). A secondary source: missing weights or any model error
     leave M1 unavailable with a warning and never cost the assessment."""
@@ -620,13 +635,13 @@ def m1_for_area(applicable: set[str], pre_path: str, post_path: str, footprints_
         if len(preds) != len(footprints_raster_crs):
             raise ValueError(f"model returned {len(preds)} entries for {len(footprints_raster_crs)} buildings")
     except FileNotFoundError as ex:
-        warnings.append(f"Groma damage model (M1) unavailable: weights not found ({ex})")
+        warnings.append(f"NC Recon damage model (M1) unavailable: weights not found ({ex})")
         return None, mode, "M1_WEIGHTS_MISSING"
     except Exception as ex:  # noqa: BLE001 - secondary source
-        warnings.append(f"Groma damage model (M1) unavailable: {str(ex)[:160]}")
+        warnings.append(f"NC Recon damage model (M1) unavailable: {str(ex)[:160]}")
         return None, mode, "M1_UNAVAILABLE"
     scored = sum(p is not None for p in preds)
-    warnings.append(f"Groma damage model (M1, {mode}): {scored} of {len(preds)} buildings scored")
+    warnings.append(f"NC Recon damage model (M1, {mode}): {scored} of {len(preds)} buildings scored")
     return preds, mode, ""
 
 

@@ -1,4 +1,4 @@
-# Groma ops event registry.
+# NC Recon ops event registry.
 #
 # Incident dates are NOT written here: they are pulled from OpenFEMA
 # DisasterDeclarationsSummaries by disaster number (see ops/plan/events.py) and

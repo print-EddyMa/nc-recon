@@ -123,7 +123,7 @@ def _balanced(idx: np.ndarray, y: np.ndarray, rng) -> np.ndarray:
 
 
 def train(boxes: list[str], incident: str, *, epochs: int = 12, pretrained: bool = True,
-          seed: int = 0, tag: str = "groma-dmg-v0") -> dict[str, Any]:
+          seed: int = 0, tag: str = "ncrecon-dmg-v0") -> dict[str, Any]:
     import torch
     from torch import nn
 
@@ -215,7 +215,7 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--incident", required=True)
     ap.add_argument("--epochs", type=int, default=14)
     ap.add_argument("--scratch", action="store_true", help="no ImageNet initialisation")
-    ap.add_argument("--tag", default="groma-dmg-v0")
+    ap.add_argument("--tag", default="ncrecon-dmg-v0")
     a = ap.parse_args(argv)
     card = train(a.boxes, a.incident, epochs=a.epochs, pretrained=not a.scratch, tag=a.tag)
     print(json.dumps({k: card[k] for k in ("model", "best_epoch", "temperature", "validation")}, indent=1))

@@ -1,12 +1,12 @@
 # Security
 
-Groma handles building-level damage calls and street addresses after a
+NC Recon handles building-level damage calls and street addresses after a
 disaster, which can be misused (for example, to find empty homes). Please
 report anything that could expose them.
 
 ## Reporting a vulnerability
 
-Email **ma.eddy.work@gmail.com** with "Groma security" in the subject. Do not
+Email **ma.eddy.work@gmail.com** with "NC Recon security" in the subject. Do not
 open a public issue. Include what you found, how to reproduce it and what it
 exposes. You will get a reply within 7 days, and a fix or a plan within 30.
 

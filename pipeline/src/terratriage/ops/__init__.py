@@ -1,4 +1,4 @@
-"""Groma operational mode (Phase J).
+"""NC Recon operational mode (Phase J).
 
 Everything under `terratriage.ops` is the "operational GEOINT" path: outputs an
 emergency-management analyst can rely on because each one is located

@@ -2,7 +2,7 @@
 
     python -m terratriage.ops.model.fetch_encoder      # on a networked machine, once
 
-Groma never downloads model weights while assessing: on an offline laptop a
+NC Recon never downloads model weights while assessing: on an offline laptop a
 hidden download would stall or fail late. `encoder_path()` only looks on disk
 ($TORCH_HOME/hub/checkpoints, else ~/.cache/torch/hub/checkpoints) and checks
 the file's sha256; this command is the one place that fetches it (torchvision's

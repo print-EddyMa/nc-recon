@@ -55,7 +55,7 @@ License obligations for this export
 
 
 FEMA_IA_LEVELS = ("unaffected", "affected", "minor", "major", "destroyed", "inaccessible")
-# Groma level -> FEMA IA survey choice (code values as the survey stores them)
+# NC Recon level -> FEMA IA survey choice (code values as the survey stores them)
 IA_LEVEL = {"no_damage": "unaffected", "affected": "affected", "minor": "minor",
             "major": "major", "destroyed": "destroyed"}
 # Field names exactly as a deployed FEMA "Damage Assessment form V2.7 for
@@ -75,7 +75,7 @@ FEMA_IA_NOTE = """FEMA IA layout (<area>_fema_ia.csv / .geojson)
 ---------------------------------------------
 Residential structures only, one point each, with the question names of FEMA's
 Individual Assistance damage assessment survey as deployed in Survey123
-(form V2.7), plus Groma columns prefixed ncr_. Every row is a remote call:
+(form V2.7), plus NC Recon columns prefixed ncr_. Every row is a remote call:
 "level_of_damage_assessed" is the most likely level from imagery, never a
 field observation; owner/renter, insurance, occupancy and utilities are
 "unknown" because imagery cannot see them. Rows marked ncr_needs_review = yes
@@ -150,7 +150,7 @@ def fema_ia_rows(fc: dict[str, Any], rows: list[dict[str, Any]]) -> tuple[list[d
         probs = p.get("damage_probs") or {}
         reasons = [r.replace("_", " ").lower() for r in (p.get("review_reasons") or [])]
         if lvl:
-            narrative = (f"Remote assessment by Groma from imagery dated "
+            narrative = (f"Remote assessment by NC Recon from imagery dated "
                          f"{fema.get('IMG_DATE') or fema.get('IMG_DATE_RANGE') or 'unknown'}; "
                          f"P({FEMA_LABEL.get(lvl, lvl)}) = {round(100 * (probs.get(lvl) or 0))}%"
                          + (f"; verify first: {', '.join(reasons)}" if p.get("needs_review") else "")
@@ -352,7 +352,7 @@ def export_area(area: str, mode: str = "responder", out_dir: str | None = None) 
         json.dump(prov, fh, indent=2)
     paths["provenance"] = p
     with open(os.path.join(d, "README.txt"), "w", encoding="utf-8") as fh:
-        fh.write(f"Groma export: {area}\n\n{DISCLAIMER}\n\n"
+        fh.write(f"NC Recon export: {area}\n\n{DISCLAIMER}\n\n"
                  "Contains street addresses (responder mode). Do not post publicly.\n\n"
                  f"{LICENSE_TEXT}\n{FEMA_IA_NOTE}\nSee {area}.provenance.json for sources, dates and processing.\n")
     print(f"[export] {area}: {len(rows)} rows -> {d}")
@@ -368,7 +368,7 @@ def _kml(area, rows, geoms, path) -> str:
 
     out = ['<?xml version="1.0" encoding="UTF-8"?>',
            '<kml xmlns="http://www.opengis.net/kml/2.2"><Document>',
-           f"<name>Groma {escape(area)}</name><description>{escape(DISCLAIMER)}</description>"]
+           f"<name>NC Recon {escape(area)}</name><description>{escape(DISCLAIMER)}</description>"]
     for lvl, hexc in COLORS.items():
         sid = lvl or "not_assessed"
         out.append(f'<Style id="{sid}"><LineStyle><color>{kcol(hexc, "ff")}</color><width>1.5</width></LineStyle>'

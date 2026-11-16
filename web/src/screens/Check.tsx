@@ -192,7 +192,7 @@ export default function Check() {
           </h2>
           <ul className="mt-3 grid gap-3 text-ink-dim">
             <li>
-              <b className="font-semibold text-ink">From the air, not the ground.</b> Groma compares public imagery from
+              <b className="font-semibold text-ink">From the air, not the ground.</b> NC Recon compares public imagery from
               before and after. Water inside a house does not show from above.
             </li>
             <li>
