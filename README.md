@@ -9,17 +9,19 @@
 NC Recon calls the damage to every building from public imagery, lidar and field records, checks its own work, and tells search teams where to start.</p>
 
 <p align="center">
+  <a href="https://ncrecon.netlify.app"><b>Open the live app: ncrecon.netlify.app</b></a> ·
   <a href="https://www.youtube.com/watch?v=NxaThnvTAm4"><b>▶ Watch the Congressional App Challenge video</b></a>
 </p>
 
 <p align="center">
+  <a href="https://ncrecon.netlify.app"><img alt="Live app" src="https://img.shields.io/badge/live_app-ncrecon.netlify.app-FF5A1F?style=for-the-badge"></a>
   <a href="https://www.congressionalappchallenge.us/"><img alt="Congressional App Challenge 2026" src="https://img.shields.io/badge/Congressional_App_Challenge-2026-0A3161?style=for-the-badge"></a>
   <a href="https://www.youtube.com/watch?v=NxaThnvTAm4"><img alt="Video on YouTube" src="https://img.shields.io/badge/Video-YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white"></a>
   <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue?style=for-the-badge"></a>
 </p>
 <p align="center">
   <a href="https://github.com/print-EddyMa/nc-recon/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/print-EddyMa/nc-recon/actions/workflows/ci.yml/badge.svg"></a>
-  <img alt="Tests: 364 passing" src="https://img.shields.io/badge/tests-364_passing-2ea44f">
+  <img alt="Tests: 365 passing" src="https://img.shields.io/badge/tests-365_passing-2ea44f">
   <img alt="Self-checks on every assessment" src="https://img.shields.io/badge/self--checks-every_assessment-FF5A1F">
   <img alt="Python 3.13" src="https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white">
   <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white">
@@ -165,6 +167,10 @@ Every source with its endpoint, licence, datum and caveats: [`docs/ops/DATA_SOUR
 
 ## Get started
 
+### Try it live
+
+**[ncrecon.netlify.app](https://ncrecon.netlify.app)** is the real app: live North Carolina conditions, "Is my street OK?", the NC Recon Index, and every assessed area's totals. Building-level views, exports and new assessments need a responder token. The launch page is at [ncrecon.netlify.app/about](https://ncrecon.netlify.app/about/). The server runs on the team's own computer ([`deploy/home/`](deploy/home/README.md)), so the live site can be offline at times.
+
 ### Run it (one container, HTTPS, both models built in)
 
 ```bash
@@ -205,7 +211,7 @@ runs and says that channel is off.
 
 * Launch checklist (ready, and what still needs a person): [`docs/LAUNCH.md`](docs/LAUNCH.md)
 * Event playbook: [`docs/ops/OPERATIONS.md`](docs/ops/OPERATIONS.md)
-* Deployment and configuration: [`docs/ops/DEPLOYMENT.md`](docs/ops/DEPLOYMENT.md)
+* Deployment and configuration: [`docs/ops/DEPLOYMENT.md`](docs/ops/DEPLOYMENT.md); the live site: [`deploy/home/README.md`](deploy/home/README.md)
 * Any hazard, any state: [`docs/ops/ANY_HAZARD.md`](docs/ops/ANY_HAZARD.md)
 * Offline field packs: [`docs/ops/OFFLINE.md`](docs/ops/OFFLINE.md)
 * Response products: [`docs/response/README.md`](docs/response/README.md)

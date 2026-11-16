@@ -130,6 +130,9 @@ app.include_router(owner_router)
 async def _guard(request: Request, call_next):
     """Per-client rate limits and browser security headers on every response
     (API and web app alike). See terratriage.ops.guard."""
+    if guard.refused_direct(request):
+        # NCR_PROXY_SECRET: only the front proxy may reach this server
+        return JSONResponse({"detail": "use the public site"}, status_code=403)
     wait = guard.check(request)
     if wait:
         return JSONResponse(

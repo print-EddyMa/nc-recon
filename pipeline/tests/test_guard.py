@@ -96,3 +96,25 @@ def test_csp_connect_extension(monkeypatch):
     policy = guard.csp(None)
     assert "https://tiles.example.gov https://api.example.gov" in policy
     assert "connect-src 'self'" in policy
+
+
+def test_front_proxy_secret_gates_and_supplies_client_address(client, monkeypatch):
+    from terratriage.ops import guard
+
+    monkeypatch.setenv("NCR_PROXY_SECRET", "s3cret")
+    monkeypatch.setenv("NCR_CLIENT_IP_HEADER", "x-nf-client-connection-ip")
+    assert client.get("/ops/meta").status_code == 403                       # straight at the tunnel
+    assert client.get("/ops/meta", headers={"X-Ncr-Proxy": "wrong"}).status_code == 403
+    assert client.get("/health").status_code == 200                         # exempt
+    assert client.get("/ops/meta", headers={"X-Ncr-Proxy": "s3cret"}).status_code == 200
+
+    class Req:
+        def __init__(self, headers):
+            self.headers = headers
+            self.client = type("C", (), {"host": "127.0.0.1"})()
+
+    ip = {"x-nf-client-connection-ip": "198.51.100.7"}
+    assert guard.client_ip(Req(ip)) == "127.0.0.1"                          # header alone is not trusted
+    assert guard.client_ip(Req({**ip, "x-ncr-proxy": "s3cret"})) == "198.51.100.7"
+    monkeypatch.delenv("NCR_PROXY_SECRET")
+    assert client.get("/ops/meta").status_code == 200                       # off by default

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import hmac
 import os
 import re
 import threading
@@ -36,9 +37,34 @@ def trust_proxy() -> bool:
     return os.environ.get("NCR_TRUST_PROXY", "").strip() == "1"
 
 
+def proxy_secret() -> str:
+    """NCR_PROXY_SECRET: when set, the only way in is through the front proxy
+    (e.g. Netlify in front of a tunnel), which adds `X-Ncr-Proxy: <secret>`.
+    Requests without it are refused, so the tunnel address cannot be used to
+    skip the proxy or forge a client address."""
+    return os.environ.get("NCR_PROXY_SECRET", "").strip()
+
+
+def from_proxy(request) -> bool:
+    s = proxy_secret()
+    return bool(s) and hmac.compare_digest(request.headers.get("x-ncr-proxy", "").encode(), s.encode())
+
+
+def refused_direct(request) -> bool:
+    """True when a front proxy is required and this request did not come through it."""
+    return bool(proxy_secret()) and request.url.path not in EXEMPT_PATHS and not from_proxy(request)
+
+
 def client_ip(request) -> str:
-    """Peer address, or the first `X-Forwarded-For` hop when the deployment
-    says the proxy in front of us is trusted."""
+    """Peer address; the front proxy's client-address header when the request
+    proved it came through that proxy (NCR_CLIENT_IP_HEADER, e.g. Netlify's
+    `x-nf-client-connection-ip`); or the first `X-Forwarded-For` hop when the
+    deployment says the proxy in front of us is trusted."""
+    hdr = os.environ.get("NCR_CLIENT_IP_HEADER", "").strip().lower()
+    if hdr and from_proxy(request):
+        v = request.headers.get(hdr, "").strip()
+        if v:
+            return v
     if trust_proxy():
         fwd = request.headers.get("x-forwarded-for", "")
         if fwd:
