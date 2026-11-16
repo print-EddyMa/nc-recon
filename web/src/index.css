@@ -1,38 +1,57 @@
-@import url("https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Geist:wght@400;450;500;600&family=Geist+Mono:wght@400;500&display=swap");
+/* Hallmark · system: NC Recon (amends DESIGN.md, 2026-10-26: one sans family with the site)
+ * genre: utilitarian instrument · theme: custom (near-black / paper, ink for interaction, one orange tile for the brand) (2026-11-15)
+ * display: Archivo, expanded, as on the site and in the film · text: Public Sans (USWDS) · figures: IBM Plex Mono
+ * Self-hosted (bundled by Vite): the UI renders the same with no internet, which
+ * an EOC on a satellite link or a field laptop cannot take for granted. */
+@import "@fontsource-variable/public-sans/wght.css";
+/* Archivo (SIL OFL 1.1): the display face of the site and the launch film */
+@font-face { font-family: "Archivo"; font-style: normal; font-weight: 100 900; font-stretch: 62% 125%; font-display: swap; src: url("./assets/fonts/archivo-latin-standard-normal.woff2") format("woff2"); }
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  /* -------- light theme (default) -------- */
+  /* -------- light theme: limestone (daylight, field laptops, print) -------- */
   :root {
     color-scheme: light;
 
-    --canvas: 250 249 246;
-    --surface: 255 255 255;
-    --surface-2: 244 243 239;
-    --line: 227 224 217;
-    --line-strong: 200 197 188;
-    --ink: 28 29 33;
-    --ink-dim: 92 96 104;
-    --ink-faint: 138 142 150;
-    --accent: 37 99 235;
-    --accent-soft: 224 234 254;
-    --accent-ink: 255 255 255;
-    --meter: 71 85 105;
-    --shadow: 30 34 44;
+    --canvas: 244 242 237;
+    --surface: 251 250 247;
+    --surface-2: 233 230 223;
+    --line: 222 218 210;
+    --line-strong: 190 185 175;
+    --ink: 15 15 14;
+    --ink-dim: 74 71 66;
+    --ink-faint: 106 102 95;
+    /* cast bronze: interaction and "this is live". Never severity:
+       it sits darker and browner than every step of the damage ramp. */
+    --accent: 15 15 14;
+    --accent-soft: 233 230 223;
+    --accent-ink: 251 250 247;
+    /* the rings and dot of the NC Recon mark */
+    --brand: 222 72 18;
+    /* needs-review outline: a blue that stays legible over aerial imagery
+       and is off the damage ramp */
+    --review: 37 99 235;
+    --meter: 74 71 66;
+    --shadow: 15 15 14;
+
+    /* FEMA Community Lifelines status (stabilized / stabilizing / not / unknown) */
+    --st-ok: 46 125 78;
+    --st-warn: 176 120 0;
+    --st-bad: 178 34 52;
+    --st-unknown: 120 128 124;
 
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
-    /* type scale - restrained, report register, not magazine.
-       Display caps at ~2.75rem so a headline never becomes drama on a
-       1280-1440px operations screen. */
-    --text-display: clamp(1.9rem, 2.4vw + 1rem, 2.6rem);
-    --text-display-s: clamp(1.55rem, 1.4vw + 1rem, 1.9rem);
+    --text-display: clamp(1.6rem, 1.4vw + 1rem, 2.1rem);
+    --text-display-s: clamp(1.3rem, 0.9vw + 1rem, 1.6rem);
 
-    /* spacing - 4px base, named by role */
     --space-3xs: 0.125rem;
     --space-2xs: 0.25rem;
     --space-xs: 0.5rem;
@@ -44,40 +63,52 @@
     --space-3xl: 6rem;
   }
 
-  /* -------- dark theme -------- */
+  /* -------- dark theme: basalt (EOC wall, night shift) -------- */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --canvas: 15 17 21;
-      --surface: 23 25 30;
-      --surface-2: 32 35 41;
-      --line: 42 46 54;
-      --line-strong: 62 67 78;
-      --ink: 233 234 232;
-      --ink-dim: 158 161 168;
-      --ink-faint: 108 112 121;
-      --accent: 74 128 246;
-      --accent-soft: 28 42 74;
-      --accent-ink: 255 255 255;
-      --meter: 132 148 168;
+      --canvas: 10 10 10;
+      --surface: 19 19 18;
+      --surface-2: 28 28 26;
+      --line: 40 40 37;
+      --line-strong: 64 63 59;
+      --ink: 245 243 238;
+      --ink-dim: 182 179 172;
+      --ink-faint: 138 135 128;
+      --accent: 245 243 238;
+      --accent-soft: 40 40 37;
+      --accent-ink: 10 10 10;
+      --brand: 255 90 31;
+      --review: 96 165 250;
+      --meter: 182 179 172;
       --shadow: 0 0 0;
+      --st-ok: 87 171 115;
+      --st-warn: 226 177 60;
+      --st-bad: 232 93 104;
+      --st-unknown: 124 131 127;
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --canvas: 15 17 21;
-    --surface: 23 25 30;
-    --surface-2: 32 35 41;
-    --line: 42 46 54;
-    --line-strong: 62 67 78;
-    --ink: 233 234 232;
-    --ink-dim: 158 161 168;
-    --ink-faint: 108 112 121;
-    --accent: 74 128 246;
-    --accent-soft: 28 42 74;
-    --accent-ink: 255 255 255;
-    --meter: 132 148 168;
+    --canvas: 10 10 10;
+    --surface: 19 19 18;
+    --surface-2: 28 28 26;
+    --line: 40 40 37;
+    --line-strong: 64 63 59;
+    --ink: 245 243 238;
+    --ink-dim: 182 179 172;
+    --ink-faint: 138 135 128;
+    --accent: 245 243 238;
+    --accent-soft: 40 40 37;
+    --accent-ink: 10 10 10;
+    --brand: 255 90 31;
+    --review: 96 165 250;
+    --meter: 182 179 172;
     --shadow: 0 0 0;
+    --st-ok: 87 171 115;
+    --st-warn: 226 177 60;
+    --st-bad: 232 93 104;
+    --st-unknown: 124 131 127;
   }
 
   html {
@@ -94,7 +125,7 @@
     background: rgb(var(--canvas));
     color: rgb(var(--ink));
     font-family: theme("fontFamily.sans");
-    font-feature-settings: "cv11", "ss01";
+    font-size: 14px;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -110,14 +141,16 @@
     border-radius: 3px;
   }
 
+  /* Headings are the body face at weight: in a dense console a second
+     typeface on every heading reads as decoration. Screen titles and the
+     wordmark are the same face, larger and tighter (.title-display). */
   h1,
   h2,
   h3 {
-    font-family: theme("fontFamily.display");
-    font-weight: 600;
-    line-height: 1.16;
-    letter-spacing: -0.006em;
-    font-optical-sizing: auto;
+    font-family: theme("fontFamily.sans");
+    font-weight: 650;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
     text-wrap: balance;
     color: rgb(var(--ink));
   }
@@ -168,6 +201,107 @@
     background: rgb(var(--surface));
     border: 1px solid rgb(var(--line));
     border-radius: 10px;
+  }
+
+  /* one text-field style for every form in the app */
+  .field {
+    display: block;
+    width: 100%;
+    height: 2rem;
+    border-radius: 6px;
+    border: 1px solid rgb(var(--line-strong));
+    background: rgb(var(--canvas));
+    padding: 0 0.625rem;
+    font-size: 0.875rem;
+    color: rgb(var(--ink));
+  }
+  .field::placeholder {
+    color: rgb(var(--ink-faint));
+  }
+  .field:hover {
+    border-color: rgb(var(--ink-faint));
+  }
+  select.field {
+    padding-right: 1.75rem;
+  }
+  .field[aria-invalid="true"] {
+    border-color: rgb(var(--st-bad));
+  }
+
+  /* the wordmark, screen and document titles: Archivo, expanded, as on the site */
+  .title-display {
+    font-family: theme("fontFamily.display");
+    font-stretch: 112%;
+    font-weight: 600;
+    font-style: normal;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+  }
+
+  /* public pages (check, index, owner record): light like the site, one sans family */
+  .public-wrap {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding-left: max(20px, env(safe-area-inset-left, 0px));
+    padding-right: max(20px, env(safe-area-inset-right, 0px));
+  }
+  /* public pages' buttons: pills, like the site */
+  .btn-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0 1.25rem;
+    border-radius: 999px;
+    border: 1px solid rgb(var(--line-strong));
+    background: transparent;
+    color: rgb(var(--ink));
+    font-size: 0.9375rem;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out), color 160ms var(--ease-out);
+  }
+  .btn-pill:hover {
+    border-color: rgb(var(--ink));
+  }
+  .btn-pill.primary {
+    background: rgb(var(--ink));
+    border-color: rgb(var(--ink));
+    color: rgb(var(--surface));
+  }
+  .btn-pill.primary:hover {
+    opacity: 0.86;
+  }
+  .btn-pill:disabled {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+  .field-lg {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: 2.875rem;
+    border-radius: 10px;
+    border: 1px solid rgb(var(--line-strong));
+    background: rgb(var(--surface));
+    padding: 0 0.875rem;
+    font-size: 1rem;
+    color: rgb(var(--ink));
+  }
+  .field-lg::placeholder {
+    color: rgb(var(--ink-faint));
+  }
+  .field-lg:hover {
+    border-color: rgb(var(--ink-faint));
+  }
+
+  /* a section label inside a panel: small, sentence case, quiet */
+  .label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgb(var(--ink-dim));
   }
 
   /* a full-width hairline rule between blocks in a document */
@@ -359,4 +493,25 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* operational warning banner (disclaimer, stale data). AA contrast both themes. */
+:root {
+  --warn-bg: 255 244 214;
+  --warn-ink: 58 42 0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --warn-bg: 58 42 0;
+    --warn-ink: 255 233 173;
+  }
+}
+:root[data-theme="dark"] {
+  --warn-bg: 58 42 0;
+  --warn-ink: 255 233 173;
+}
+
+@layer utilities {
+  /* titles: Archivo, a little expanded, as on the site */
+  .font-display { font-stretch: 112%; letter-spacing: -0.012em; }
 }

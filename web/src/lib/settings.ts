@@ -4,12 +4,11 @@ import { useCallback, useSyncExternalStore } from "react";
  * Per-viewer settings kept in localStorage (never leaves the browser): the
  * optional NASA FIRMS map key for the global active-fire layer, the NC
  * State Climate Office CLOUDS API hash for the Phase E current-conditions layer,
- * and a TomTom Traffic API key for real (not simulated) road-segment congestion.
+ * Both are free; the app works fully without either.
  */
 export interface Settings {
   firmsKey?: string;
   cloudsKey?: string;
-  tomtomKey?: string;
 }
 
 const KEY = "terratriage:settings";

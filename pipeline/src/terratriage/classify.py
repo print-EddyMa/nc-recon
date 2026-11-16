@@ -112,6 +112,36 @@ def _conda_python(env: str = "terratriage-tf") -> str | None:
 
 def _keras_probs(crops, weights_path: str) -> np.ndarray:
     """(N, 4) softmax probabilities from the xView2 baseline classifier."""
+    pred = _keras_logits(crops, weights_path)
+    probs = np.exp(pred - pred.max(axis=1, keepdims=True))
+    probs /= probs.sum(axis=1, keepdims=True)
+    return probs
+
+
+_ORT_SESSIONS: dict = {}
+
+
+def _onnx_logits(crops, onnx_path: str, batch: int = 64) -> np.ndarray:
+    """(N, 4) raw activations from the ONNX export of the same classifier
+    (scripts/export_onnx.py). CPU onnxruntime, no TensorFlow needed. Same
+    preprocessing as `_keras_infer.py`: POST crop pixels x 1.4, NHWC."""
+    import onnxruntime as ort
+
+    sess = _ORT_SESSIONS.get(onnx_path)
+    if sess is None:
+        opts = ort.SessionOptions()
+        opts.intra_op_num_threads = int(os.environ.get("NCR_CPU_THREADS", "0")) or max(1, (os.cpu_count() or 2) - 2)
+        sess = ort.InferenceSession(onnx_path, sess_options=opts, providers=["CPUExecutionProvider"])
+        _ORT_SESSIONS[onnx_path] = sess
+    name = sess.get_inputs()[0].name
+    x = np.stack([c[2] for c in crops]).astype("float32") * 1.4
+    outs = [sess.run(None, {name: x[i:i + batch]})[0] for i in range(0, len(x), batch)]
+    return np.concatenate(outs, axis=0) if outs else np.zeros((0, 4), "float32")
+
+
+def _keras_logits(crops, weights_path: str) -> np.ndarray:
+    """(N, 4) raw final-layer activations (the head ends in Dense(4, relu), so
+    these are non-negative "logits"; softmax over them is what v2 reported)."""
     py = _conda_python()
     if not py:
         raise RuntimeError("terratriage-tf conda env not found; run scripts/setup_tf_env.sh")
@@ -129,9 +159,7 @@ def _keras_probs(crops, weights_path: str) -> np.ndarray:
         if r.returncode != 0:
             raise RuntimeError(f"_keras_infer.py failed:\n{r.stdout}\n{r.stderr}")
         pred = np.load(outp)  # (N,4) activations
-    probs = np.exp(pred - pred.max(axis=1, keepdims=True))
-    probs /= probs.sum(axis=1, keepdims=True)
-    return probs
+    return pred
 
 
 def _keras_scores(crops, weights_path: str) -> list[tuple[int, float]]:

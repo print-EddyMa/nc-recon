@@ -1,0 +1,32 @@
+# FEMA Preliminary Damage Assessment Guide, July 2025 - Appendix H flood rows.
+# Source: https://www.fema.gov/sites/default/files/documents/fema_rd_pda-guide_07012025.pdf
+# Transcribed 2026-09-26 from the PDF text (pages cited are PDF page numbers;
+# printed page labels in parentheses). Supersedes the 2021 guide + Aug 2024
+# errata that the Phase J prompt referenced.
+#
+# NOTE vs the Phase J prompt: the 2025 guide DOES define a depth-based
+# Destroyed flood row ("waterline at or above the ceiling of an above-ground
+# essential living space", Table 30, p.109 (H-4)); the prompt's summary said
+# Destroyed is never depth-based. We follow the guide.
+source: FEMA PDA Guide, July 2025
+verified: true
+verified_utc: 2026-09-26T04:20:00Z
+
+conventional:           # Table 30, pp.107-109 (H-2..H-4); also Tables 14-15, p.49 (43)
+  affected: "Waterline in the crawlspace or an unfinished basement; essential living spaces and mechanical components not damaged or submerged."
+  minor:    "Waterline below electrical outlets in an essential living space. May be recorded Major with extenuating conditions: flood duration, contaminants, or basement waterline damaging mechanical components."
+  major:    "Waterline at or above the electrical outlets in an essential living space; or waterline on the first floor (any depth) if the basement is completely submerged."
+  destroyed: "Waterline at or higher than the ceiling of an above-ground essential living space."
+manufactured:           # Table 29, pp.106-107 (H-1..H-2)
+  affected: "Water below the floor system."
+  minor:    "Waterline has reached the floor system but has not entered the living space."
+  major:    "Water has covered the floor system and entered the living space but is below the ceiling."
+  destroyed: "Waterline is at or above the ceiling."
+
+# Model parameters (assumptions, not from the guide). Sensitivity runs vary them.
+params:
+  outlet_height_in: 16            # sensitivity: 12, 18
+  ceiling_height_ft: 8
+  manufactured_floor_system_ft: 1.0   # depth of floor system below finished floor
+  minor_extenuating_major_p: 0.20     # share of below-outlet cases recorded Major
+                                      # (duration / contamination); assumption

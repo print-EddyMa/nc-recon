@@ -1,0 +1,158 @@
+{
+ "model": "groma-dmg-v0",
+ "kind": "frozen_linear",
+ "architecture": "frozen ImageNet ResNet-18 features of before and after chips ([post, post - pre], 1024 values) + 15 colour statistics of the chip centre -> standardised multinomial logistic regression, balanced class weights, C=0.01",
+ "chip": {
+  "metres": 32.0,
+  "pixels": 64
+ },
+ "classes": [
+  "no_damage",
+  "affected",
+  "minor",
+  "major",
+  "destroyed"
+ ],
+ "trained_on": [
+  {
+   "box": "palisades_west",
+   "bbox": [
+    -118.56,
+    34.035,
+    -118.53,
+    34.065
+   ],
+   "pre": {
+    "source": "USDA NAIP via Planetary Computer",
+    "items": [
+     "ca_m_3411860_sw_11_060_20220512",
+     "ca_m_3411860_nw_11_060_20220512",
+     "ca_m_3411860_se_11_060_20220511",
+     "ca_m_3411860_ne_11_060_20220511"
+    ],
+    "dates": [
+     "2022-05-11",
+     "2022-05-12"
+    ],
+    "license": "public domain (USDA FSA)"
+   },
+   "post": {
+    "source": "NOAA NGS Emergency Response Imagery",
+    "prefix": "2025_California_Fires",
+    "flights": [
+     "20250128a"
+    ],
+    "tiles": 12,
+    "license": "US Government work (NOAA NGS)"
+   },
+   "incident": "2025-01-07",
+   "chips": 4085
+  },
+  {
+   "box": "palisades_east",
+   "bbox": [
+    -118.53,
+    34.035,
+    -118.5,
+    34.065
+   ],
+   "pre": {
+    "source": "USDA NAIP via Planetary Computer",
+    "items": [
+     "ca_m_3411861_sw_11_060_20220511",
+     "ca_m_3411861_nw_11_060_20220511",
+     "ca_m_3411860_se_11_060_20220511",
+     "ca_m_3411860_ne_11_060_20220511"
+    ],
+    "dates": [
+     "2022-05-11"
+    ],
+    "license": "public domain (USDA FSA)"
+   },
+   "post": {
+    "source": "NOAA NGS Emergency Response Imagery",
+    "prefix": "2025_California_Fires",
+    "flights": [
+     "20250128a"
+    ],
+    "tiles": 9,
+    "license": "US Government work (NOAA NGS)"
+   },
+   "incident": "2025-01-07",
+   "chips": 2418
+  }
+ ],
+ "label_source": "CAL FIRE DINS (incident Palisades)",
+ "split": "spatial: 300 m blocks, one in five to validation; validation metrics below come from a fit on the other blocks; the stored model was then refit on all blocks",
+ "label_counts": {
+  "no_damage": 1733,
+  "affected": 353,
+  "minor": 85,
+  "major": 28,
+  "destroyed": 4304
+ },
+ "validation": {
+  "n": 1625,
+  "accuracy": 0.854,
+  "destroyed_vs_rest_balanced_accuracy": 0.948,
+  "destroyed_recall": 0.951,
+  "not_destroyed_recall": 0.945,
+  "macro_f1_present_levels": 0.396,
+  "major_or_destroyed": {
+   "precision": 0.975,
+   "recall": 0.946,
+   "f1": 0.96,
+   "true": 1230,
+   "called": 1193
+  },
+  "nll": 0.4869,
+  "confusion_rows_true_cols_pred": [
+   [
+    193,
+    64,
+    20,
+    4,
+    13
+   ],
+   [
+    31,
+    30,
+    9,
+    4,
+    9
+   ],
+   [
+    10,
+    7,
+    1,
+    0,
+    0
+   ],
+   [
+    4,
+    3,
+    0,
+    0,
+    0
+   ],
+   [
+    25,
+    20,
+    15,
+    0,
+    1163
+   ]
+  ],
+  "levels": [
+   "no_damage",
+   "affected",
+   "minor",
+   "major",
+   "destroyed"
+  ]
+ },
+ "held_out_never_read": [
+  "Eaton fire (DR-4856 altadena TEST area)"
+ ],
+ "fit_seconds": 18
+}

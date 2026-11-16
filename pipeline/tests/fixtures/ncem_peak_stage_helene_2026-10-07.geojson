@@ -1,0 +1,1376 @@
+{
+ "type": "FeatureCollection",
+ "crs": {
+  "type": "name",
+  "properties": {
+   "name": "EPSG:4326"
+  }
+ },
+ "features": [
+  {
+   "type": "Feature",
+   "id": 4,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -83.012,
+     35.46
+    ]
+   },
+   "properties": {
+    "Owner": "NCEM",
+    "Site_ID": 7700,
+    "Site_Name": "Richland Creek near Waynesville",
+    "Latitude": 35.46,
+    "Longitude": -83.012,
+    "County": "Haywood",
+    "NCDOT_Division": 14,
+    "River_Basin": "French Broad",
+    "Road_Name": null,
+    "Road_Number": null,
+    "Waterbody": "Richland Creek",
+    "DOT_Structure": null,
+    "DATUM": 2768,
+    "Peak_Elevation": 2777.76,
+    "Peak_Stage": 9.76,
+    "Peak_Time": 1727442360000,
+    "Peak_Rating": "Moderate",
+    "Return_Period": "<10",
+    "Record": "No",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 4,
+    "SiteID": "7700",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 10,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.459,
+     35.778
+    ]
+   },
+   "properties": {
+    "Owner": "NCEM",
+    "Site_ID": 25330,
+    "Site_Name": "Ivy River",
+    "Latitude": 35.778,
+    "Longitude": -82.459,
+    "County": "Buncombe",
+    "NCDOT_Division": 13,
+    "River_Basin": "French Broad",
+    "Road_Name": null,
+    "Road_Number": "NC197",
+    "Waterbody": "Ivy River",
+    "DOT_Structure": "100078",
+    "DATUM": 2176,
+    "Peak_Elevation": 2191.42,
+    "Peak_Stage": 15.42,
+    "Peak_Time": 1727446682000,
+    "Peak_Rating": "Major",
+    "Return_Period": ">1000",
+    "Record": "Yes",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": 6.7,
+    "Years_of_Data": 10,
+    "FID": 10,
+    "SiteID": "25330",
+    "Years_Data_str": "10",
+    "Prev_Rec_str": "6.7"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 11,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -83.106,
+     35.52
+    ]
+   },
+   "properties": {
+    "Owner": "NCEM",
+    "Site_ID": 25360,
+    "Site_Name": "Jonathan Creek",
+    "Latitude": 35.52,
+    "Longitude": -83.106,
+    "County": "Haywood",
+    "NCDOT_Division": 14,
+    "River_Basin": "French Broad",
+    "Road_Name": "Fie Top Rd",
+    "Road_Number": "SR1304",
+    "Waterbody": "Jonathan Creek",
+    "DOT_Structure": "430197",
+    "DATUM": 3065,
+    "Peak_Elevation": 3072.92,
+    "Peak_Stage": 7.92,
+    "Peak_Time": 1727442787000,
+    "Peak_Rating": "Minor",
+    "Return_Period": "25-50",
+    "Record": "Yes",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": 4.02,
+    "Years_of_Data": 10,
+    "FID": 11,
+    "SiteID": "25360",
+    "Years_Data_str": "10",
+    "Prev_Rec_str": "4.02"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 18,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.188289,
+     35.634772
+    ]
+   },
+   "properties": {
+    "Owner": "NCEM",
+    "Site_ID": 25520,
+    "Site_Name": "Mills Creek at W. Orchard St nr  Old Fort",
+    "Latitude": 35.634772,
+    "Longitude": -82.188289,
+    "County": "McDowell",
+    "NCDOT_Division": 13,
+    "River_Basin": "Catawba",
+    "Road_Name": "W. Orchard St",
+    "Road_Number": "SR1119",
+    "Waterbody": "Mill Creek",
+    "DOT_Structure": "580087",
+    "DATUM": 1446.6,
+    "Peak_Elevation": 1453.6,
+    "Peak_Stage": 7,
+    "Peak_Time": 1727436120000,
+    "Peak_Rating": "Minor",
+    "Return_Period": "<10",
+    "Record": "No",
+    "Stopped_Reporting": "Yes",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 18,
+    "SiteID": "25520",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 19,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -81.943,
+     35.875
+    ]
+   },
+   "properties": {
+    "Owner": "NCEM",
+    "Site_ID": 25530,
+    "Site_Name": "N Fork Catawba River/Us 221 N",
+    "Latitude": 35.875,
+    "Longitude": -81.943,
+    "County": "McDowell",
+    "NCDOT_Division": 13,
+    "River_Basin": "Catawba",
+    "Road_Name": null,
+    "Road_Number": "US221N",
+    "Waterbody": "N Fork Catawba River",
+    "DOT_Structure": "580119",
+    "DATUM": 1721.33,
+    "Peak_Elevation": 1734.19,
+    "Peak_Stage": 12.86,
+    "Peak_Time": 1727441880000,
+    "Peak_Rating": "Major",
+    "Return_Period": "100-500",
+    "Record": "Yes",
+    "Stopped_Reporting": "Yes",
+    "Previous_Record_Stage": 9.23,
+    "Years_of_Data": 10,
+    "FID": 19,
+    "SiteID": "25530",
+    "Years_Data_str": "10",
+    "Prev_Rec_str": "9.23"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 24,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.8067,
+     35.51285
+    ]
+   },
+   "properties": {
+    "Owner": "Haywood County",
+    "Site_ID": 26100,
+    "Site_Name": "Dutch Cove Ck at Dutch Cove Rd",
+    "Latitude": 35.51285,
+    "Longitude": -82.8067,
+    "County": "Haywood",
+    "NCDOT_Division": 14,
+    "River_Basin": "French Broad",
+    "Road_Name": "Dutch Cove Rd",
+    "Road_Number": "SR1854",
+    "Waterbody": "Dutch Cove Creek",
+    "DOT_Structure": "430154",
+    "DATUM": 2667.35,
+    "Peak_Elevation": 2677.66,
+    "Peak_Stage": 10.31,
+    "Peak_Time": 1727442792000,
+    "Peak_Rating": "Major",
+    "Return_Period": "100-500",
+    "Record": "NA",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 24,
+    "SiteID": "26100",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 25,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.87308,
+     35.49895
+    ]
+   },
+   "properties": {
+    "Owner": "Haywood County",
+    "Site_ID": 26200,
+    "Site_Name": "Pigeon Rvr at Wells Rd",
+    "Latitude": 35.49895,
+    "Longitude": -82.87308,
+    "County": "Haywood",
+    "NCDOT_Division": 14,
+    "River_Basin": "French Broad",
+    "Road_Name": "Wells Rd",
+    "Road_Number": "SR1869",
+    "Waterbody": "Pigeon River",
+    "DOT_Structure": "430016",
+    "DATUM": 2613.59,
+    "Peak_Elevation": 2634.06,
+    "Peak_Stage": 20.47,
+    "Peak_Time": 1727436300000,
+    "Peak_Rating": "Major",
+    "Return_Period": "500-1000",
+    "Record": "NA",
+    "Stopped_Reporting": "Yes",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 25,
+    "SiteID": "26200",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 26,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.80375,
+     35.55875
+    ]
+   },
+   "properties": {
+    "Owner": "Haywood County",
+    "Site_ID": 26300,
+    "Site_Name": "N. Hominy Ck at Newfound Rd",
+    "Latitude": 35.55875,
+    "Longitude": -82.80375,
+    "County": "Haywood",
+    "NCDOT_Division": 14,
+    "River_Basin": "French Broad",
+    "Road_Name": "Newfound Rd",
+    "Road_Number": "SR1004",
+    "Waterbody": "North Hominy Creek",
+    "DOT_Structure": "430411",
+    "DATUM": 2649.13,
+    "Peak_Elevation": 2657.78,
+    "Peak_Stage": 8.65,
+    "Peak_Time": 1727443314000,
+    "Peak_Rating": "Minor",
+    "Return_Period": "25-50",
+    "Record": "NA",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 26,
+    "SiteID": "26300",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 27,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.90255,
+     35.40607
+    ]
+   },
+   "properties": {
+    "Owner": "Haywood County",
+    "Site_ID": 26400,
+    "Site_Name": "Little Eastfork Pigeon Rvr at Little Eastfork Rd",
+    "Latitude": 35.40607,
+    "Longitude": -82.90255,
+    "County": "Haywood",
+    "NCDOT_Division": 14,
+    "River_Basin": "French Broad",
+    "Road_Name": "Little East Fork Rd",
+    "Road_Number": "SR1129",
+    "Waterbody": "Little Eastfork Pigeon River",
+    "DOT_Structure": "430090",
+    "DATUM": 3046.04,
+    "Peak_Elevation": 3056.7,
+    "Peak_Stage": 10.66,
+    "Peak_Time": 1727441580000,
+    "Peak_Rating": "Minor",
+    "Return_Period": "25-50",
+    "Record": "NA",
+    "Stopped_Reporting": "Yes",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 27,
+    "SiteID": "26400",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 28,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.81128,
+     35.41776
+    ]
+   },
+   "properties": {
+    "Owner": "Haywood County",
+    "Site_ID": 26600,
+    "Site_Name": "Eastfork Pigeon River at Chinquapin Rd",
+    "Latitude": 35.41776,
+    "Longitude": -82.81128,
+    "County": "Haywood",
+    "NCDOT_Division": 14,
+    "River_Basin": "French Broad",
+    "Road_Name": "Chinquapin Rd",
+    "Road_Number": "SR1887",
+    "Waterbody": "Eastfork Pigeon River",
+    "DOT_Structure": "430003",
+    "DATUM": 2923.07,
+    "Peak_Elevation": 2935.84,
+    "Peak_Stage": 12.77,
+    "Peak_Time": 1727443500000,
+    "Peak_Rating": "Major",
+    "Return_Period": "100-500",
+    "Record": "NA",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 28,
+    "SiteID": "26600",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 38,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.572,
+     35.589
+    ]
+   },
+   "properties": {
+    "Owner": "NCDOT",
+    "Site_ID": 30044,
+    "Site_Name": "French Broad R. at Craven St",
+    "Latitude": 35.589,
+    "Longitude": -82.572,
+    "County": "Buncombe",
+    "NCDOT_Division": 13,
+    "River_Basin": "French Broad",
+    "Road_Name": "Craven St",
+    "Road_Number": "SR3408",
+    "Waterbody": "French Broad River",
+    "DOT_Structure": "100743",
+    "DATUM": 1959.88,
+    "Peak_Elevation": 1990.6,
+    "Peak_Stage": 30.72,
+    "Peak_Time": 1727471760000,
+    "Peak_Rating": "Major",
+    "Return_Period": ">500",
+    "Record": "Yes",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": 26.98,
+    "Years_of_Data": 6,
+    "FID": 38,
+    "SiteID": "30044",
+    "Years_Data_str": "6",
+    "Prev_Rec_str": "26.98"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 40,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.31481,
+     35.62017
+    ]
+   },
+   "properties": {
+    "Owner": "NCEM",
+    "Site_ID": 30077,
+    "Site_Name": "Flat Cr at US70, Black Mountain",
+    "Latitude": 35.62017,
+    "Longitude": -82.31481,
+    "County": "Buncombe",
+    "NCDOT_Division": 13,
+    "River_Basin": "French Broad",
+    "Road_Name": null,
+    "Road_Number": "US70",
+    "Waterbody": "Flat Creek",
+    "DOT_Structure": "100782",
+    "DATUM": 2349,
+    "Peak_Elevation": 2367.9,
+    "Peak_Stage": 18.9,
+    "Peak_Time": 1727444400000,
+    "Peak_Rating": "Major",
+    "Return_Period": "100-500",
+    "Record": "NA",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 40,
+    "SiteID": "30077",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 41,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.47623,
+     35.60046
+    ]
+   },
+   "properties": {
+    "Owner": "NCEM",
+    "Site_ID": 30078,
+    "Site_Name": "Grassy Branch at Old Farm School Rd (SR2402) Asheville",
+    "Latitude": 35.60046,
+    "Longitude": -82.47623,
+    "County": "Buncombe",
+    "NCDOT_Division": 13,
+    "River_Basin": "French Broad",
+    "Road_Name": "Old Farm School Rd",
+    "Road_Number": "SR2402",
+    "Waterbody": "Grassy Branch",
+    "DOT_Structure": "100217",
+    "DATUM": 2120,
+    "Peak_Elevation": 2133.99,
+    "Peak_Stage": 13.99,
+    "Peak_Time": 1727436600000,
+    "Peak_Rating": "Minor",
+    "Return_Period": "10-25",
+    "Record": "NA",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 41,
+    "SiteID": "30078",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 42,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.63465,
+     35.54482
+    ]
+   },
+   "properties": {
+    "Owner": "NCEM",
+    "Site_ID": 30079,
+    "Site_Name": "Hominy Cr at Sand Hill Rd (SR3412) Asheville",
+    "Latitude": 35.54482,
+    "Longitude": -82.63465,
+    "County": "Buncombe",
+    "NCDOT_Division": 13,
+    "River_Basin": "French Broad",
+    "Road_Name": "Sand Hill Rd",
+    "Road_Number": "SR3412",
+    "Waterbody": "Hominy Creek",
+    "DOT_Structure": "100286",
+    "DATUM": 2020,
+    "Peak_Elevation": 2055.03,
+    "Peak_Stage": 35.03,
+    "Peak_Time": 1727454600000,
+    "Peak_Rating": "Major",
+    "Return_Period": "100-500",
+    "Record": "NA",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 42,
+    "SiteID": "30079",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 43,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.49327,
+     35.58195
+    ]
+   },
+   "properties": {
+    "Owner": "NCEM",
+    "Site_ID": 30080,
+    "Site_Name": "Swannanoa R at Gashes Creek Rd, Swannanoa",
+    "Latitude": 35.58195,
+    "Longitude": -82.49327,
+    "County": "Buncombe",
+    "NCDOT_Division": 13,
+    "River_Basin": "French Broad",
+    "Road_Name": "Gashes Creek Rd",
+    "Road_Number": "NS-96197",
+    "Waterbody": "Swannanoa River",
+    "DOT_Structure": "100552",
+    "DATUM": 2003,
+    "Peak_Elevation": 2051.11,
+    "Peak_Stage": 48.11,
+    "Peak_Time": 1727452800000,
+    "Peak_Rating": "Major",
+    "Return_Period": ">500",
+    "Record": "NA",
+    "Stopped_Reporting": "Yes",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 43,
+    "SiteID": "30080",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 57,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -83.02933,
+     35.52657
+    ]
+   },
+   "properties": {
+    "Owner": "NCEM",
+    "Site_ID": 30104,
+    "Site_Name": "Jonathan Cr at Hall Dr (SR1394) Dellwood",
+    "Latitude": 35.52657,
+    "Longitude": -83.02933,
+    "County": "Haywood",
+    "NCDOT_Division": 14,
+    "River_Basin": "French Broad",
+    "Road_Name": "Hall Dr",
+    "Road_Number": "SR1394",
+    "Waterbody": "Jonathan Creek",
+    "DOT_Structure": "430407",
+    "DATUM": 2708,
+    "Peak_Elevation": 2725.68,
+    "Peak_Stage": 17.68,
+    "Peak_Time": 1727445000000,
+    "Peak_Rating": "Major",
+    "Return_Period": "100-500",
+    "Record": "NA",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 57,
+    "SiteID": "30104",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 58,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.91199,
+     35.53511
+    ]
+   },
+   "properties": {
+    "Owner": "NCEM",
+    "Site_ID": 30105,
+    "Site_Name": "Pigeon R at Charles St, Clyde",
+    "Latitude": 35.53511,
+    "Longitude": -82.91199,
+    "County": "Haywood",
+    "NCDOT_Division": 14,
+    "River_Basin": "French Broad",
+    "Road_Name": "Charles St",
+    "Road_Number": "SR1642",
+    "Waterbody": "Pigeon River",
+    "DOT_Structure": "430406",
+    "DATUM": 2505,
+    "Peak_Elevation": 2535.07,
+    "Peak_Stage": 30.07,
+    "Peak_Time": 1727451300000,
+    "Peak_Rating": "Major",
+    "Return_Period": "100-500",
+    "Record": "NA",
+    "Stopped_Reporting": "Yes",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 58,
+    "SiteID": "30105",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 63,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.03293,
+     35.70751
+    ]
+   },
+   "properties": {
+    "Owner": "NCEM",
+    "Site_ID": 30111,
+    "Site_Name": "CATAWBA RIVER at US221, Marion",
+    "Latitude": 35.70751,
+    "Longitude": -82.03293,
+    "County": "McDowell",
+    "NCDOT_Division": 13,
+    "River_Basin": "Catawba",
+    "Road_Name": null,
+    "Road_Number": "US221 Bus",
+    "Waterbody": "Catawba River",
+    "DOT_Structure": "580075",
+    "DATUM": 1197,
+    "Peak_Elevation": 1229.31,
+    "Peak_Stage": 32.31,
+    "Peak_Time": 1727462400000,
+    "Peak_Rating": "Major",
+    "Return_Period": "100-500",
+    "Record": "NA",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 63,
+    "SiteID": "30111",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 102,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.0602778,
+     35.6858333
+    ]
+   },
+   "properties": {
+    "Owner": "USGS",
+    "Site_ID": 2137727,
+    "Site_Name": "Catawba River near Pleasant Gardens",
+    "Latitude": 35.6858333,
+    "Longitude": -82.0602778,
+    "County": "Mcdowell",
+    "NCDOT_Division": 13,
+    "River_Basin": "Catawba",
+    "Road_Name": "Resistoflex Rd",
+    "Road_Number": "SR1221",
+    "Waterbody": "Catawba River",
+    "DOT_Structure": "580025",
+    "DATUM": 1233.82,
+    "Peak_Elevation": 1255.54,
+    "Peak_Stage": 21.72,
+    "Peak_Time": 1727460000000,
+    "Peak_Rating": "Major",
+    "Return_Period": "100-500",
+    "Record": "Yes",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": 17.55,
+    "Years_of_Data": 43,
+    "FID": 102,
+    "SiteID": "02137727",
+    "Years_Data_str": "43",
+    "Prev_Rec_str": "17.55"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 146,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.4052778,
+     35.65305556
+    ]
+   },
+   "properties": {
+    "Owner": "USGS",
+    "Site_ID": 3450000,
+    "Site_Name": "Beetree Ck near Swannanoa",
+    "Latitude": 35.65305556,
+    "Longitude": -82.4052778,
+    "County": "Buncombe",
+    "NCDOT_Division": 13,
+    "River_Basin": "French Broad",
+    "Road_Name": null,
+    "Road_Number": null,
+    "Waterbody": "Beetree Creek",
+    "DOT_Structure": null,
+    "DATUM": 2693.13,
+    "Peak_Elevation": 2701.83,
+    "Peak_Stage": 8.7,
+    "Peak_Time": 1727442000000,
+    "Peak_Rating": "Minor",
+    "Return_Period": "10-25",
+    "Record": "Yes",
+    "Stopped_Reporting": "Yes",
+    "Previous_Record_Stage": 7.69,
+    "Years_of_Data": 97,
+    "FID": 146,
+    "SiteID": "03450000",
+    "Years_Data_str": "97",
+    "Prev_Rec_str": "7.69"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 147,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.5447222,
+     35.5683333
+    ]
+   },
+   "properties": {
+    "Owner": "USGS",
+    "Site_ID": 3451000,
+    "Site_Name": "Swannanoa River at Biltmore",
+    "Latitude": 35.5683333,
+    "Longitude": -82.5447222,
+    "County": "Buncombe",
+    "NCDOT_Division": 13,
+    "River_Basin": "French Broad",
+    "Road_Name": "NC81",
+    "Road_Number": "NC81",
+    "Waterbody": "Swannanoa River",
+    "DOT_Structure": "100039",
+    "DATUM": 1976.58,
+    "Peak_Elevation": 1999.32,
+    "Peak_Stage": 22.74,
+    "Peak_Time": 1727449200000,
+    "Peak_Rating": "Major",
+    "Return_Period": "100-500",
+    "Record": "Yes",
+    "Stopped_Reporting": "Yes",
+    "Previous_Record_Stage": 20.7,
+    "Years_of_Data": 103,
+    "FID": 147,
+    "SiteID": "03451000",
+    "Years_Data_str": "103",
+    "Prev_Rec_str": "20.7"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 148,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.5780556,
+     35.60888889
+    ]
+   },
+   "properties": {
+    "Owner": "USGS",
+    "Site_ID": 3451500,
+    "Site_Name": "French Broad River at Asheville",
+    "Latitude": 35.60888889,
+    "Longitude": -82.5780556,
+    "County": "Buncombe",
+    "NCDOT_Division": 13,
+    "River_Basin": "French Broad",
+    "Road_Name": "Pearson Bridge Rd",
+    "Road_Number": "SR1348",
+    "Waterbody": "French Broad River",
+    "DOT_Structure": "100278",
+    "DATUM": 1950.12,
+    "Peak_Elevation": 1974.79,
+    "Peak_Stage": 24.67,
+    "Peak_Time": 1727472600000,
+    "Peak_Rating": "Major",
+    "Return_Period": "100-500",
+    "Record": "Yes",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": 23.1,
+    "Years_of_Data": 128,
+    "FID": 148,
+    "SiteID": "03451500",
+    "Years_Data_str": "128",
+    "Prev_Rec_str": "23.1"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 149,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.6208333,
+     35.7697222
+    ]
+   },
+   "properties": {
+    "Owner": "USGS",
+    "Site_ID": 3453000,
+    "Site_Name": "Ivy River near Marshall",
+    "Latitude": 35.7697222,
+    "Longitude": -82.6208333,
+    "County": "Madison",
+    "NCDOT_Division": 13,
+    "River_Basin": "French Broad",
+    "Road_Name": null,
+    "Road_Number": null,
+    "Waterbody": "Ivy River",
+    "DOT_Structure": null,
+    "DATUM": 1700.12,
+    "Peak_Elevation": 1721.86,
+    "Peak_Stage": 21.74,
+    "Peak_Time": 1727454300000,
+    "Peak_Rating": "Major",
+    "Return_Period": "100-500",
+    "Record": "Yes",
+    "Stopped_Reporting": "Yes",
+    "Previous_Record_Stage": 17.21,
+    "Years_of_Data": 89,
+    "FID": 149,
+    "SiteID": "03453000",
+    "Years_Data_str": "89",
+    "Prev_Rec_str": "17.21"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 150,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.6608333,
+     35.78638889
+    ]
+   },
+   "properties": {
+    "Owner": "USGS",
+    "Site_ID": 3453500,
+    "Site_Name": "French Broad River near Marshall",
+    "Latitude": 35.78638889,
+    "Longitude": -82.6608333,
+    "County": "Madison",
+    "NCDOT_Division": 13,
+    "River_Basin": "French Broad",
+    "Road_Name": null,
+    "Road_Number": null,
+    "Waterbody": "French Broad River",
+    "DOT_Structure": null,
+    "DATUM": 1646.5,
+    "Peak_Elevation": 1666.58,
+    "Peak_Stage": 20.08,
+    "Peak_Time": 1727481600000,
+    "Peak_Rating": "Major",
+    "Return_Period": ">100",
+    "Record": "No",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 150,
+    "SiteID": "03453500",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 151,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.821,
+     35.88991667
+    ]
+   },
+   "properties": {
+    "Owner": "USGS",
+    "Site_ID": 3454500,
+    "Site_Name": "French Broad River at Hot Springs",
+    "Latitude": 35.88991667,
+    "Longitude": -82.821,
+    "County": "Madison",
+    "NCDOT_Division": 13,
+    "River_Basin": "French Broad",
+    "Road_Name": null,
+    "Road_Number": null,
+    "Waterbody": "French Broad River",
+    "DOT_Structure": null,
+    "DATUM": 1311.1,
+    "Peak_Elevation": 1331.49,
+    "Peak_Stage": 20.39,
+    "Peak_Time": 1727466300000,
+    "Peak_Rating": "Moderate",
+    "Return_Period": ">100",
+    "Record": "No",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 151,
+    "SiteID": "03454500",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 152,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.9375,
+     35.3961111
+    ]
+   },
+   "properties": {
+    "Owner": "USGS",
+    "Site_ID": 3455500,
+    "Site_Name": "W F Pigeon River Abv Lake Logan",
+    "Latitude": 35.3961111,
+    "Longitude": -82.9375,
+    "County": "Haywood",
+    "NCDOT_Division": 14,
+    "River_Basin": "French Broad",
+    "Road_Name": "Steel Bridge Rd",
+    "Road_Number": "SR1216",
+    "Waterbody": "W F Pigeon River",
+    "DOT_Structure": "430246",
+    "DATUM": 2976.03,
+    "Peak_Elevation": 2986.57,
+    "Peak_Stage": 10.54,
+    "Peak_Time": 1727442600000,
+    "Peak_Rating": "Minor",
+    "Return_Period": "10-25",
+    "Record": "No",
+    "Stopped_Reporting": "Yes",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 152,
+    "SiteID": "03455500",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 153,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.9222222,
+     35.4225
+    ]
+   },
+   "properties": {
+    "Owner": "USGS",
+    "Site_ID": 3455773,
+    "Site_Name": "LAKE LOGAN AT DAM NR HAZELWOOD",
+    "Latitude": 35.4225,
+    "Longitude": -82.9222222,
+    "County": "Haywood",
+    "NCDOT_Division": 14,
+    "River_Basin": "French Broad",
+    "Road_Name": null,
+    "Road_Number": null,
+    "Waterbody": "Lake Logan",
+    "DOT_Structure": null,
+    "DATUM": 2856.2,
+    "Peak_Elevation": 2914.98,
+    "Peak_Stage": 58.78,
+    "Peak_Time": 1727443800000,
+    "Peak_Rating": "Major",
+    "Return_Period": "<10",
+    "Record": "Yes",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": 57.79,
+    "Years_of_Data": 17,
+    "FID": 153,
+    "SiteID": "03455773",
+    "Years_Data_str": "17",
+    "Prev_Rec_str": "57.79"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 154,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.9,
+     35.46388889
+    ]
+   },
+   "properties": {
+    "Owner": "USGS",
+    "Site_ID": 3456100,
+    "Site_Name": "West Fork Pigeon River at Bethel",
+    "Latitude": 35.46388889,
+    "Longitude": -82.9,
+    "County": "Haywood",
+    "NCDOT_Division": 14,
+    "River_Basin": "French Broad",
+    "Road_Name": "Oates Dr",
+    "Road_Number": "SR1112",
+    "Waterbody": "West Fork Pigeon River",
+    "DOT_Structure": "430079",
+    "DATUM": 2667.85,
+    "Peak_Elevation": 2684.63,
+    "Peak_Stage": 16.78,
+    "Peak_Time": 1727447100000,
+    "Peak_Rating": "Major",
+    "Return_Period": "100-500",
+    "Record": "Yes",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": 16.27,
+    "Years_of_Data": 33,
+    "FID": 154,
+    "SiteID": "03456100",
+    "Years_Data_str": "33",
+    "Prev_Rec_str": "16.27"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 155,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.8697222,
+     35.46166667
+    ]
+   },
+   "properties": {
+    "Owner": "USGS",
+    "Site_ID": 3456500,
+    "Site_Name": "E Fork Pigeon River near Canton",
+    "Latitude": 35.46166667,
+    "Longitude": -82.8697222,
+    "County": "Haywood",
+    "NCDOT_Division": 14,
+    "River_Basin": "French Broad",
+    "Road_Name": null,
+    "Road_Number": null,
+    "Waterbody": "E Fork Pigeon River ",
+    "DOT_Structure": null,
+    "DATUM": 2674.41,
+    "Peak_Elevation": 2688.64,
+    "Peak_Stage": 14.23,
+    "Peak_Time": 1727447100000,
+    "Peak_Rating": "Major",
+    "Return_Period": "100-500",
+    "Record": "No",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 155,
+    "SiteID": "03456500",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 156,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.8480556,
+     35.52194444
+    ]
+   },
+   "properties": {
+    "Owner": "USGS",
+    "Site_ID": 3456991,
+    "Site_Name": "Pigeon River near Canton",
+    "Latitude": 35.52194444,
+    "Longitude": -82.8480556,
+    "County": "Haywood",
+    "NCDOT_Division": 14,
+    "River_Basin": "French Broad",
+    "Road_Name": null,
+    "Road_Number": "NC215",
+    "Waterbody": "Pigeon River",
+    "DOT_Structure": "430164",
+    "DATUM": 2581.48,
+    "Peak_Elevation": 2607.37,
+    "Peak_Stage": 25.89,
+    "Peak_Time": 1727450400000,
+    "Peak_Rating": "Major",
+    "Return_Period": "100-500",
+    "Record": "Yes",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": 22.8,
+    "Years_of_Data": 30,
+    "FID": 156,
+    "SiteID": "03456991",
+    "Years_Data_str": "30",
+    "Prev_Rec_str": "22.8"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 157,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.99,
+     35.635
+    ]
+   },
+   "properties": {
+    "Owner": "USGS",
+    "Site_ID": 3459500,
+    "Site_Name": "Pigeon River near Hepco",
+    "Latitude": 35.635,
+    "Longitude": -82.99,
+    "County": "Haywood",
+    "NCDOT_Division": 14,
+    "River_Basin": "French Broad",
+    "Road_Name": null,
+    "Road_Number": null,
+    "Waterbody": "Pigeon River",
+    "DOT_Structure": null,
+    "DATUM": 2335.77,
+    "Peak_Elevation": 2356.48,
+    "Peak_Stage": 20.71,
+    "Peak_Time": 1727469000000,
+    "Peak_Rating": "Monitor",
+    "Return_Period": "100-500",
+    "Record": "Yes",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": 17.31,
+    "Years_of_Data": 96,
+    "FID": 157,
+    "SiteID": "03459500",
+    "Years_Data_str": "96",
+    "Prev_Rec_str": "17.31"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 158,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -83.0727778,
+     35.6672222
+    ]
+   },
+   "properties": {
+    "Owner": "USGS",
+    "Site_ID": 3460000,
+    "Site_Name": "Cataloochee Creek near Cataloochee",
+    "Latitude": 35.6672222,
+    "Longitude": -83.0727778,
+    "County": "Haywood",
+    "NCDOT_Division": 14,
+    "River_Basin": "French Broad",
+    "Road_Name": "National Park Rd",
+    "Road_Number": "Old NC284",
+    "Waterbody": "Cataloochee Creek",
+    "DOT_Structure": null,
+    "DATUM": 2457.3,
+    "Peak_Elevation": 2466.77,
+    "Peak_Stage": 9.47,
+    "Peak_Time": 1727448300000,
+    "Peak_Rating": "Moderate",
+    "Return_Period": "50-100",
+    "Record": "Yes",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": 8.08,
+    "Years_of_Data": 89,
+    "FID": 158,
+    "SiteID": "03460000",
+    "Years_Data_str": "89",
+    "Prev_Rec_str": "8.08"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 211,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.5969444,
+     35.56138889
+    ]
+   },
+   "properties": {
+    "Owner": "USGS",
+    "Site_ID": 344878100,
+    "Site_Name": "HOMINY CREEK NR WEST ASHEVILLE, NC",
+    "Latitude": 35.56138889,
+    "Longitude": -82.5969444,
+    "County": "Buncombe",
+    "NCDOT_Division": 13,
+    "River_Basin": "French Broad",
+    "Road_Name": null,
+    "Road_Number": null,
+    "Waterbody": "Hominy Creek",
+    "DOT_Structure": null,
+    "DATUM": 1975.32,
+    "Peak_Elevation": 1995.03,
+    "Peak_Stage": 19.71,
+    "Peak_Time": 1727443800000,
+    "Peak_Rating": "Moderate",
+    "Return_Period": "25-50",
+    "Record": "Yes",
+    "Stopped_Reporting": "Yes",
+    "Previous_Record_Stage": 19.45,
+    "Years_of_Data": 5,
+    "FID": 211,
+    "SiteID": "0344878100",
+    "Years_Data_str": "5",
+    "Prev_Rec_str": "19.45"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 212,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.3327778,
+     35.68527778
+    ]
+   },
+   "properties": {
+    "Owner": "USGS",
+    "Site_ID": 344894205,
+    "Site_Name": "N Fk Swannanoa River near Walkertown",
+    "Latitude": 35.68527778,
+    "Longitude": -82.3327778,
+    "County": "Buncombe",
+    "NCDOT_Division": 13,
+    "River_Basin": "French Broad",
+    "Road_Name": null,
+    "Road_Number": null,
+    "Waterbody": "N Fork Swannanoa River",
+    "DOT_Structure": null,
+    "DATUM": 2640.34,
+    "Peak_Elevation": 2647.37,
+    "Peak_Stage": 7.03,
+    "Peak_Time": 1727433900000,
+    "Peak_Rating": "Normal",
+    "Return_Period": "<10",
+    "Record": "No",
+    "Stopped_Reporting": "Yes",
+    "Previous_Record_Stage": null,
+    "Years_of_Data": null,
+    "FID": 212,
+    "SiteID": "0344894205",
+    "Years_Data_str": "N/A",
+    "Prev_Rec_str": "N/A"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 213,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.9197222,
+     35.42666667
+    ]
+   },
+   "properties": {
+    "Owner": "USGS",
+    "Site_ID": 345577330,
+    "Site_Name": "West Fork Pigeon River near Retreat",
+    "Latitude": 35.42666667,
+    "Longitude": -82.9197222,
+    "County": "Haywood",
+    "NCDOT_Division": 14,
+    "River_Basin": "French Broad",
+    "Road_Name": null,
+    "Road_Number": "NC215",
+    "Waterbody": "West Fork Pigeon River",
+    "DOT_Structure": "430136",
+    "DATUM": 2837.53,
+    "Peak_Elevation": 2852.14,
+    "Peak_Stage": 14.61,
+    "Peak_Time": 1727444400000,
+    "Peak_Rating": "Minor",
+    "Return_Period": ">1000",
+    "Record": "Yes",
+    "Stopped_Reporting": "No",
+    "Previous_Record_Stage": 14.15,
+    "Years_of_Data": 35,
+    "FID": 213,
+    "SiteID": "0345577330",
+    "Years_Data_str": "35",
+    "Prev_Rec_str": "14.15"
+   }
+  }
+ ]
+}
