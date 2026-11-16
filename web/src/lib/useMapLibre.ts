@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { resolved } from "./theme";
+import { loadOffline, localStyle, type OfflineStatus } from "./offline";
 import { prefersReducedMotion } from "./motion";
 
 export type { Map as MLMap, IControl, RasterTileSource } from "maplibre-gl";
@@ -92,17 +93,36 @@ export function useMapLibre({
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    // the offline check is cached after the first call, so this waits once per
+    // session; offline or with a packed basemap the style is local, never CARTO
+    let cancelled = false;
+    let teardown: (() => void) | undefined;
+    void loadOffline().then((off) => {
+      if (cancelled || !containerRef.current || mapRef.current) return;
+      teardown = init(off);
+    });
+    return () => {
+      cancelled = true;
+      teardown?.();
+    };
+
+    function init(off: OfflineStatus | null): (() => void) | undefined {
+    const styleFor = (t: "light" | "dark") => localStyle(off, t) ?? STYLE[t];
+    const local = localStyle(off, resolved()) !== null;
     let map: maplibregl.Map;
     try {
       map = new maplibregl.Map({
-        container: containerRef.current,
-        style: STYLE[resolved()],
+        container: containerRef.current!,
+        style: styleFor(resolved()),
         center,
         zoom,
         pitch,
         bearing,
         interactive,
-        attributionControl: { compact: true },
+        attributionControl: {
+          compact: true,
+          customAttribution: local && off?.basemap?.available ? off.basemap.attribution : undefined,
+        },
         dragRotate: interactive,
         maxPitch: 75,
       });
@@ -111,7 +131,7 @@ export function useMapLibre({
       // `ready` false so callers fall back to their non-map view instead of the
       // whole screen crashing into the error boundary.
       if (import.meta.env.DEV) console.warn("[maplibre] init failed:", err);
-      return;
+      return undefined;
     }
     if (interactive) {
       map.addControl(
@@ -160,13 +180,21 @@ export function useMapLibre({
     });
     mapRef.current = map;
 
+    // recording hook: same pattern as demo/Demo.tsx's __demoMap, gated behind
+    // ?rec=1 so it never runs in normal use. Lets the capture scripts drive
+    // the camera with frame-exact jumpTo() instead of live drag/animation.
+    if (new URLSearchParams(location.search).has("rec")) {
+      (window as unknown as { __ttMap?: maplibregl.Map }).__ttMap = map;
+    }
+
     // follow the theme
     let cur = resolved();
     const obs = new MutationObserver(() => {
       const next = resolved();
       if (next === cur) return;
       cur = next;
-      map.setStyle(STYLE[next], { diff: false });
+      if (local && off?.basemap?.available) return; // one raster basemap for both themes
+      map.setStyle(styleFor(next), { diff: false });
       map.once("styledata", () => {
         addBuildingDepth(map);
         setStyleEpoch((n) => n + 1);
@@ -181,7 +209,8 @@ export function useMapLibre({
       const next = resolved();
       if (next === cur) return;
       cur = next;
-      map.setStyle(STYLE[next], { diff: false });
+      if (local && off?.basemap?.available) return;
+      map.setStyle(styleFor(next), { diff: false });
       map.once("styledata", () => {
         addBuildingDepth(map);
         setStyleEpoch((n) => n + 1);
@@ -201,6 +230,7 @@ export function useMapLibre({
       mapRef.current = null;
       setReady(false);
     };
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

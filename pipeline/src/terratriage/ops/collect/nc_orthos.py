@@ -1,0 +1,229 @@
+"""Public orthoimagery ImageServers: NC OneMap (NC Orthoimagery Program +
+post-Helene collection) and USDA NAIP for every other state.
+
+Services (ArcGIS ImageServer, public, exportImage):
+  nc_2020_2023   Imagery/Orthoimagery_2020_2023_4band_analysis
+                 6 in, RGB+NIR, RMSE 1.0 ft, leaf-off; the "analysis" service
+                 uses compression that "minimizes the alteration of individual
+                 pixel values" (unlike the display services), so it is fit for
+                 radiometric change detection. Pre-event for Helene.
+  nc_helene_2025 Imagery/Orthoimagery_Helene_2025
+                 6 in, 13 WNC counties (Alexander, Ashe, Watauga, Avery,
+                 Mitchell, Burke, Yancey, McDowell, Rutherford, Buncombe,
+                 Henderson, Haywood, Jackson), spring 2025, leaf-off. NC
+                 Collaboratory / UNC. Seamline editing focused on major roads;
+                 elsewhere "may exhibit seamline displacement ... smears".
+  naip           USGS National Map USGSNAIPImagery (USDA NAIP), continental
+                 US, RGB+NIR, 0.3-0.6 m, leaf-on. The service holds only the
+                 latest statewide collection, so the pre-event check must
+                 confirm its acquisition date precedes the incident.
+
+Native CRS EPSG:6543 (NAD83(2011) / NC State Plane, US survey foot). We ask
+the server to resample onto our analysis grid (NAD83(2011) UTM 17N/18N) so
+pre and post land on the identical pixel grid.
+"""
+from __future__ import annotations
+
+import json
+import os
+import re
+import time
+import urllib.parse
+import urllib.request
+from datetime import datetime, timezone
+
+import numpy as np
+
+from ..provenance import Provenance
+from .base import Connector, SchemaError, SourceUnavailable, USER_AGENT, http_json
+
+ROOT = "https://services.nconemap.gov/secure/rest/services/Imagery"
+NAIP_ROOT = "https://imagery.nationalmap.gov/arcgis/rest/services"
+SERVICES = {
+    "nc_2020_2023": {
+        "path": "Orthoimagery_2020_2023_4band_analysis", "bands": [1, 2, 3], "nir_band": 4,
+        "date_label": "NC Orthoimagery Program 2020-2023 cycle (leaf-off)",
+        # acquisition date is encoded in each full-resolution tile name
+        # (OF6i0_37_000_<tile>_<YYYYMMDD>_...); the catalog `date` field is a
+        # year placeholder, so it is not used
+        "range_if_undated": ["2020-01-01", "2023-12-31"], "season": "leaf-off",
+        "license": "NC OneMap / NC CGIA / NC 911 Board; public",
+        "radiometric": True,
+    },
+    "nc_helene_2025": {
+        "path": "Orthoimagery_Helene_2025", "bands": [1, 2, 3], "nir_band": None,
+        "date_label": "spring 2025 (leaf-off), NC Collaboratory post-Helene collection",
+        # tile names carry no date and the service publishes only "spring
+        # 2025"; Jan 1 - May 31 2025 is the widest range that statement allows
+        "range_if_undated": ["2025-01-01", "2025-05-31"], "season": "leaf-off",
+        "license": "NC Collaboratory at UNC Chapel Hill; public via NC OneMap",
+        "radiometric": True,
+    },
+    "naip": {
+        "root": NAIP_ROOT, "path": "USGSNAIPImagery", "bands": [1, 2, 3], "nir_band": 4,
+        "date_label": "USDA NAIP, latest statewide collection (leaf-on)",
+        # catalog items carry a per-tile acquisition date (epoch ms)
+        "date_attr": "acquisition_date", "range_if_undated": None, "season": "leaf-on",
+        "license": "USDA Farm Service Agency NAIP; public domain",
+        "radiometric": False, "source": "USGS The National Map, USDA NAIP",
+        "crs": "EPSG:3857 served (resampled)", "gsd": "0.3-0.6 m native GSD",
+        # the server times out on large reprojected requests: ask at native
+        # resolution in smaller tiles and upsample locally onto the grid
+        "fetch_res_m": 0.6, "max_px": 1000,
+    },
+}
+
+
+def _url(service: str, op: str = "") -> str:
+    spec = SERVICES[service]
+    return f"{spec.get('root', ROOT)}/{spec['path']}/ImageServer" + (f"/{op}" if op else "")
+MAX_PX = 2000  # 4000 px requests return an HTML error page; 2500 works
+
+
+def export_window(service: str, bounds_xy: tuple[float, float, float, float], epsg: int,
+                  res_m: float) -> np.ndarray:
+    """(bands, H, W) uint8 for `bounds_xy` in `epsg`, tiled under the server limit."""
+    spec = SERVICES[service]
+    fetch_res = max(res_m, float(spec.get("fetch_res_m") or res_m))
+    if fetch_res > res_m:
+        coarse = export_window_at(service, bounds_xy, epsg, fetch_res)
+        return _upsample(coarse, *_shape(bounds_xy, res_m))
+    return export_window_at(service, bounds_xy, epsg, res_m)
+
+
+def _shape(bounds_xy, res_m: float) -> tuple[int, int]:
+    x0, y0, x1, y1 = bounds_xy
+    return int(round((y1 - y0) / res_m)), int(round((x1 - x0) / res_m))
+
+
+def _upsample(arr: np.ndarray, H: int, W: int) -> np.ndarray:
+    """Bilinear upsample of (bands, h, w) uint8 to (bands, H, W)."""
+    from PIL import Image
+
+    return np.stack([np.asarray(Image.fromarray(b).resize((W, H), Image.BILINEAR)) for b in arr])
+
+
+def export_window_at(service: str, bounds_xy: tuple[float, float, float, float], epsg: int,
+                     res_m: float) -> np.ndarray:
+    import rasterio
+    from rasterio.io import MemoryFile
+
+    spec = SERVICES[service]
+    max_px = int(spec.get("max_px") or MAX_PX)
+    x0, y0, x1, y1 = bounds_xy
+    W = int(round((x1 - x0) / res_m))
+    H = int(round((y1 - y0) / res_m))
+    nb = len(spec["bands"])
+    out = np.zeros((nb, H, W), dtype="uint8")
+    for r0 in range(0, H, max_px):
+        for c0 in range(0, W, max_px):
+            h, w = min(max_px, H - r0), min(max_px, W - c0)
+            bx = (x0 + c0 * res_m, y1 - (r0 + h) * res_m, x0 + (c0 + w) * res_m, y1 - r0 * res_m)
+            q = {
+                "bbox": ",".join(f"{v:.3f}" for v in bx), "bboxSR": epsg, "imageSR": epsg,
+                "size": f"{w},{h}", "format": "tiff", "pixelType": "U8",
+                "bandIds": ",".join(str(b - 1) for b in spec["bands"]),
+                "interpolation": "RSP_BilinearInterpolation", "f": "image",
+            }
+            url = _url(service, "exportImage") + "?" + urllib.parse.urlencode(q)
+            data = None
+            for i in range(4):
+                try:
+                    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+                    with urllib.request.urlopen(req, timeout=180) as r:  # noqa: S310
+                        data = r.read()
+                        ctype = r.headers.get("Content-Type", "")
+                    if "tiff" not in ctype:
+                        raise SchemaError(f"{service}: exportImage returned {ctype}: {data[:120]!r}")
+                    break
+                except Exception as ex:  # noqa: BLE001 - incl. transient HTML error pages
+                    if i == 3:
+                        raise SourceUnavailable(f"{service} exportImage failed: {ex}") from ex
+                    time.sleep(2 ** (i + 1))
+            with MemoryFile(data) as mf, mf.open() as ds:
+                arr = ds.read()
+                if arr.shape[1:] != (h, w):
+                    arr = ds.read(out_shape=(ds.count, h, w))
+            out[:, r0:r0 + h, c0:c0 + w] = arr[:nb]
+    _ = rasterio
+    return out
+
+
+_TILE_DATE = re.compile(r"_(20\d{2})(\d{2})(\d{2})_")
+
+
+def tile_dates(service: str, points_lonlat: list[tuple[float, float]]) -> tuple[str, str, str]:
+    """(date_min, date_max, how) for the full-resolution tiles under the points.
+
+    Dates come from tile names where the service encodes them; otherwise the
+    documented collection range, labelled as a range, never a single made-up day.
+    """
+    spec = SERVICES[service]
+    found: set[str] = set()
+    for lon, lat in points_lonlat:
+        try:
+            d = http_json(_url(service, "identify"), params={
+                "geometry": json.dumps({"x": lon, "y": lat, "spatialReference": {"wkid": 4326}}),
+                "geometryType": "esriGeometryPoint", "returnGeometry": "false",
+                "returnCatalogItems": "true", "f": "json"}, timeout=60)
+        except Exception:  # noqa: BLE001
+            continue
+        for f in ((d.get("catalogItems") or {}).get("features") or []):
+            a = {k.lower(): v for k, v in (f.get("attributes") or {}).items()}
+            if a.get("minps") not in (0, 0.0):
+                continue  # overview levels, not the source tile
+            if spec.get("date_attr") and a.get(spec["date_attr"]):
+                found.add(datetime.fromtimestamp(a[spec["date_attr"]] / 1000, timezone.utc).date().isoformat())
+                continue
+            m = _TILE_DATE.search(a.get("name") or "")
+            if m:
+                found.add(f"{m.group(1)}-{m.group(2)}-{m.group(3)}")
+    if found:
+        return min(found), max(found), "catalog acquisition dates" if spec.get("date_attr") else "tile names"
+    if not spec.get("range_if_undated"):
+        raise SourceUnavailable(f"{service}: no dated tiles found under the area")
+    lo, hi = spec["range_if_undated"]
+    return lo, hi, "service description (tiles undated)"
+
+
+def covered(service: str, lon: float, lat: float) -> bool:
+    """Does the service have imagery at this point? (catalog footprint query)"""
+    spec = SERVICES[service]
+    # the geometry must carry its spatialReference: a bare "x,y" with sr=4326 is
+    # silently read in the service's own CRS (NC State Plane ftUS) -> NoData
+    d = http_json(_url(service, "identify"), params={
+        "geometry": json.dumps({"x": lon, "y": lat, "spatialReference": {"wkid": 4326}}),
+        "geometryType": "esriGeometryPoint",
+        "returnGeometry": "false", "returnCatalogItems": "false", "f": "json"}, timeout=60)
+    v = str(d.get("value", "NoData"))
+    return v not in ("NoData", "", "None")
+
+
+def provenance(service: str) -> Provenance:
+    spec = SERVICES[service]
+    return Provenance(
+        source=spec.get("source") or f"NC OneMap {spec['path']}", source_url=_url(service),
+        license=spec["license"], dataset_version=spec["date_label"],
+        crs=spec.get("crs", "EPSG:6543 native (served resampled)"), horizontal_datum="NAD83(2011)", epoch=2010.0,
+        units=f"RGB uint8, {spec.get('gsd', '6 in (0.1524 m) native GSD')}",
+    )
+
+
+class NCOrthos(Connector):
+    name = "nc_orthos"
+    license = "NC OneMap; public"
+    homepage = "https://www.nconemap.gov/"
+    stale_after_s = 10 * 365 * 86400
+
+    def fetch(self, **kw):  # pragma: no cover - use export_window
+        raise NotImplementedError
+
+    def probe(self) -> float | None:
+        for s in SERVICES:
+            d = http_json(_url(s), params={"f": "json"}, timeout=30)
+            if "bandCount" not in d:
+                raise SchemaError(f"{s}: ImageServer metadata missing bandCount")
+        return None
+
+
+_ = os

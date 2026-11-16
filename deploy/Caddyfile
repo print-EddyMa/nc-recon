@@ -1,0 +1,11 @@
+# HTTPS in front of NC Recon. With a real domain (NCR_DOMAIN=recon.example.gov)
+# Caddy obtains and renews a certificate automatically; with "localhost" it
+# uses a local CA (browser warning) for testing.
+{$NCR_DOMAIN} {
+	encode gzip
+	reverse_proxy ncrecon:8000
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+}

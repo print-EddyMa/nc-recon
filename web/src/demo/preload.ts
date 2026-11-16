@@ -7,6 +7,10 @@
  * tiles/) or from the CARTO basemap CDN the app already depends on. During
  * playback there are zero further requests - see scripts/validate_demo.mjs.
  */
+// The recording demo is built by vite.demo.config.ts, which resolves
+// maplibre-gl / @deck.gl/* to the pinned copies in demo-deps/ (maplibre 5 +
+// deck.gl 9.3): deck.gl's interleaved overlay, needed on this non-interactive
+// map, does not work with the maplibre 6 / deck.gl 9.4 the product ships.
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { BEATS, OLDFORT, cameraAt, type Cam } from "./beats";
@@ -216,13 +220,12 @@ export async function preload(
 
   // count every tile that finishes parsing into MapLibre's own cache
   const seen = new Set<string>();
-  map.on(
-    "data",
-    (e: { tile?: { tileID?: { key?: unknown } }; sourceId?: string }) => {
-      if (e.tile?.tileID?.key != null)
-        seen.add(`${e.sourceId}:${e.tile.tileID.key}`);
-    },
-  );
+  map.on("data", (ev) => {
+    // maplibre 6 types "data" as source|style events; only source tile events
+    // carry a tile id
+    const e = ev as unknown as { tile?: { tileID?: { key?: unknown } }; sourceId?: string };
+    if (e.tile?.tileID?.key != null) seen.add(`${e.sourceId}:${e.tile.tileID.key}`);
+  });
 
   // The playback camera path, sampled every 60ms across the whole map-visible
   // span (0 → end of the flood beat; B7/B8 only hold statewide, B9 hides the

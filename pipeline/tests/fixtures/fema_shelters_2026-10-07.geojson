@@ -1,0 +1,75 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "id": 2091701,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -82.48427699999996,
+     39.246661000000074
+    ]
+   },
+   "properties": {
+    "objectid": 2091701,
+    "shelter_id": 368554,
+    "shelter_name": "McArthur Freewill Baptist Church",
+    "address": "408 W Main St",
+    "city": "McArthur",
+    "state": "OH",
+    "zip": "45651",
+    "shelter_status": "OPEN",
+    "evacuation_capacity": null,
+    "post_impact_capacity": null,
+    "total_population": 10,
+    "hours_open": null,
+    "hours_close": null,
+    "org_name": "Independent",
+    "org_id": 126166,
+    "match_type": null,
+    "subfacility_code": "GENPOPSHEL",
+    "ada_compliant": null,
+    "pet_accommodations_code": null,
+    "wheelchair_accessible": null,
+    "latitude": null,
+    "longitude": null
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 2091702,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -86.41706084999998,
+     42.07724420000005
+    ]
+   },
+   "properties": {
+    "objectid": 2091702,
+    "shelter_id": 368555,
+    "shelter_name": "Harbor of Hope Church",
+    "address": "769 Pipestone Road",
+    "city": "Benton Harbor",
+    "state": "MI",
+    "zip": "49022",
+    "shelter_status": "OPEN",
+    "evacuation_capacity": null,
+    "post_impact_capacity": null,
+    "total_population": 9,
+    "hours_open": null,
+    "hours_close": null,
+    "org_name": "ARC Partner",
+    "org_id": 126165,
+    "match_type": null,
+    "subfacility_code": "GENPOPSHEL",
+    "ada_compliant": null,
+    "pet_accommodations_code": null,
+    "wheelchair_accessible": null,
+    "latitude": null,
+    "longitude": null
+   }
+  }
+ ]
+}

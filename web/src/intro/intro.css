@@ -1,0 +1,657 @@
+/* Hallmark · sequence: scripted intro · tone: technical, cinematic · anchor hue: accent blue (interaction only)
+ * system: DESIGN.md (locked): dark tokens, Source Serif 4 + Geist + Geist Mono, FEMA YlOrRd for data
+ * pre-emit critique: P4 H5 E4 S5 R4 V4
+ *
+ * One fixed-dark stage. The motion budget DESIGN.md withholds from the product
+ * is spent here, in the pitch build, on one sequence. Colour still means what
+ * it means in the app: blue is interaction and "needs a person", the
+ * yellow-to-red ramp is FEMA damage level and nothing else.
+ */
+@import "@fontsource-variable/source-serif-4/opsz.css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+:root {
+  --bg: #0f1115;
+  --surface: #17191e;
+  --line: #2a2e36;
+  --line-strong: #3e434e;
+  --ink: #e9eae8;
+  --ink-dim: #9ea1a8;
+  --ink-faint: #6c7079;
+  --accent: #4a80f6;
+  --accent-ink: #ffffff;
+  --scrim: 15 17 21; /* --bg as channels, for the legibility scrims */
+  --fema-major: #f03b20;
+
+  --font-display: "Source Serif 4 Variable", "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  --font-sans: "Geist Variable", "Geist", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* type scale: everything sizes off the stage, so a 4K capture and a laptop
+     frame compose the same way */
+  --text-stamp: clamp(2.6rem, 8.2vw, 9.5rem);
+  --text-cap: clamp(1.7rem, 4.1vw, 4.6rem);
+  --text-stat: clamp(2.8rem, 7.4vw, 8.4rem);
+  --text-body: clamp(0.8rem, 1.05vw, 1.15rem);
+  --text-small: clamp(0.68rem, 0.82vw, 0.9rem);
+  --edge: clamp(1.1rem, 4.6vw, 5.5rem);
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.intro-root {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  overflow: hidden;
+}
+.intro-root.is-running {
+  cursor: none;
+}
+.intro-root.is-running .intro-skip {
+  cursor: pointer;
+}
+
+.intro-stage,
+.intro-map {
+  position: absolute;
+  inset: 0;
+}
+.intro-map {
+  background: var(--bg);
+}
+.intro-map .maplibregl-control-container {
+  display: none;
+}
+
+/* every overlay is positioned by the playhead, never by a CSS transition */
+.intro-stage > div {
+  pointer-events: none;
+}
+
+/* ---- radar plate, glued to its bounding box on the map -------------------- */
+.intro-radar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+}
+.intro-radar-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  mix-blend-mode: screen; /* "no echo" pixels are transparent: only rain shows */
+}
+
+/* the archive time of the radar frame on screen, set as large as the storm */
+.intro-stamp {
+  position: absolute;
+  left: var(--edge);
+  top: calc(var(--edge) + 3.2rem);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+.intro-stamp-day {
+  font-size: calc(var(--text-stamp) * 0.42);
+  color: var(--ink-dim);
+  letter-spacing: 0.01em;
+}
+.intro-stamp-time {
+  font-size: var(--text-stamp);
+  color: var(--ink);
+}
+
+/* ---- before / after plate, registered to the map -------------------------- */
+.intro-plate {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+  overflow: hidden;
+}
+.intro-plate-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  background-size: 100% 100%;
+}
+.intro-plate-after {
+  clip-path: inset(0 100% 0 0);
+}
+.intro-plate-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  margin-left: -1.5px;
+  background: var(--ink);
+  opacity: 0;
+}
+.intro-tags {
+  position: absolute;
+  left: var(--edge);
+  right: var(--edge);
+  top: calc(var(--edge) + 3.4rem);
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+.intro-tags span {
+  opacity: 0;
+  background: rgb(var(--scrim) / 0.78);
+  border: 1px solid var(--line-strong);
+  padding: 0.4em 0.75em;
+}
+
+/* the line that reads the picture */
+.intro-sweep {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--accent);
+}
+.intro-sweep::after {
+  /* the ground it has just read, briefly lit behind it */
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 2px;
+  width: 9vw;
+  background: linear-gradient(to left, rgb(74 128 246 / 0.2), rgb(74 128 246 / 0));
+}
+
+/* legibility scrims at the edges type sits on; the middle stays clear */
+.intro-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, rgb(var(--scrim) / 0.92), rgb(var(--scrim) / 0) 34%),
+    linear-gradient(to bottom, rgb(var(--scrim) / 0.8), rgb(var(--scrim) / 0) 24%),
+    linear-gradient(to right, rgb(var(--scrim) / 0.55), rgb(var(--scrim) / 0) 30%),
+    linear-gradient(to left, rgb(var(--scrim) / 0.82), rgb(var(--scrim) / 0) 36%);
+}
+
+/* ---- furniture ------------------------------------------------------------- */
+.intro-brand {
+  position: absolute;
+  left: var(--edge);
+  top: var(--edge);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(0.95rem, 1.25vw, 1.4rem);
+  opacity: 0;
+}
+.intro-brand svg {
+  height: 1.05em;
+  fill: var(--ink);
+}
+
+.intro-tel {
+  position: absolute;
+  right: var(--edge);
+  top: var(--edge);
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+  letter-spacing: 0.04em;
+  opacity: 0;
+}
+.intro-tel-coord {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.intro-tel-tag {
+  margin-top: 0.3em;
+  color: var(--ink-dim);
+}
+
+/* the statement of each beat: serif, large, roman, set low on the left */
+.intro-cap {
+  position: absolute;
+  left: var(--edge);
+  bottom: calc(var(--edge) + 2.2rem);
+  width: min(52vw, 21ch * 2.4);
+  opacity: 0;
+}
+.intro-cap-text {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-cap);
+  line-height: 1.06;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+  max-width: 17ch;
+}
+.intro-cap-text span {
+  display: inline-block;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.intro-cap-sub {
+  margin-top: 0.9em;
+  font-size: var(--text-body);
+  color: var(--ink-dim);
+  max-width: 44ch;
+  opacity: 0;
+}
+
+/* the figure of each beat: mono, tabular, right-hand column */
+.intro-stat {
+  position: absolute;
+  right: var(--edge);
+  bottom: calc(var(--edge) + 2.2rem);
+  width: min(30vw, 30rem);
+  min-width: 15rem;
+  text-align: right;
+  opacity: 0;
+}
+.intro-stat-big {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-stat);
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+}
+.intro-stat-label {
+  margin-top: 0.5em;
+  font-size: clamp(0.95rem, 1.45vw, 1.6rem);
+  font-weight: 500;
+}
+.intro-stat-sub {
+  margin-top: 0.25em;
+  font-size: var(--text-body);
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+.intro-stat-rows {
+  margin-top: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.intro-stat-rows div {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0.7em;
+  font-size: var(--text-body);
+  color: var(--ink-dim);
+}
+.intro-stat-rows b {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: clamp(1.2rem, 2.1vw, 2.4rem);
+  color: var(--ink);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* expected structures by FEMA level, to scale */
+.intro-bar {
+  margin-top: 1.2rem;
+}
+.intro-bar-fill {
+  display: flex;
+  height: 0.7rem;
+  gap: 2px;
+  clip-path: inset(0 100% 0 0);
+}
+.intro-bar-fill span {
+  display: block;
+  height: 100%;
+}
+.intro-legend {
+  margin-top: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  opacity: 0;
+}
+.intro-legend-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.55em;
+  font-size: var(--text-small);
+  color: var(--ink-dim);
+}
+.intro-legend-row i {
+  width: 0.7em;
+  height: 0.7em;
+  order: 3;
+}
+.intro-legend-row b {
+  order: 1;
+  min-width: 3.2em;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.intro-legend-row span {
+  order: 2;
+}
+
+.intro-note {
+  position: absolute;
+  left: var(--edge);
+  right: var(--edge);
+  bottom: calc(var(--edge) * 0.55);
+  font-size: var(--text-small);
+  color: var(--ink-dim);
+  letter-spacing: 0.02em;
+  opacity: 0;
+}
+
+/* ---- the region: one label on top of each town's column ------------------- */
+.intro-towns {
+  position: absolute;
+  inset: 0;
+}
+.intro-town {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  white-space: nowrap;
+  opacity: 0;
+}
+.intro-town b {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: clamp(0.95rem, 1.5vw, 1.7rem);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.intro-town span {
+  font-size: var(--text-small);
+  color: var(--ink-dim);
+}
+
+/* the cut: a dark frame, and the logo's scan line crossing it */
+.intro-cut {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+}
+.intro-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: var(--accent);
+}
+
+/* ---- title card ----------------------------------------------------------- */
+.intro-title {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--edge);
+  padding-bottom: calc(var(--edge) + 4.5rem); /* room for the actions */
+}
+.intro-title-mark {
+  width: min(46vw, 38rem);
+  overflow: visible;
+  opacity: 0;
+}
+.intro-title-state {
+  fill: var(--ink);
+}
+.intro-title-ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3.5;
+  /* start the stroke at 12 o'clock */
+  transform: rotate(-90deg);
+  transform-origin: 198.09px 28.24px;
+}
+.intro-title-ping {
+  stroke-width: 1.5;
+  opacity: 0;
+}
+.intro-title-dot {
+  fill: var(--accent);
+}
+.intro-title-word {
+  margin-top: 0.1em;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.4rem, 6.4vw, 7rem);
+  letter-spacing: -0.015em;
+  line-height: 1;
+  opacity: 0;
+}
+.intro-title-desc {
+  margin-top: 1.1rem;
+  font-size: clamp(0.95rem, 1.5vw, 1.6rem);
+  color: var(--ink);
+  max-width: 34ch;
+  text-wrap: balance;
+  opacity: 0;
+}
+.intro-title-disc {
+  margin-top: 1rem;
+  font-size: var(--text-small);
+  color: var(--ink-dim);
+  max-width: 62ch;
+  line-height: 1.5;
+  text-wrap: balance;
+  opacity: 0;
+}
+
+.intro-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+}
+.intro-progress div {
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+
+/* ---- shell: loader, start, skip, actions ---------------------------------- */
+.intro-loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  background: var(--bg);
+  padding: var(--edge);
+  text-align: center;
+}
+.intro-loader-bar {
+  width: min(60vw, 22rem);
+  height: 2px;
+  background: var(--line);
+}
+.intro-loader-bar div {
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+}
+.intro-loader-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+  color: var(--ink-dim);
+  max-width: 60ch;
+  line-height: 1.5;
+}
+.intro-loader-label code {
+  color: var(--ink);
+}
+
+.intro-btn,
+.intro-start,
+.intro-skip {
+  font-family: var(--font-sans);
+  font-size: clamp(0.85rem, 1vw, 1.05rem);
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 0.6em 1.05em;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    transform 140ms var(--ease-out),
+    background-color 140ms var(--ease-out),
+    border-color 140ms var(--ease-out);
+}
+.intro-btn:hover,
+.intro-start:hover,
+.intro-skip:hover {
+  border-color: var(--ink-dim);
+}
+.intro-btn:active,
+.intro-start:active,
+.intro-skip:active {
+  transform: scale(0.975);
+}
+.intro-btn:focus-visible,
+.intro-start:focus-visible,
+.intro-skip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.intro-btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.intro-btn-primary:hover {
+  border-color: var(--accent-ink);
+}
+
+.intro-start {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.intro-start:active {
+  transform: translate(-50%, -50%) scale(0.975);
+}
+.intro-start span {
+  font-family: var(--font-mono);
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  padding: 0.1em 0.45em;
+  margin-right: 0.5em;
+}
+.intro-skip {
+  position: absolute;
+  right: var(--edge);
+  bottom: calc(var(--edge) * 0.45);
+  background: rgb(var(--scrim) / 0.7);
+  color: var(--ink-dim);
+  padding: 0.4em 0.8em;
+}
+.intro-actions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--edge) + 0.5rem);
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0 var(--edge);
+}
+
+.intro-debug {
+  position: absolute;
+  left: var(--edge);
+  top: calc(var(--edge) + 2rem);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-dim);
+  background: rgb(var(--scrim) / 0.8);
+  padding: 4px 8px;
+}
+.intro-debug b {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* phone / narrow: the figure moves above the statement, both full width */
+@media (max-width: 760px) {
+  .intro-cap {
+    width: auto;
+    right: var(--edge);
+  }
+  .intro-stat {
+    left: var(--edge);
+    right: var(--edge);
+    width: auto;
+    text-align: left;
+    bottom: auto;
+    top: calc(var(--edge) + 4.2rem);
+  }
+  .intro-stat-rows div,
+  .intro-legend-row {
+    justify-content: flex-start;
+  }
+  .intro-legend-row i {
+    order: 0;
+  }
+  .intro-tel {
+    display: none;
+  }
+  .intro-tags {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-btn,
+  .intro-start,
+  .intro-skip {
+    transition: none;
+  }
+}

@@ -1,73 +1,101 @@
-# TerraTriage - Phase A (model & data pipeline)
+# NC Recon pipeline and service
 
-Turns a **pre/post satellite image pair** of a disaster area into a **GeoJSON of
-building footprints, each tagged with a 0-3 damage class**, geo-referenced to real
-lon/lat. That GeoJSON is the only thing Phase B (the web app) consumes - see
-[`src/terratriage/contract.py`](src/terratriage/contract.py) for the exact schema.
+Python 3.13. Two things live here:
 
-Demo case: **Hurricane Helene**, western North Carolina, Sept-Oct 2024
-(Old Fort & Spruce Pine).
+* `src/terratriage/ops/`, the operational pipeline (what the product runs), and
+  `server.py`, the FastAPI service that exposes it under `/ops` and serves the
+  built web app.
+* The older demo path (`run.py fetch | infer | infer-seg | validate`,
+  `predict_footprints.py`, `models/`): the 4-class xView2 pipeline behind the
+  offline pitch demo. Kept working, not used by the product.
 
-## Quick start
+Root [`README.md`](../README.md) covers deployment; this file is for working
+on the pipeline.
 
-```bash
-python -m venv .venv && ./.venv/bin/pip install -r requirements.txt
-./.venv/bin/pip install torch torchvision            # only for the segmentation path
-
-# 1. pull Maxar Open Data pre/post imagery for an AOI
-./.venv/bin/python scripts/run.py fetch --area old_fort --lat 35.6293 --lon -82.1804
-./.venv/bin/python scripts/run.py fetch --area spruce_pine --lat 35.9151 --lon -82.0643
-
-# 2. run the pipeline  -> data/output/<area>.geojson
-./.venv/bin/python scripts/run.py infer --area old_fort            # heuristic scorer
-./.venv/bin/python scripts/run.py infer --area old_fort --backend keras   # xView2 baseline CNN (needs TF env, see below)
-
-# 3. eyeball it  -> data/output/<area>_check.html
-./.venv/bin/python scripts/run.py validate --area old_fort
-```
-
-## How it works
-
-```
-pre.tif + post.tif
-   │
-   ├─ footprints.py   OSM buildings (Overpass) for the AOI, clipped, in raster CRS
-   │
-   ├─ classify.py     per-building 128 px pre/post crop  ─►  damage class 0..3
-   │                     backend=heuristic : structure-loss change detection (offline)
-   │                     backend=keras     : xView2 CMU baseline (ResNet50+CNN head)
-   │ backend=fusion : heuristic + keras combined into a per-building
-   │ confidence tier (see fusion.py, Phase D)
-   │
-   └─ predict_footprints.py   footprints + classes  ─►  contract.collection()  ─►  GeoJSON
-```
-
-There is a second, fully-built path - `scripts/run.py infer-seg` - that runs the
-**xView2 1st-place architecture** (Siamese U-Nets, 4 encoder families, ported to
-torch 2.x in `src/terratriage/models/`) as a tiled segmentation ensemble. It is
-wired and smoke-tested but **parked**: the published weights are offline (see
-STATUS below). With `--mock` it runs a heuristic ensemble so the tiling /
-stitching / fusion / polygonisation code stays exercised.
-
-## Status / what's blocked
-
-See [`../docs/PHASE_A_STATUS.md`](../docs/PHASE_A_STATUS.md) for the full account.
-Short version:
-
-| Component | State |
-|---|---|
-| Maxar Helene imagery download | working (Old Fort, Spruce Pine, pre+post) |
-| Tiling + geo-referencing + polygonisation + contract | working, tested |
-| OSM footprints | working (764 buildings Old Fort, 147 Spruce Pine) |
-| xView2 **baseline** damage classifier | **working** - Keras 2.2.5 weights-only HDF5, ResNet50-v1 rebuilt name-for-name in `_keras_infer.py`, verified tensor-exact (`_keras_verify.py`). See root README for `--backend auto`'s resolution order. |
-| Heuristic damage scorer | working - offline fallback |
-| xView2 **1st-place** weights | blocked - `vdurnov.s3` AccessDenied; Wayback copy exists but archive.org unreachable here. Architectures ported (`models/`) & wired (`infer-seg`) - drop the zip in `weights/` to activate. |
-| xView2 **baseline** localisation weights | not used - `weights/localization.h5` is a **Chainer** `save_npz` (dead framework) - superseded by OSM footprints. |
-
-## TF env for `--backend keras`
+## Set up and run
 
 ```bash
-conda create -y -n terratriage-tf python=3.11
-conda run -n terratriage-tf pip install "tensorflow==2.15.1" "numpy<2" pillow
+python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+cp /path/to/xview2_cmu_classifier.onnx weights/      # damage model, not in git
+
+NCR_DEV_OPEN=1 .venv/bin/python server.py           # http://127.0.0.1:8000, auth off (local only)
+.venv/bin/python -m pytest tests -q                  # offline; `-m live` hits the real upstreams
 ```
-`classify.py` shells out to this env automatically.
+
+The tests read the committed config and any assessment outputs on disk, but
+keep their registry, job list and audit log in a temporary directory. They are
+safe to run beside a working server.
+
+## One assessment, by hand
+
+The service runs these same commands as a job (`ops/jobs.py`):
+
+```bash
+R=".venv/bin/python scripts/run.py"
+$R ops-health                                        # every data source: ok / stale / down
+$R ops-fetch  --area town --lon -82.009 --lat 35.684 --half-m 400 --post nc_helene_2025
+$R ops-assess --area town                            # -> data/output/ops/town.geojson
+$R ops-impact --area town                            # people, tract need index
+$R ops-brief  --area town                            # one-page brief (HTML + text)
+$R ops-export --area town                            # GeoJSON, CSV, KML, GPKG, FileGDB, Survey123
+$R ops-aggregate --area town                         # public tract product, small counts withheld
+```
+
+`ops-assess` needs the area in `config/events.yaml` (TUNE / TEST) or in the
+operational registry (`data/ops_registry.yaml`, written by the service when an
+analyst starts an assessment). After labeling: `ops-eval`, then `ops-calibrate`
+(TUNE labels only). `ops-backup` archives labels, registry and outputs.
+
+## Layout
+
+```
+server.py                    FastAPI app: /ops API, live-feed proxy, static web app
+scripts/run.py               CLI for every step above
+config/
+  events.yaml                events, imagery windows, TUNE / TEST areas
+  context_rules.yaml         evidence weights, masks, review rules (provisional until labels exist)
+  crosswalks.yaml            xBD -> FEMA classes, class prior
+  damage_matrices/           FEMA PDA flood-depth matrix
+  seeds/                     OpenFEMA declarations shipped for offline start
+src/terratriage/ops/
+  plan/events.py             event registry, incident dates from OpenFEMA, window checks
+  collect/                   connectors (USGS, NWPS, NWS, OpenFEMA, NSI, USA Structures,
+                             NC OneMap orthos, NOAA ERI), each with a health probe
+  process/                   imagery pairs, co-registration, footprint alignment, structures
+  analyze/                   evidence channels, fusion, calibration, evaluation, impact
+  disseminate/               exports, brief, public aggregates, map tiles
+  pipeline.py                ops-assess: one area end to end
+  jobs.py                    assessment queue: one at a time, persisted, cancellable
+  api.py auth.py audit.py    HTTP API, fail-closed access control, audit trail
+data/                        runtime state (git-ignored): raw imagery, outputs, labels,
+                             registry, jobs.json, audit.log, caches
+tests/                       pytest
+```
+
+## Things that will bite you
+
+* **One server per data directory.** At start-up the server treats any
+  half-registered operational area as left over from a crash and removes it.
+* **Dates are asserted, not assumed.** A pre image must be before the
+  incident and a post image on or after it, or the run stops
+  (`plan/events.py`). Incident dates come from the federal declaration.
+* **Hold-out areas.** TEST areas (`config/events.yaml`) are never used to
+  choose a threshold, and their image chips are not looked at before they are
+  labeled. See `docs/ops/LABELING_PROTOCOL.md`.
+* **Nothing is measured in Web Mercator.** Analysis runs in the imagery's
+  projected CRS; `ops/geodesy.py` refuses otherwise. The map tiles in
+  `disseminate/tiles.py` are pictures only.
+* **Structure ids are stable.** `ncr_id` is a UUID5 of source + source id
+  (multi-part buildings: `<id>/1`, ...). Labels are keyed by it and survive a
+  re-run.
+
+## Demo path (legacy)
+
+`run.py fetch` pulls a Maxar Open Data pair, `run.py infer` writes the 4-class
+contract GeoJSON (`contract.py`) from OSM footprints and the xView2 baseline
+classifier, `scripts/make_tiles.py` cuts its imagery tiles. `infer-seg` runs
+the ported xView2 1st-place Siamese U-Nets when their weights are present in
+`weights/` (see `weights/README.md`); with `--mock` it exercises the tiling
+and polygonising code without them. The Keras fallback for the classifier
+needs the `terratriage-tf` conda env (TensorFlow 2.15); the ONNX model does
+not.

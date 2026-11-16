@@ -1,0 +1,934 @@
+{
+ "displayFieldName": "NAME",
+ "fieldAliases": {
+  "SITE_ID": "SITE_ID",
+  "NAME": "NAME",
+  "OWNER": "OWNER",
+  "COUNTY": "COUNTY",
+  "GAGE_DATUM": "GAGE_DATUM",
+  "NAVD88_ELEVATION": "NAVD88_ELEVATION",
+  "NGVD29_SITE_ELEVATION": "NGVD29_SITE_ELEVATION",
+  "NGVD29_TO_NAVD88": "NGVD29_TO_NAVD88",
+  "USGS_ELEVATION": "USGS_ELEVATION",
+  "LATITUDE": "LATITUDE",
+  "LONGITUDE": "LONGITUDE"
+ },
+ "fields": [
+  {
+   "name": "SITE_ID",
+   "type": "esriFieldTypeString",
+   "alias": "SITE_ID",
+   "length": 255
+  },
+  {
+   "name": "NAME",
+   "type": "esriFieldTypeString",
+   "alias": "NAME",
+   "length": 255
+  },
+  {
+   "name": "OWNER",
+   "type": "esriFieldTypeString",
+   "alias": "OWNER",
+   "length": 250
+  },
+  {
+   "name": "COUNTY",
+   "type": "esriFieldTypeString",
+   "alias": "COUNTY",
+   "length": 20
+  },
+  {
+   "name": "GAGE_DATUM",
+   "type": "esriFieldTypeDouble",
+   "alias": "GAGE_DATUM"
+  },
+  {
+   "name": "NAVD88_ELEVATION",
+   "type": "esriFieldTypeDouble",
+   "alias": "NAVD88_ELEVATION"
+  },
+  {
+   "name": "NGVD29_SITE_ELEVATION",
+   "type": "esriFieldTypeDouble",
+   "alias": "NGVD29_SITE_ELEVATION"
+  },
+  {
+   "name": "NGVD29_TO_NAVD88",
+   "type": "esriFieldTypeDouble",
+   "alias": "NGVD29_TO_NAVD88"
+  },
+  {
+   "name": "USGS_ELEVATION",
+   "type": "esriFieldTypeDouble",
+   "alias": "USGS_ELEVATION"
+  },
+  {
+   "name": "LATITUDE",
+   "type": "esriFieldTypeDouble",
+   "alias": "LATITUDE"
+  },
+  {
+   "name": "LONGITUDE",
+   "type": "esriFieldTypeDouble",
+   "alias": "LONGITUDE"
+  }
+ ],
+ "features": [
+  {
+   "attributes": {
+    "SITE_ID": "02137727",
+    "NAME": "Catawba River near Pleasant Gardens",
+    "OWNER": "USGS",
+    "COUNTY": "Mcdowell",
+    "GAGE_DATUM": 1233.82,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 1233.82,
+    "LATITUDE": 35.68,
+    "LONGITUDE": -82.06
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "03451500",
+    "NAME": "French Broad River at Asheville",
+    "OWNER": "USGS",
+    "COUNTY": "Buncombe",
+    "GAGE_DATUM": 1949.93,
+    "NAVD88_ELEVATION": 1950.12,
+    "NGVD29_SITE_ELEVATION": 1950.28,
+    "NGVD29_TO_NAVD88": -0.16,
+    "USGS_ELEVATION": 1950.28,
+    "LATITUDE": 35.6,
+    "LONGITUDE": -82.57
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "03453000",
+    "NAME": "Ivy River near Marshall",
+    "OWNER": "USGS",
+    "COUNTY": "Madison",
+    "GAGE_DATUM": 1700.12,
+    "NAVD88_ELEVATION": 1700.12,
+    "NGVD29_SITE_ELEVATION": 1700.41,
+    "NGVD29_TO_NAVD88": -0.29,
+    "USGS_ELEVATION": 1700.41,
+    "LATITUDE": 35.76,
+    "LONGITUDE": -82.62
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "03453500",
+    "NAME": "French Broad River near Marshall",
+    "OWNER": "USGS",
+    "COUNTY": "Madison",
+    "GAGE_DATUM": 1646.46,
+    "NAVD88_ELEVATION": 1646.5,
+    "NGVD29_SITE_ELEVATION": 1646.79,
+    "NGVD29_TO_NAVD88": -0.29,
+    "USGS_ELEVATION": 1646.79,
+    "LATITUDE": 35.78,
+    "LONGITUDE": -82.66
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "03454500",
+    "NAME": "French Broad River at Hot Springs",
+    "OWNER": "USGS",
+    "COUNTY": "Madison",
+    "GAGE_DATUM": 1311.1,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 1311.1,
+    "LATITUDE": 35.8897,
+    "LONGITUDE": -82.821111
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "03455500",
+    "NAME": "W F Pigeon River Abv Lake Logan",
+    "OWNER": "USGS",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2976.03,
+    "NAVD88_ELEVATION": 2975.82,
+    "NGVD29_SITE_ELEVATION": 2976.0,
+    "NGVD29_TO_NAVD88": -0.18,
+    "USGS_ELEVATION": 2976.0,
+    "LATITUDE": 35.396121,
+    "LONGITUDE": -82.937847
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "03456100",
+    "NAME": "West Fork Pigeon River at Bethel",
+    "OWNER": "USGS",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2667.85,
+    "NAVD88_ELEVATION": 2667.6,
+    "NGVD29_SITE_ELEVATION": 2667.78,
+    "NGVD29_TO_NAVD88": -0.18,
+    "USGS_ELEVATION": 2667.78,
+    "LATITUDE": 35.46,
+    "LONGITUDE": -82.9
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "03456500",
+    "NAME": "E Fork Pigeon River near Canton",
+    "OWNER": "USGS",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2674.41,
+    "NAVD88_ELEVATION": 2674.16,
+    "NGVD29_SITE_ELEVATION": 2674.34,
+    "NGVD29_TO_NAVD88": -0.18,
+    "USGS_ELEVATION": 2674.34,
+    "LATITUDE": 35.46,
+    "LONGITUDE": -82.86
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "03456991",
+    "NAME": "Pigeon River near Canton",
+    "OWNER": "USGS",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2581.6,
+    "NAVD88_ELEVATION": 2581.48,
+    "NGVD29_SITE_ELEVATION": 2581.66,
+    "NGVD29_TO_NAVD88": -0.18,
+    "USGS_ELEVATION": 2581.66,
+    "LATITUDE": 35.52,
+    "LONGITUDE": -82.84
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "1941",
+    "NAME": "Swannanoa R. at Black Mountain Park",
+    "OWNER": "Asheville",
+    "COUNTY": "Buncombe",
+    "GAGE_DATUM": 2277.75,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.608,
+    "LONGITUDE": -82.335
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "1942",
+    "NAME": "Flat Creek at Montreat",
+    "OWNER": "Asheville",
+    "COUNTY": "Buncombe",
+    "GAGE_DATUM": 2464.0,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.637,
+    "LONGITUDE": -82.313
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "25330",
+    "NAME": "Ivy River",
+    "OWNER": "NCEM",
+    "COUNTY": "Buncombe",
+    "GAGE_DATUM": 2176.0,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.7775,
+    "LONGITUDE": -82.4594
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "25360",
+    "NAME": "Jonathan Creek",
+    "OWNER": "NCEM",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 3076.0,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 3065.0,
+    "LATITUDE": 35.5203,
+    "LONGITUDE": -83.1064
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "7700",
+    "NAME": "Richland Creek near Waynesville",
+    "OWNER": "NCEM",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2768.0,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.46034488,
+    "LONGITUDE": -83.01195014
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "25350",
+    "NAME": "Richland Creek in Waynesville",
+    "OWNER": "NCEM",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2654.0,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 2654.0,
+    "LATITUDE": 35.4892,
+    "LONGITUDE": -82.9992
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "03451000",
+    "NAME": "Swannanoa River at Biltmore",
+    "OWNER": "USGS",
+    "COUNTY": "Buncombe",
+    "GAGE_DATUM": 1976.37,
+    "NAVD88_ELEVATION": 0.0,
+    "NGVD29_SITE_ELEVATION": 0.0,
+    "NGVD29_TO_NAVD88": 0.0,
+    "USGS_ELEVATION": 0.0,
+    "LATITUDE": 35.56,
+    "LONGITUDE": -82.54
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "25530",
+    "NAME": "N Fork Catawba River/Us 221 N",
+    "OWNER": "NCEM",
+    "COUNTY": "McDowell",
+    "GAGE_DATUM": 1721.33,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.8754,
+    "LONGITUDE": -81.9426
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "0344894205",
+    "NAME": "N Fk Swannanoa River near Walkertown",
+    "OWNER": "USGS",
+    "COUNTY": "Buncombe",
+    "GAGE_DATUM": 2640.34,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 2650.0,
+    "LATITUDE": 35.685256,
+    "LONGITUDE": -82.332794
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "03450000",
+    "NAME": "Beetree Ck near Swannanoa",
+    "OWNER": "USGS",
+    "COUNTY": "Buncombe",
+    "GAGE_DATUM": 2693.13,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 2726.39,
+    "LATITUDE": 35.653099,
+    "LONGITUDE": -82.405348
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "03460000",
+    "NAME": "Cataloochee Creek near Cataloochee",
+    "OWNER": "USGS",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2457.3,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 2456.88,
+    "LATITUDE": 35.667246,
+    "LONGITUDE": -83.072761
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "03459500",
+    "NAME": "Pigeon River near Hepco",
+    "OWNER": "USGS",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2335.81,
+    "NAVD88_ELEVATION": 2335.77,
+    "NGVD29_SITE_ELEVATION": 2335.95,
+    "NGVD29_TO_NAVD88": -0.18,
+    "USGS_ELEVATION": 2335.95,
+    "LATITUDE": 35.635,
+    "LONGITUDE": -82.99
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "1945",
+    "NAME": "Swannanoa River at Warren Wilson Rd",
+    "OWNER": "Asheville",
+    "COUNTY": "Buncombe",
+    "GAGE_DATUM": 2110.5,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.60913086,
+    "LONGITUDE": -82.4420166
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "30045",
+    "NAME": "French Broad R. at Long Shoals Rd",
+    "OWNER": "NCDOT",
+    "COUNTY": "Buncombe",
+    "GAGE_DATUM": 2000.0,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.48164553,
+    "LONGITUDE": -82.55780631
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "30044",
+    "NAME": "French Broad R. at Craven St",
+    "OWNER": "NCDOT",
+    "COUNTY": "Buncombe",
+    "GAGE_DATUM": 1959.88,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.58949341,
+    "LONGITUDE": -82.57171069
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "25520",
+    "NAME": "Mills Creek at W. Orchard St nr  Old Fort",
+    "OWNER": "NCEM",
+    "COUNTY": "McDowell",
+    "GAGE_DATUM": 1447.0,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.634772,
+    "LONGITUDE": -82.188289
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "30111",
+    "NAME": "CATAWBA RIVER @ US221, Marion",
+    "OWNER": "NCEM",
+    "COUNTY": "Mcdowell",
+    "GAGE_DATUM": 1197.0,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.707513,
+    "LONGITUDE": -82.032933
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "30077",
+    "NAME": "FLAT CREEK @ US70, Black Mountain",
+    "OWNER": "NCEM",
+    "COUNTY": "Buncombe",
+    "GAGE_DATUM": 2349.0,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.620166,
+    "LONGITUDE": -82.314807
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "30078",
+    "NAME": "Grassy Branch at Old Farm School Rd, Asheville\r\n",
+    "OWNER": "NCEM",
+    "COUNTY": "Buncombe",
+    "GAGE_DATUM": 2120.0,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.600462,
+    "LONGITUDE": -82.476228
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "30104",
+    "NAME": "JONATHAN CREEK @ Hall Dr (SR1394) Dellwood",
+    "OWNER": "NCEM",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2708.0,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.526566,
+    "LONGITUDE": -83.02933
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "30105",
+    "NAME": "PIGEON RIVER @ Charles St, Clyde",
+    "OWNER": "NCEM",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2505.0,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.53511,
+    "LONGITUDE": -82.911992
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "30080",
+    "NAME": "Swannanoa R at Azalea Rd, Swannanoa",
+    "OWNER": "NCEM",
+    "COUNTY": "Buncombe",
+    "GAGE_DATUM": 2010.0,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.580594,
+    "LONGITUDE": -82.491433
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "30079",
+    "NAME": "HOMINY CREEK @ Sand Hill Rd (SR3412) Asheville",
+    "OWNER": "NCEM",
+    "COUNTY": "Buncombe",
+    "GAGE_DATUM": 2020.0,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.544821,
+    "LONGITUDE": -82.634652
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "0344878100",
+    "NAME": "HOMINY CREEK NR WEST ASHEVILLE, NC",
+    "OWNER": "USGS",
+    "COUNTY": "Buncombe",
+    "GAGE_DATUM": 1975.32,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 0.0,
+    "LATITUDE": 35.56138889,
+    "LONGITUDE": -82.5969444
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "26100",
+    "NAME": "Dutch Cove Ck at Dutch Cove Rd",
+    "OWNER": "Haywood County",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2664.89,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.51285,
+    "LONGITUDE": -82.8067
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "26200",
+    "NAME": "Pigeon Rvr at Wells Rd",
+    "OWNER": "Haywood County",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2606.37,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.49895,
+    "LONGITUDE": -82.87308
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "26300",
+    "NAME": "N. Hominy Ck at Newfound Rd",
+    "OWNER": "Haywood County",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2649.13,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.55875,
+    "LONGITUDE": -82.80375
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "26400",
+    "NAME": "Little Eastfork Pigeon Rvr at Little Eastfork Rd",
+    "OWNER": "Haywood County",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 3042.45,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.40607,
+    "LONGITUDE": -82.90255
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "26500",
+    "NAME": "Eastfork Pigeon River at Burnette Cove Rd",
+    "OWNER": "Haywood County",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2758.5,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.45192,
+    "LONGITUDE": -82.83797
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "26600",
+    "NAME": "Eastfork Pigeon River at Chinquapin Rd",
+    "OWNER": "Haywood County",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2920.93,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.41776,
+    "LONGITUDE": -82.81128
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "26700",
+    "NAME": "Eastfork Pigeon River at Cruso Rd",
+    "OWNER": "Haywood County",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 3314.77,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.3656,
+    "LONGITUDE": -82.81797
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "26800",
+    "NAME": "Richland Creek at County Rd",
+    "OWNER": "Haywood County",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2517.06,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": null,
+    "LATITUDE": 35.52894,
+    "LONGITUDE": -82.96269
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "26410",
+    "NAME": "East Fork Pigeon Rvr at Dix Creek Rd",
+    "OWNER": "Haywood County",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2681.17,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 0.0,
+    "LATITUDE": 35.457709,
+    "LONGITUDE": -82.869497
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "26420",
+    "NAME": "Triple Arch Bridge on Hwy 215",
+    "OWNER": "Haywood County",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 4463.14,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 0.0,
+    "LATITUDE": 35.32995,
+    "LONGITUDE": -82.908224
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "26910",
+    "NAME": "West Fork Pigeon at Bethel \u2013 Chambers Farm Rd",
+    "OWNER": "Haywood County",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2668.02,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 0.0,
+    "LATITUDE": 35.461966,
+    "LONGITUDE": -82.901243
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "26920",
+    "NAME": "West Fork Pigeon River near Retreat, NC",
+    "OWNER": "Haywood County",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2829.78,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 0.0,
+    "LATITUDE": 35.427087,
+    "LONGITUDE": -82.919622
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "26940",
+    "NAME": "West Fork Pigeon River at Steel Bridge",
+    "OWNER": "Haywood County",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2972.56,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 0.0,
+    "LATITUDE": 35.396139,
+    "LONGITUDE": -82.937828
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "26980",
+    "NAME": "Jonathan Creek at Joe Carver Rd",
+    "OWNER": "Haywood County",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2542.31,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 0.0,
+    "LATITUDE": 35.57596,
+    "LONGITUDE": -83.018
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "26990",
+    "NAME": "Allens Creek at Indian Trail Loop",
+    "OWNER": "Haywood County",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2921.25,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 0.0,
+    "LATITUDE": 35.44511,
+    "LONGITUDE": -83.00661
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "30702",
+    "NAME": "Grassy Branch at US70",
+    "OWNER": "NCDOT",
+    "COUNTY": "Buncombe",
+    "GAGE_DATUM": 2046.83,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 0.0,
+    "LATITUDE": 35.58491,
+    "LONGITUDE": -82.4723
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "30709",
+    "NAME": "Cane Creek at US64",
+    "OWNER": "NCDOT",
+    "COUNTY": "McDowell",
+    "GAGE_DATUM": 1026.51,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 0.0,
+    "LATITUDE": 35.56782,
+    "LONGITUDE": -81.8507
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "30707",
+    "NAME": "Catawba River at I40",
+    "OWNER": "NCDOT",
+    "COUNTY": "McDowell",
+    "GAGE_DATUM": 1322.97,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 0.0,
+    "LATITUDE": 35.6399948,
+    "LONGITUDE": -82.1271095
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "30708",
+    "NAME": "Pepper Creek at US221",
+    "OWNER": "NCDOT",
+    "COUNTY": "McDowell",
+    "GAGE_DATUM": 1440.27,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 0.0,
+    "LATITUDE": 35.8309443,
+    "LONGITUDE": -82.0053931
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "30701",
+    "NAME": "Ivy Creek at US19 & 23",
+    "OWNER": "NCDOT",
+    "COUNTY": "Madison",
+    "GAGE_DATUM": 1955.18,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 0.0,
+    "LATITUDE": 35.79167592,
+    "LONGITUDE": -82.5399139
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "30719",
+    "NAME": "Pigeon River at Harmon Den Rd",
+    "OWNER": "NCDOT",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 1853.88,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 0.0,
+    "LATITUDE": 35.73325909,
+    "LONGITUDE": -83.02525198
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "30713",
+    "NAME": "Jonathan Creek at SR1318",
+    "OWNER": "NCDOT",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2577.51,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 0.0,
+    "LATITUDE": 35.56627438,
+    "LONGITUDE": -83.02271658
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "30714",
+    "NAME": "Pigeon River at I40",
+    "OWNER": "NCDOT",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 2465.01,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 0.0,
+    "LATITUDE": 35.56723213,
+    "LONGITUDE": -82.95363223
+   }
+  },
+  {
+   "attributes": {
+    "SITE_ID": "30301",
+    "NAME": "Lake Junaluska",
+    "OWNER": "Haywood County",
+    "COUNTY": "Haywood",
+    "GAGE_DATUM": 0.0,
+    "NAVD88_ELEVATION": null,
+    "NGVD29_SITE_ELEVATION": null,
+    "NGVD29_TO_NAVD88": null,
+    "USGS_ELEVATION": 0.0,
+    "LATITUDE": 35.527212,
+    "LONGITUDE": -82.963108
+   }
+  }
+ ]
+}

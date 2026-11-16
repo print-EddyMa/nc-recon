@@ -117,6 +117,13 @@ def _overpass_query(s: float, w: float, n: float, e: float) -> str:
 
 def fetch_osm_buildings(bounds_lonlat, cache_path: str | None = None, retries: int = 3):
     """Return a list of shapely polygons (lon/lat) for buildings in the bbox."""
+    return [p for _id, p in fetch_osm_buildings_with_ids(bounds_lonlat, cache_path, retries)]
+
+
+def fetch_osm_buildings_with_ids(bounds_lonlat, cache_path: str | None = None, retries: int = 3):
+    """Like fetch_osm_buildings, but each polygon carries its OSM element id
+    ("way/123", "relation/456#0") - a stable key that does not depend on
+    response order or on which polygons later filters drop."""
     if cache_path and os.path.exists(cache_path):
         with open(cache_path) as fh:
             data = json.load(fh)
@@ -144,22 +151,24 @@ def fetch_osm_buildings(bounds_lonlat, cache_path: str | None = None, retries: i
             with open(cache_path, "w") as fh:
                 json.dump(data, fh)
 
-    polys: list[Polygon] = []
+    polys: list[tuple[str, Polygon]] = []
     for el in data.get("elements", []):
         if el["type"] == "way" and "geometry" in el:
             ring = [(p["lon"], p["lat"]) for p in el["geometry"]]
             if len(ring) >= 4:
                 p = Polygon(ring)
                 if p.is_valid and p.area > 0:
-                    polys.append(p)
+                    polys.append((f"way/{el['id']}", p))
         elif el["type"] == "relation":
+            k = 0
             for m in el.get("members", []):
                 if m.get("role") == "outer" and "geometry" in m:
                     ring = [(p["lon"], p["lat"]) for p in m["geometry"]]
                     if len(ring) >= 4:
                         p = Polygon(ring)
                         if p.is_valid and p.area > 0:
-                            polys.append(p)
+                            polys.append((f"relation/{el['id']}#{k}", p))
+                            k += 1
     return polys
 
 
